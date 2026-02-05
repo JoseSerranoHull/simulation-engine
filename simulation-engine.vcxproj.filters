@@ -1,0 +1,389 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Config Files">
+      <UniqueIdentifier>{000e14e3-bae4-449f-8f55-108ee516aa42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IMGUI Files">
+      <UniqueIdentifier>{7a978b8c-1415-404d-981f-6b800bc2ea0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shader Files">
+      <UniqueIdentifier>{cc9a7c29-0572-4866-85e1-c9d42120ec9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mardown Files">
+      <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config\config.txt">
+      <Filter>Config Files</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\imgui.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\imgui_demo.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\imgui_draw.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\imgui_tables.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\imgui_widgets.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\backends\imgui_impl_glfw.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external-libraries\imgui\imgui-1.92.5\backends\imgui_impl_vulkan.cpp">
+      <Filter>IMGUI Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AssetManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ClimateManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ConfigLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Cubemap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Experience.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GeometryUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\IMGUIManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\InputManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ParticleSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\PointLight.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\PostProcessor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RenderPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SimpleAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Skybox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\stb_impl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SwapChain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SyncManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SystemFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\VulkanEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\VulkanResourceManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\VulkanUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\base.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\dust.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\dust.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\dust.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\fire.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\fire.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\fire.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\glass.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\gouraud.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\gouraud.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\particle.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\particle.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\particle.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\phong.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\phong.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\post.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\post.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\rain.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\rain.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\rain.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\sand.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shadow.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shadow.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\skybox.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\skybox.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\smoke.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\smoke.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\smoke.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\snow.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\snow.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\snow.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\transparent.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\water.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\water.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="markdown\Complete Lab Book (1 - 8) - Real-Time Graphics.md">
+      <Filter>Mardown Files</Filter>
+    </None>
+    <None Include="markdown\Complete Lab Book (A - H) - C++ Programming and Design.md">
+      <Filter>Mardown Files</Filter>
+    </None>
+    <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
+      <Filter>Mardown Files</Filter>
+    </None>
+    <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md">
+      <Filter>Mardown Files</Filter>
+    </None>
+    <None Include="markdown\Licenses.md">
+      <Filter>Mardown Files</Filter>
+    </None>
+    <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="source\AssetManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ClimateManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\CommonStructs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ConfigLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Cubemap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Experience.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\GeometryUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\IMGUIManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\InputManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\libs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Material.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\OBJLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Particle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ParticleSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Pipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\PointLight.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\PostProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RenderPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ShaderModule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SimpleAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Skybox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\StatsManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SwapChain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SyncManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SystemFactory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\TimeManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Vertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\VulkanContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\VulkanEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\VulkanResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\VulkanUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

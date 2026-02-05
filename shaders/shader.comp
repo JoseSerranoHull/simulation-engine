@@ -1,0 +1,60 @@
+#version 450
+
+/**
+ * @file shader.comp
+ * @brief Basic compute shader for a 2D particle simulation.
+ *
+ * This shader performs simple Euler integration for particle positions and 
+ * implements axis-aligned boundary collisions (bouncing) for a 2D viewport.
+ * It utilizes separate input and output storage buffers for state updates.
+ */
+
+// local_size_x = 256 provides high occupancy on most modern GPUs
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// --- Data Structures ---
+struct Particle {
+    vec2 position;
+    vec2 velocity;
+    vec4 color;
+};
+
+// --- Uniform Data ---
+layout(binding = 0) uniform ParameterUBO {
+    float deltaTime;
+} ubo;
+
+// --- Storage Buffers ---
+layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
+    Particle particlesIn[];
+};
+
+layout(std140, binding = 2) buffer ParticleSSBOOut {
+    Particle particlesOut[];
+};
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+
+    // 1. STATE ACQUISITION
+    // Fetch initial state from the input storage buffer.
+    Particle particleIn = particlesIn[index];
+
+    // 2. KINEMATIC INTEGRATION
+    // Apply velocity over the time step to update the position.
+    particlesOut[index].position = particleIn.position + particleIn.velocity.xy * ubo.deltaTime;
+    particlesOut[index].velocity = particleIn.velocity;
+
+    // 3. BOUNDARY COLLISION (Window Borders)
+    // Flip movement at window border to keep particles within the [-1, 1] NDC range.
+    
+    // Horizontal boundary check
+    if ((particlesOut[index].position.x <= -1.0) || (particlesOut[index].position.x >= 1.0)) {
+        particlesOut[index].velocity.x = -particlesOut[index].velocity.x;
+    }
+    
+    // Vertical boundary check
+    if ((particlesOut[index].position.y <= -1.0) || (particlesOut[index].position.y >= 1.0)) {
+        particlesOut[index].velocity.y = -particlesOut[index].velocity.y;
+    }
+}

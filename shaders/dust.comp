@@ -1,0 +1,121 @@
+#version 450
+
+/**
+ * @file dust.comp
+ * @brief Compute shader for the Dust Vortex simulation.
+ * * This shader executes on the GPU to update particle positions using a 
+ * vortex-suction physics model. It synchronizes the dust color with the 
+ * global light state for seamless day/night transitions.
+ */
+
+// local_size_x = 256 provides high occupancy on most modern GPUs
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle {
+    vec4 position; // xyz = position, w = point size
+    vec4 velocity; // xyz = direction, w = age (0.0 to 1.0)
+    vec4 color;    // rgba
+};
+
+// --- Uniform Data (Set by ClimateManager and TimeManager) ---
+layout(binding = 0) uniform ParameterUBO {
+    float deltaTime;
+    float spawnEnabled; 
+    float totalTime;
+    float padding;      // Alignment padding
+    vec3  lightColor;   // Current light color for albedo tinting
+    float padding2;     // Alignment padding
+    vec3  emitterPos;   // Global origin of the vortex
+} ubo;
+
+// --- Storage Buffer (Shared with ParticleSystem.cpp) ---
+layout(std140, binding = 1) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+/**
+ * @brief Deterministic pseudo-random hash function.
+ */
+float hash(float n) { 
+    return fract(sin(n) * 43758.5453123); 
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    
+    // Safety check: Matches the hardcoded max particle limit in ParticleSystem.h
+    if (index >= 20000) return;
+
+    Particle p = particles[index];
+
+    // 1. RANDOMIZED DECAY
+    // Each particle has a unique lifespan to ensure a continuous stream rather than bursts.
+    float decaySpeed = 0.15 + (hash(float(index) * 0.5) * 0.2);
+    p.velocity.w += ubo.deltaTime * decaySpeed;
+    float age = p.velocity.w;
+
+    // 2. VORTEX PHYSICS (Angular Velocity)
+    // Particles rotate around a central vertical axis.
+    vec2 center = vec2(0.0, 0.0);
+    vec2 relPos = p.position.xz - center;
+    float dist  = length(relPos);
+    
+    // Rotation speed is inversely proportional to distance (faster at the center)
+    float swirlSpeed = 0.35 / (dist + 0.2); 
+    float angleShift = ubo.deltaTime * swirlSpeed;
+    float s = sin(angleShift);
+    float c = cos(angleShift);
+    
+    // Standard 2D Rotation Matrix application
+    p.position.x = center.x + (relPos.x * c - relPos.y * s);
+    p.position.z = center.y + (relPos.x * s + relPos.y * c);
+
+    // 3. INWARD SUCTION (Centripetal Force)
+    // Pulls particles toward the center to maintain the "cone" shape of the vortex.
+    p.position.xz -= normalize(relPos) * ubo.deltaTime * 0.15;
+
+    // 4. VERTICAL CONSTRAINT
+    // Particles drift upward and are clamped to prevent them from exiting the snow globe.
+    p.position.y += p.velocity.y * ubo.deltaTime;
+    if (p.position.y > 0.45) p.velocity.y = -0.015; 
+    if (p.position.y < -0.05) p.position.y = 0.0;
+
+    // 5. DYNAMIC SAND COLORING
+    // Grains are randomly tinted between two desert base colors.
+    vec3 tanBase    = vec3(0.76, 0.70, 0.50);
+    vec3 brownBase  = vec3(0.55, 0.45, 0.30);
+    vec3 sandAlbedo = mix(tanBase, brownBase, hash(float(index)));
+
+    // Environmental Tinting: The dust grains reflect the project's global lightColor.
+    p.color.rgb = sandAlbedo * ubo.lightColor * 0.7;
+    
+    // Radial Fade: Masks the "singularity" at the center to prevent vertical flickering.
+    float radialFade = smoothstep(0.02, 0.15, dist);
+    // Alpha pulsates over the lifespan: Fade in -> Peak -> Fade out.
+    p.color.a = sin(age * 3.14159) * 0.4 * radialFade;
+
+    // 6. RESPAWN LOGIC
+    // Recycles particles that have reached their age limit or hit the center.
+    if (age > 1.0 || dist < 0.02) {
+        if (ubo.spawnEnabled > 0.5) {
+            float seed        = float(index) + ubo.totalTime;
+            float angle       = hash(seed) * 6.28318;
+            float spawnRadius = 0.25 + hash(seed + 1.0) * 0.35;
+            
+            p.position.x = cos(angle) * spawnRadius;
+            p.position.z = sin(angle) * spawnRadius;
+            p.position.y = 0.0;
+            
+            p.velocity.w = 0.0; // Reset age
+            p.velocity.y = 0.01 + hash(seed + 2.0) * 0.02; // Vertical drift speed
+            p.position.w = 4.0 + hash(seed + 3.0) * 4.0;   // Particle point size
+            p.color.a    = 0.2;
+        } else {
+            // If the dust effect is toggled off, kill the particle alpha immediately.
+            p.color.a = 0.0;
+        }
+    }
+
+    // Write back updated state to global memory
+    particles[index] = p;
+}

@@ -1,0 +1,93 @@
+#version 450
+
+/**
+ * @file smoke.comp
+ * @brief Compute shader for the Smoke particle simulation.
+ *
+ * This shader simulates rising smoke trails using a cone-expansion physics model.
+ * It handles upward buoyancy, horizontal drift over time, and spherical 
+ * containment within the glass globe, specifically offsetting spawn points 
+ * to rise from the top of the fire effects.
+ */
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// --- Data Structures ---
+struct Particle {
+    vec4 position; // xyz = position, w = point size
+    vec4 velocity; // xyz = velocity, w = life (age)
+    vec4 color;    // rgba
+};
+
+// --- Uniform Data (Environmental State) ---
+layout(binding = 0) uniform ParameterUBO {
+    float deltaTime;
+    float spawnEnabled; 
+    float totalTime;
+    float padding;
+    vec3 lightColor;
+    float padding2;
+    vec3 emitterPos; // Origin of the smoke source
+} ubo;
+
+// --- Storage Buffer (Shared GPU Memory) ---
+layout(std140, binding = 1) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+/**
+ * @brief Deterministic pseudo-random hash function.
+ */
+float hash(float n) { 
+    return fract(sin(n) * 43758.5453123); 
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    
+    // Safety check: Matches the particle count defined in the SystemFactory
+    if (index >= 300) return;
+
+    Particle p = particles[index];
+    
+    // 1. AGE DECAY
+    // Slower decay rate (0.3) allows for better vertical cone height.
+    p.velocity.w += ubo.deltaTime * 0.3; 
+    float age = p.velocity.w;
+
+    // 2. CONE PHYSICS & KINEMATICS
+    // Horizontal drift (X and Z) increases with age to create a widening cone shape.
+    float expansion = age * 0.5; 
+    p.position.xyz += p.velocity.xyz * ubo.deltaTime;
+    p.position.x += sin(ubo.totalTime + float(index)) * expansion * ubo.deltaTime;
+    p.position.z += cos(ubo.totalTime + float(index)) * expansion * ubo.deltaTime;
+
+    // 3. SPHERICAL CONTAINMENT
+    // Defines the boundary of the globe to prevent particles from exiting the glass.
+    vec3 sphereCenter = vec3(0.0, -0.3, 0.0);
+    float globeRadius = 1.70;
+    float distFromCenter = length(p.position.xyz - sphereCenter);
+
+    // 4. RESET LOGIC (Recycling)
+    // Triggers when a particle exceeds its lifespan or hits the glass boundary.
+    if (age > 1.0 || distFromCenter > globeRadius) {
+        float seed = float(index) + ubo.totalTime;
+        
+        // SPAWN OFFSET: Initiates smoke 0.15 units above the emitter to clear fire height.
+        p.position.x = ubo.emitterPos.x + (hash(seed) - 0.5) * 0.05;
+        p.position.z = ubo.emitterPos.z + (hash(seed + 1.0) - 0.5) * 0.05;
+        p.position.y = ubo.emitterPos.y + 0.15; 
+        
+        // Vertical buoyancy reset
+        p.velocity.xyz = vec3(0.0, 0.6 + hash(seed + 2.0) * 0.4, 0.0);
+        p.velocity.w = 0.0;
+        
+        // VISUAL ATTRIBUTES
+        // Randomized size and dark charcoal color (0.005) for realistic soot.
+        p.position.w = 4.0 + hash(seed + 3.0) * 4.0;
+        p.color = vec4(0.005, 0.005, 0.005, 0.95); 
+    }
+
+    // Write back updated state to global memory
+    particles[index] = p;
+}

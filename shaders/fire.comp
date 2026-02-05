@@ -1,0 +1,134 @@
+#version 450
+
+/**
+ * @file fire.comp
+ * @brief Compute shader for the Bonfire particle simulation.
+ *
+ * This shader updates fire particles using a controlled radius convergence model.
+ * It forces particles into a "diamond" or "leaf" shape while applying 
+ * angular velocity (whirl) and dynamic color gradients based on particle life.
+ */
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// --- Data Structures ---
+struct Particle {
+    vec4 position; // xyz = position, w = point size
+    vec4 velocity; // xyz = velocity, w = life (1.0 to 0.0)
+    vec4 color;    // rgba
+};
+
+// --- Uniform Data (Environmental State) ---
+layout(binding = 0) uniform ParameterUBO {
+    float deltaTime;
+    float spawnEnabled; 
+    float totalTime;
+    float padding;
+    vec3  lightColor;
+    float padding2;
+    vec3  emitterPos; // Origin of the fire effect
+} ubo;
+
+// --- Storage Buffer (Shared GPU Memory) ---
+layout(std140, binding = 1) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+/**
+ * @brief Deterministic pseudo-random hash function.
+ */
+float hash(float n) { 
+    return fract(sin(n) * 43758.5453123); 
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    
+    // Safety check: Matches hardcoded particle limit in the engine
+    if (index >= 20000) return;
+
+    Particle p = particles[index];
+
+    // 1. LIFESPAN AND DYNAMIC DECAY
+    // Particles lose life over time based on a randomized speed for continuous flow.
+    float decaySpeed = 2.4 + (hash(float(index) * 0.1) * 1.5);
+    p.velocity.w -= ubo.deltaTime * decaySpeed;
+    float life = p.velocity.w;
+
+    // 2. THERMAL COLOR GRADIENT
+    // Interpolates through Hot (Yellow/White) -> Mid (Orange) -> Cool (Red) based on life.
+    vec3 hotColor  = vec3(1.0, 1.0, 0.7); 
+    vec3 midColor  = vec3(1.0, 0.4, 0.0); 
+    vec3 coolColor = vec3(0.5, 0.0, 0.0); 
+    
+    if (life > 0.7) {
+        p.color.rgb = mix(midColor, hotColor, (life - 0.7) * 3.3);
+    } else {
+        p.color.rgb = mix(coolColor, midColor, life * 1.4);
+    }
+    
+    // Alpha fades linearly with the remaining life
+    p.color.a = life * 0.8; 
+
+    // 3. THE BONFIRE "WHIRL" (Angular Velocity)
+    // Applies a 2D rotation matrix around the emitter origin to simulate rising heat turbulence.
+    float swirlStrength = 5.0 * life;
+    float angleShift    = ubo.deltaTime * swirlStrength;
+    float s = sin(angleShift);
+    float c = cos(angleShift);
+    
+    vec2 center = ubo.emitterPos.xz;
+    vec2 relPos = p.position.xz - center;
+    
+    p.position.x = center.x + (relPos.x * c - relPos.y * s);
+    p.position.z = center.y + (relPos.x * s + relPos.y * c);
+
+    // 4. CONTROLLED RADIUS CONVERGENCE
+    // Forces the flame into a specific profile (diamond shape) by clamping the max radius.
+    float targetRadius = 0.12 * sin(life * 3.14159); // Maximum width occurs at life 0.5
+    vec2 toCenter      = center - p.position.xz;
+    float currentDist  = length(-toCenter);
+    
+    // Pull particles inside if they drift outside the target radius profile
+    if (currentDist > targetRadius) {
+        p.position.xz += (toCenter / currentDist) * (currentDist - targetRadius) * 0.5;
+    }
+    
+    // Constant centripetal pull to ensure the flame "tips" close correctly
+    p.position.xz += toCenter * ubo.deltaTime * 5.0;
+
+    // 5. PHYSICS AND TURBULENCE
+    // Calculates randomized noise to break up mechanical regularity.
+    float noiseX = hash(p.position.x * 20.0 + ubo.totalTime);
+    float noiseZ = hash(p.position.z * 20.0 + ubo.totalTime);
+    
+    p.velocity.x += (noiseX - 0.5) * 0.15 * life; 
+    p.velocity.z += (noiseZ - 0.5) * 0.15 * life;
+
+    // Apply integrated velocity and buoyancy drift
+    p.position.xyz += p.velocity.xyz * ubo.deltaTime;
+    p.velocity.y   += ubo.deltaTime * 0.05; 
+
+    // 6. DIAMOND SPAWNER (Recycling)
+    // Resets dead particles back to the base of the fire.
+    if (p.velocity.w <= 0.0) {
+        if (ubo.spawnEnabled > 0.5) {
+            float seed  = float(index) + ubo.totalTime * 512.0; 
+            float angle = hash(seed) * 6.28318;
+            
+            p.position.x = center.x + cos(angle) * 0.01;
+            p.position.y = -0.12; // Ground level height
+            p.position.z = center.y + sin(angle) * 0.01;
+            
+            p.velocity.w = 1.0; // Reset life
+            
+            // Initial outward burst (clamped to prevent wide dispersion)
+            p.velocity.x = cos(angle) * 0.15;
+            p.velocity.z = sin(angle) * 0.15;
+            p.velocity.y = 0.12 + hash(seed + 3.0) * 0.15; 
+        }
+    }
+
+    // Write back updated state to global storage
+    particles[index] = p;
+}

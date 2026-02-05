@@ -1,0 +1,97 @@
+#version 450
+
+/**
+ * @file rain.comp
+ * @brief Compute shader for the Rain particle simulation.
+ *
+ * This shader executes a vertical precipitation simulation within a spherical 
+ * constraint. It handles high-velocity movement, boundary enforcement (the glass globe), 
+ * and a top-hemisphere respawn system for continuous weather effects.
+ */
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// --- Data Structures ---
+struct Particle {
+    vec4 position; // xyz = position, w = point size
+    vec4 velocity; // xyz = velocity, w = life/age
+    vec4 color;    // rgba
+};
+
+// --- Uniform Data (Environmental State) ---
+layout(binding = 0) uniform ParameterUBO {
+    float deltaTime;
+    float spawnEnabled; 
+    float totalTime;
+    float padding;
+    vec3  lightColor;
+    float padding2;
+    vec3  emitterPos;
+} ubo;
+
+// --- Storage Buffer (Shared GPU Memory) ---
+layout(std140, binding = 1) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+/**
+ * @brief Deterministic pseudo-random hash function.
+ */
+float hash(float n) { 
+    return fract(sin(n) * 43758.5453123); 
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    
+    // Safety check: Limited to the hardcoded rain particle capacity
+    if (index >= 5000) return;
+
+    Particle p = particles[index];
+    
+    // 1. KINEMATICS
+    // Apply integrated velocity over time.
+    p.position.xyz += p.velocity.xyz * ubo.deltaTime;
+    
+    // 2. STRICTOR BOUNDS ENFORCEMENT
+    // Defines the spherical volume of the globe and the ground plane.
+    vec3 sphereCenter = vec3(0.0, -0.3, 0.0);
+    float globeRadius = 1.70; // Tightened from 1.75 for safety buffer
+    float distFromCenter = length(p.position.xyz - sphereCenter);
+    
+    // 3. RESET TRIGGER DETECTION
+    // Determines if the particle has hit the floor, exited the glass, or died.
+    bool hitFloor = p.position.y < -0.12;
+    bool exitedGlass = distFromCenter > globeRadius;
+
+    if (hitFloor || exitedGlass || p.velocity.w <= 0.0) {
+        if (ubo.spawnEnabled > 0.5) {
+            // 4. TOP-HEMISPHERE RESPAWN LOGIC
+            float seed = float(index) + ubo.totalTime;
+            
+            // Generate a point inside the top half of the sphere (0 to 90 degrees)
+            float r = (globeRadius - 0.05) * pow(hash(seed), 0.33); 
+            float phi = hash(seed + 1.0) * 1.57; 
+            float theta = hash(seed + 2.0) * 6.28318;
+            
+            p.position.x = r * sin(phi) * cos(theta);
+            p.position.z = r * sin(phi) * sin(theta);
+            p.position.y = r * cos(phi); 
+
+            // Offset by the physical center of the globe
+            p.position.xyz += sphereCenter;
+            
+            // 5. PHYSICS & ATTRIBUTE INITIALIZATION
+            p.velocity.xyz = vec3(0.0, -4.5, 0.0); // Constant downward terminal velocity
+            p.velocity.w   = 1.0;                  // Reset age
+            p.color        = vec4(0.6, 0.7, 1.0, 0.4);
+            p.position.w   = 1.2;                  // Rain drop size
+        } else {
+            // Kill alpha if spawn is disabled to fade out existing precipitation
+            p.color.a = 0.0;
+        }
+    }
+
+    // Write back updated state to global storage
+    particles[index] = p;
+}

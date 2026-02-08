@@ -7,11 +7,8 @@
 /**
  * @brief Constructor: Links the UI manager to the centralized Vulkan context.
  */
-IMGUIManager::IMGUIManager(VulkanContext* const inContext)
-    : context(inContext),
-    imguiPool(VK_NULL_HANDLE)
-{
-}
+IMGUIManager::IMGUIManager()
+    : imguiPool(VK_NULL_HANDLE) { }
 
 /**
  * @brief Destructor: Triggers the cleanup of ImGui and Vulkan handles.
@@ -51,6 +48,8 @@ void IMGUIManager::init(GLFWwindow* const window, const VulkanEngine* const engi
     pool_info.maxSets = POOL_SIZE;
     pool_info.poolSizeCount = static_cast<uint32_t>(sizeof(pool_sizes) / sizeof(pool_sizes[0]));
     pool_info.pPoolSizes = pool_sizes;
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkCreateDescriptorPool(context->device, &pool_info, nullptr, &imguiPool) != VK_SUCCESS) {
         throw std::runtime_error("IMGUIManager: Failed to create descriptor pool!");
@@ -219,6 +218,8 @@ void IMGUIManager::draw(const VkCommandBuffer cb) const {
  * @brief Shuts down ImGui and destroys the local descriptor pool.
  */
 void IMGUIManager::cleanup() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
         static_cast<void>(vkDeviceWaitIdle(context->device));
 

@@ -10,6 +10,7 @@
 #include "Vertex.h"
 #include "ShaderModule.h"
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class Pipeline
@@ -34,7 +35,6 @@ public:
     static constexpr uint32_t PUSH_CONSTANT_OFFSET = 0U;
 
 private:
-    VulkanContext* context{ nullptr };
     VkPipeline        pipeline{ VK_NULL_HANDLE };
     VkPipelineLayout  pipelineLayout{ VK_NULL_HANDLE };
     VkDescriptorSetLayout materialLayout{ VK_NULL_HANDLE };
@@ -44,7 +44,6 @@ public:
      * @brief Constructs a specialized graphics pipeline.
      */
     Pipeline(
-        VulkanContext* const inContext,
         const VkRenderPass renderPass,
         const VkDescriptorSetLayout inMaterialLayout,
         ShaderModule* const vertShader,
@@ -53,7 +52,7 @@ public:
         const bool enableBlending = false,
         const bool enableDepthWrite = true,
         const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT
-    ) : context(inContext), materialLayout(inMaterialLayout)
+    ) :  materialLayout(inMaterialLayout)
     {
         // 1. Shader Stages Initialization
         std::vector<VkPipelineShaderStageCreateInfo> shaderStages{};
@@ -134,6 +133,8 @@ public:
             static_cast<uint32_t>(sizeof(glm::mat4))
         };
 
+        VulkanContext* context = ServiceLocator::GetContext();
+
         const std::array<VkDescriptorSetLayout, LAYOUT_SET_COUNT> layouts = {
             context->globalSetLayout,
             materialLayout
@@ -173,6 +174,8 @@ public:
      * @brief Destructor: Explicitly destroys the pipeline and its layout.
      */
     ~Pipeline() {
+        VulkanContext* context = ServiceLocator::GetContext();
+
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
             vkDestroyPipeline(context->device, pipeline, nullptr);
             vkDestroyPipelineLayout(context->device, pipelineLayout, nullptr);
@@ -201,6 +204,7 @@ public:
         VkDescriptorSetLayout layout{ VK_NULL_HANDLE };
 
         if (setIndex == SET_INDEX_GLOBAL) {
+            VulkanContext* context = ServiceLocator::GetContext();
             layout = context->globalSetLayout;
         }
         else if (setIndex == SET_INDEX_MATERIAL) {

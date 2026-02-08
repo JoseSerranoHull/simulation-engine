@@ -42,13 +42,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
  * @brief Constructor: Orchestrates the sequential initialization of the Vulkan hardware stack.
  * Satisfies INIT.06 by explicitly initializing all primitives and handles.
  */
-VulkanEngine::VulkanEngine(GLFWwindow* const window, VulkanContext* const inContext)
-    : context(inContext),
-    depthFormat(VK_FORMAT_UNDEFINED),
+VulkanEngine::VulkanEngine(GLFWwindow* const window)
+    : depthFormat(VK_FORMAT_UNDEFINED),
     msaaSamples(VK_SAMPLE_COUNT_1_BIT)
 {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Initialize the SwapChain container immediately to ensure safe tracking
-    swapChainObj = std::make_unique<SwapChain>(context);
+    swapChainObj = std::make_unique<SwapChain>();
     initVulkan(window);
 }
 
@@ -56,6 +57,7 @@ VulkanEngine::VulkanEngine(GLFWwindow* const window, VulkanContext* const inCont
  * @brief Destructor: Ensures the GPU is idle before releasing RAII unique_ptrs.
  */
 VulkanEngine::~VulkanEngine() {
+    VulkanContext* context = ServiceLocator::GetContext();
     if (context != nullptr && context->device != VK_NULL_HANDLE) {
         // Step 1: Wait for GPU to finish all in-flight work
         static_cast<void>(vkDeviceWaitIdle(context->device));
@@ -129,6 +131,8 @@ void VulkanEngine::createInstance() const {
         createInfo.enabledLayerCount = 0U;
     }
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if (vkCreateInstance(&createInfo, nullptr, &context->instance) != VK_SUCCESS) {
         throw std::runtime_error("VulkanEngine: Critical failure during instance creation.");
     }
@@ -141,6 +145,8 @@ void VulkanEngine::setupDebugMessenger() const {
     if (!enableValidationLayers) {
         return;
     }
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{ VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
     createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -160,6 +166,8 @@ void VulkanEngine::setupDebugMessenger() const {
  * @brief Creates the WSI surface to connect Vulkan to the GLFW window.
  */
 void VulkanEngine::createSurface(GLFWwindow* const window) const {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if (glfwCreateWindowSurface(context->instance, window, nullptr, &context->surface) != VK_SUCCESS) {
         throw std::runtime_error("VulkanEngine: Failed to create window surface.");
     }
@@ -175,6 +183,9 @@ void VulkanEngine::createSurface(GLFWwindow* const window) const {
  */
 void VulkanEngine::pickPhysicalDevice() {
     uint32_t deviceCount = 0U;
+
+    VulkanContext* context = ServiceLocator::GetContext();
+
     static_cast<void>(vkEnumeratePhysicalDevices(context->instance, &deviceCount, nullptr));
 
     if (deviceCount == 0U) {
@@ -208,6 +219,7 @@ void VulkanEngine::pickPhysicalDevice() {
  * Configures required device extensions and enables anisotropy for high-quality sampling.
  */
 void VulkanEngine::createLogicalDevice() {
+    VulkanContext* context = ServiceLocator::GetContext();
     queueIndices = findQueueFamilies(context->physicalDevice);
 
     // Step 1: Create queue configuration for unique family indices
@@ -261,6 +273,7 @@ void VulkanEngine::createLogicalDevice() {
  * @brief Reserves a global VRAM pool for the engine's linear sub-allocator.
  */
 void VulkanEngine::initAllocator() {
+    VulkanContext* context = ServiceLocator::GetContext();
     context->allocator.init(context->device, context->physicalDevice, EngineConstants::VRAM_POOL_SIZE);
 }
 
@@ -272,6 +285,7 @@ void VulkanEngine::initAllocator() {
  * @brief Negotiates hardware capabilities and creates the VkSwapchainKHR.
  */
 void VulkanEngine::createSwapChain(GLFWwindow* const window) {
+    VulkanContext* context = ServiceLocator::GetContext();
     // Step 1: Query current hardware support and negotiate surface settings
     const SwapChainSupportDetails swapChainSupport = querySwapChainSupport(context->physicalDevice);
 
@@ -390,12 +404,14 @@ void VulkanEngine::createRenderPass() {
     passInfo.subpassCount = EngineConstants::COUNT_ONE;
     passInfo.pSubpasses = &subpass;
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     VkRenderPass rawPass{ VK_NULL_HANDLE };
     if (vkCreateRenderPass(context->device, &passInfo, nullptr, &rawPass) != VK_SUCCESS) {
         throw std::runtime_error("VulkanEngine: Failed to construct presentation RenderPass.");
     }
 
-    finalPass = std::make_unique<RenderPass>(context, rawPass);
+    finalPass = std::make_unique<RenderPass>(rawPass);
 }
 
 // ========================================================================
@@ -407,6 +423,7 @@ void VulkanEngine::createRenderPass() {
  */
 VkSampleCountFlagBits VulkanEngine::getMaxUsableSampleCount() const {
     VkPhysicalDeviceProperties props;
+    VulkanContext* context = ServiceLocator::GetContext();
     vkGetPhysicalDeviceProperties(context->physicalDevice, &props);
 
     const VkSampleCountFlags counts = props.limits.framebufferColorSampleCounts &
@@ -445,6 +462,8 @@ void VulkanEngine::recreateSwapChain(GLFWwindow* const window) {
         glfwWaitEvents();
     }
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     vkDeviceWaitIdle(context->device);
     cleanupSwapChain();
 
@@ -465,6 +484,8 @@ void VulkanEngine::recreateSwapChain(GLFWwindow* const window) {
 void VulkanEngine::createImageViews() {
     const auto& images = swapChainObj->getImages();
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     for (size_t i = 0U; i < images.size(); ++i) {
         const VkImageView view = VulkanUtils::createImageView(
             context->device,
@@ -483,8 +504,9 @@ void VulkanEngine::createImageViews() {
  * @brief Allocates the Hardware Depth Buffer for the final presentation pass.
  */
 void VulkanEngine::createDepthResources() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     depthBuffer = std::make_unique<Image>(
-        context,
         swapChainObj->getExtent().width,
         swapChainObj->getExtent().height,
         VK_SAMPLE_COUNT_1_BIT,
@@ -519,6 +541,9 @@ void VulkanEngine::createFramebuffers() {
         fbInfo.layers = EngineConstants::COUNT_ONE;
 
         VkFramebuffer newFramebuffer{ VK_NULL_HANDLE };
+
+        VulkanContext* context = ServiceLocator::GetContext();
+
         if (vkCreateFramebuffer(context->device, &fbInfo, nullptr, &newFramebuffer) != VK_SUCCESS) {
             throw std::runtime_error("VulkanEngine: Framebuffer allocation failed.");
         }
@@ -561,6 +586,8 @@ QueueFamilyIndices VulkanEngine::findQueueFamilies(const VkPhysicalDevice device
             indices.graphicsFamily = i;
         }
 
+        VulkanContext* context = ServiceLocator::GetContext();
+
         // Step 2: Check Surface Presentation Support
         VkBool32 presentSupport = VK_FALSE;
         static_cast<void>(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, context->surface, &presentSupport));
@@ -585,6 +612,7 @@ QueueFamilyIndices VulkanEngine::findQueueFamilies(const VkPhysicalDevice device
  */
 SwapChainSupportDetails VulkanEngine::querySwapChainSupport(const VkPhysicalDevice device) const {
     SwapChainSupportDetails details;
+    VulkanContext* context = ServiceLocator::GetContext();
     static_cast<void>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, context->surface, &details.capabilities));
 
     uint32_t formatCount = 0U;
@@ -615,6 +643,7 @@ VkFormat VulkanEngine::findSupportedFormat(
     // Step 1: Iterate through candidate formats in order of preference
     for (const VkFormat format : candidates) {
         VkFormatProperties props;
+        VulkanContext* context = ServiceLocator::GetContext();
         vkGetPhysicalDeviceFormatProperties(context->physicalDevice, format, &props);
 
         // Step 2: Check for linear or optimal tiling support based on required features

@@ -8,15 +8,17 @@
 /**
  * @brief Constructor: Orchestrates the allocation of HDR render targets and refraction snapshots.
  */
-PostProcessor::PostProcessor(VulkanContext* const inContext, const uint32_t inWidth, const uint32_t inHeight,
+PostProcessor::PostProcessor(const uint32_t inWidth, const uint32_t inHeight,
     const VkFormat inSwapChainFormat, const VkRenderPass finalRenderPass, const VkSampleCountFlagBits inMsaaSamples)
-    : context(inContext), width(inWidth), height(inHeight), swapChainFormat(inSwapChainFormat), msaaSamples(inMsaaSamples)
+    : width(inWidth), height(inHeight), swapChainFormat(inSwapChainFormat), msaaSamples(inMsaaSamples)
 {
     // 1. Establish the Depth Format (Hardware-specific float precision)
     this->depthFormat = VK_FORMAT_D32_SFLOAT;
 
     // 2. Resource & Pass Orchestration
     createOffscreenResources();
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     // 3. Initialize Background Snapshot Image (Refraction Buffer)
     // Uses 64-bit HDR precision (R16G16B16A16_SFLOAT) to match offscreen targets
@@ -55,6 +57,7 @@ PostProcessor::PostProcessor(VulkanContext* const inContext, const uint32_t inWi
  */
 PostProcessor::~PostProcessor() {
     try {
+        VulkanContext* context = ServiceLocator::GetContext();
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
             // 1. Clean up transient frame-dependent resources (Images/Views)
             cleanupResources();
@@ -107,6 +110,8 @@ void PostProcessor::resize(const VkExtent2D& extent) {
     createOffscreenResources();
     createBackgroundResources();
     createFramebuffer();
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     backgroundTextureWrapper = std::make_unique<Texture>(context, backgroundImage, backgroundImageView, backgroundSampler);
 
@@ -161,6 +166,8 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
  * @brief Helper: Specifically initializes resources used for refraction snapshots.
  */
 void PostProcessor::createBackgroundResources() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // 1. Create Image and View
     VulkanUtils::createImage(context->device, context->physicalDevice, width, height, 1U,
         VK_SAMPLE_COUNT_1_BIT, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
@@ -216,6 +223,8 @@ void PostProcessor::draw(const VkCommandBuffer commandBuffer, const bool enableB
  * This is called during both destruction and window resizing.
  */
 void PostProcessor::cleanupResources() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // 1. Offscreen HDR Targets & Views
     if (offscreenFramebuffer != VK_NULL_HANDLE) {
         vkDestroyFramebuffer(context->device, offscreenFramebuffer, nullptr);
@@ -289,6 +298,8 @@ void PostProcessor::cleanupResources() {
  * @brief Allocates multi-sampled HDR and Resolve images.
  */
 void PostProcessor::createOffscreenResources() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // 1. Color Target (MSAA Enabled)
     VulkanUtils::createImage(context->device, context->physicalDevice, width, height, EngineConstants::COUNT_ONE,
         msaaSamples, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
@@ -342,6 +353,8 @@ void PostProcessor::createTransparentRenderPass() {
  * @brief Creates the offscreen framebuffer linking all three HDR attachments.
  */
 void PostProcessor::createFramebuffer() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     const std::array<VkImageView, 3> attachments = {
         offscreenImageView,
         internalDepthView,
@@ -365,6 +378,8 @@ void PostProcessor::createFramebuffer() {
  * @brief Sets up descriptors to sample the resolved HDR scene for post-processing.
  */
 void PostProcessor::createDescriptors() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 0U;
     samplerLayoutBinding.descriptorCount = 1U;
@@ -423,8 +438,8 @@ void PostProcessor::createDescriptors() {
  * @brief Constructs the final fullscreen graphics pipeline.
  */
 void PostProcessor::createPipeline(const VkRenderPass finalRenderPass) {
-    const ShaderModule vertShader(context, "./shaders/post_vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    const ShaderModule fragShader(context, "./shaders/post_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    const ShaderModule vertShader("./shaders/post_vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    const ShaderModule fragShader("./shaders/post_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
     const VkPipelineShaderStageCreateInfo shaderStages[2] = { vertShader.getStageInfo(), fragShader.getStageInfo() };
 
     // --- 1. Pipeline Configuration State ---
@@ -461,6 +476,8 @@ void PostProcessor::createPipeline(const VkRenderPass finalRenderPass) {
     colorBlending.pAttachments = &colorBlendAttachment;
 
     // --- 2. Layout Creation ---
+    VulkanContext* context = ServiceLocator::GetContext();
+
     const std::array<VkDescriptorSetLayout, 2> layouts = { descriptorSetLayout, context->materialSetLayout };
     const VkPushConstantRange pushRange{ VK_SHADER_STAGE_FRAGMENT_BIT, 0U, static_cast<uint32_t>(sizeof(int32_t)) };
 
@@ -567,6 +584,8 @@ void PostProcessor::internalCreateRenderPass(const bool isTransparent) {
 
     // Select the correct pointer to the member handle
     VkRenderPass* const targetPass = isTransparent ? &transparentRenderPass : &offscreenRenderPass;
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkCreateRenderPass(context->device, &renderPassInfo, nullptr, targetPass) != VK_SUCCESS) {
         throw std::runtime_error("PostProcessor: Failed to create internal render pass!");

@@ -13,6 +13,7 @@
 #include "TimeManager.h"
 #include "ClimateManager.h"
 #include "PointLight.h"
+#include "ServiceLocator.h"
 
 /**
  * @class IMGUIManager
@@ -27,7 +28,7 @@ public:
     /**
      * @brief Constructor: Links the UI manager to the centralized Vulkan context.
      */
-    explicit IMGUIManager(VulkanContext* const inContext);
+    explicit IMGUIManager();
 
     /** @brief Destructor: Ensures cleanup of hardware and library resources. */
     ~IMGUIManager();
@@ -67,6 +68,5 @@ public:
 
 private:
     // --- Internal State & GPU Resources ---
-    VulkanContext* context;      /**< Pointer to the centralized Vulkan state. */
     VkDescriptorPool imguiPool;  /**< Dedicated descriptor pool for ImGui textures. */
 };

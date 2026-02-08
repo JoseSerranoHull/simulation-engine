@@ -24,8 +24,6 @@ public:
     static constexpr glm::vec3 AXIS_Z{ 0.0f, 0.0f, 1.0f };
 
 private:
-    VulkanContext* context{ nullptr };
-
     /** * @brief Collection of geometry pieces forming this model.
      * Meshes are owned by the Model via unique_ptr to ensure strict lifecycle management.
      */
@@ -47,7 +45,7 @@ public:
     /**
      * @brief Constructor: Initializes a model within the given Vulkan context.
      */
-    explicit Model(VulkanContext* const inContext);
+    explicit Model();
 
     /** @brief Destructor: Implicitly cleans up meshes via unique_ptr. */
     ~Model() = default;

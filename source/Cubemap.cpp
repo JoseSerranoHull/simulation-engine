@@ -15,8 +15,7 @@
 /**
  * @brief Constructor: Orchestrates the loading and assembly of a 6-face GPU Cubemap.
  */
-Cubemap::Cubemap(VulkanContext* const inContext, const std::vector<std::string>& filePaths)
-    : context(inContext)
+Cubemap::Cubemap(const std::vector<std::string>& filePaths)
 {
     int32_t texWidth{ 0 };
     int32_t texHeight{ 0 };
@@ -38,6 +37,8 @@ Cubemap::Cubemap(VulkanContext* const inContext, const std::vector<std::string>&
     // Step 2: Create a host-visible staging buffer to store all faces contiguously
     VkBuffer stagingBuffer{ VK_NULL_HANDLE };
     VkDeviceMemory stagingMemory{ VK_NULL_HANDLE };
+
+	VulkanContext* context = ServiceLocator::GetContext();
 
     VulkanUtils::createBuffer(context->device, context->physicalDevice, totalSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -106,6 +107,8 @@ Cubemap::Cubemap(VulkanContext* const inContext, const std::vector<std::string>&
  * @brief Destructor: Releases all hardware handles associated with the Cubemap.
  */
 Cubemap::~Cubemap() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
         vkDestroySampler(context->device, sampler, nullptr);
         vkDestroyImageView(context->device, imageView, nullptr);

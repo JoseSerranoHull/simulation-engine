@@ -7,7 +7,7 @@
 /**
  * @brief Constructor: Initializes the model container.
  */
-Model::Model(VulkanContext* const inContext) : context(inContext) {}
+Model::Model() {}
 
 /**
  * @brief Transfers ownership of a Mesh into the Model's internal registry.

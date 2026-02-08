@@ -16,7 +16,6 @@
  * @brief Constructor: Initializes the Compute simulation and Graphics rendering sub-systems.
  */
 ParticleSystem::ParticleSystem(
-    VulkanContext* const inContext,
     const VkRenderPass renderPass,
     const VkDescriptorSetLayout inGlobalSetLayout,
     const std::string& compPath,
@@ -25,8 +24,7 @@ ParticleSystem::ParticleSystem(
     const glm::vec3& spawnPos,
     const uint32_t maxParticles,
     const VkSampleCountFlagBits inMsaa)
-    : context(inContext),
-    globalSetLayout(inGlobalSetLayout),
+    : globalSetLayout(inGlobalSetLayout),
     particleCount(maxParticles),
     msaaSamples(inMsaa)
 {
@@ -40,6 +38,8 @@ ParticleSystem::ParticleSystem(
  * @brief Destructor: Releases all GPU pipelines, layouts, and buffers.
  */
 ParticleSystem::~ParticleSystem() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
         vkDestroyPipeline(context->device, computePipeline, nullptr);
         vkDestroyPipelineLayout(context->device, computePipelineLayout, nullptr);
@@ -137,6 +137,7 @@ std::vector<SparkLight> ParticleSystem::getLightData() const {
     void* data{ nullptr };
 
     const VkDeviceSize mapSize = static_cast<VkDeviceSize>(EngineConstants::PARTICLE_POOL_SIZE) * sizeof(Particle);
+    VulkanContext* context = ServiceLocator::GetContext();
     if (vkMapMemory(context->device, storageBufferMemory, 0ULL, mapSize, 0U, &data) != VK_SUCCESS) {
         return lights;
     }
@@ -192,6 +193,9 @@ void ParticleSystem::createBuffers(const glm::vec3& spawnPos) {
     // Step 2: Use a staging buffer to transfer particle data to Device Local memory
     VkBuffer stagingBuffer{ VK_NULL_HANDLE };
     VkDeviceMemory stagingMemory{ VK_NULL_HANDLE };
+
+    VulkanContext* context = ServiceLocator::GetContext();
+
     VulkanUtils::createBuffer(context->device, context->physicalDevice, bufferSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
@@ -230,6 +234,9 @@ void ParticleSystem::createComputeDescriptors() {
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
+
+    VulkanContext* context = ServiceLocator::GetContext();
+
     static_cast<void>(vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &computeSetLayout));
 
     const std::array<VkDescriptorPoolSize, 2> poolSizes = {
@@ -260,11 +267,14 @@ void ParticleSystem::createComputeDescriptors() {
 }
 
 void ParticleSystem::createComputePipeline(const std::string& path) {
-    const ShaderModule compShader(context, path, VK_SHADER_STAGE_COMPUTE_BIT);
+    const ShaderModule compShader(path, VK_SHADER_STAGE_COMPUTE_BIT);
 
     VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     layoutInfo.setLayoutCount = 1U;
     layoutInfo.pSetLayouts = &computeSetLayout;
+
+    VulkanContext* context = ServiceLocator::GetContext();
+
     static_cast<void>(vkCreatePipelineLayout(context->device, &layoutInfo, nullptr, &computePipelineLayout));
 
     VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
@@ -281,11 +291,12 @@ void ParticleSystem::createComputePipeline(const std::string& path) {
  */
 void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const std::string& vPath, const std::string& fPath) {
     // Step 1: Shader Module Assembly
-    const ShaderModule vertShader(context, vPath, VK_SHADER_STAGE_VERTEX_BIT);
-    const ShaderModule fragShader(context, fPath, VK_SHADER_STAGE_FRAGMENT_BIT);
+    const ShaderModule vertShader(vPath, VK_SHADER_STAGE_VERTEX_BIT);
+    const ShaderModule fragShader(fPath, VK_SHADER_STAGE_FRAGMENT_BIT);
     const VkPipelineShaderStageCreateInfo shaderStages[2] = { vertShader.getStageInfo(), fragShader.getStageInfo() };
 
     // Step 2: Define Layout with global and material descriptor sets
+    VulkanContext* context = ServiceLocator::GetContext();
     const std::array<VkDescriptorSetLayout, 2> layouts = { globalSetLayout, context->materialSetLayout };
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());

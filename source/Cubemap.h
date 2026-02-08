@@ -8,6 +8,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class Cubemap
@@ -28,7 +29,7 @@ public:
      * @brief Constructor: Loads six texture files and assembles them into a GPU Cubemap.
      * Implementation is located in the .cpp to satisfy OPT.18.
      */
-    Cubemap(VulkanContext* const inContext, const std::vector<std::string>& filePaths);
+    Cubemap(const std::vector<std::string>& filePaths);
 
     /** @brief Destructor: Safely releases all Vulkan image and sampler resources. */
     ~Cubemap();
@@ -47,8 +48,6 @@ public:
 
 private:
     // --- Internal State & GPU Handles ---
-    VulkanContext* context;      /**< Pointer to the centralized Vulkan state. */
-
     VkImage image;               /**< The 6-layered Vulkan image handle. */
     VkImageView imageView;       /**< Access point for the shader to read the image. */
     VkDeviceMemory memory;       /**< Backing VRAM allocation for the image. */

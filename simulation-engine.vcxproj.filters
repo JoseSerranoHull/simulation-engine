@@ -250,12 +250,6 @@
     <None Include="shaders\water.vert">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="markdown\Complete Lab Book (1 - 8) - Real-Time Graphics.md">
-      <Filter>Mardown Files</Filter>
-    </None>
-    <None Include="markdown\Complete Lab Book (A - H) - C++ Programming and Design.md">
-      <Filter>Mardown Files</Filter>
-    </None>
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
       <Filter>Mardown Files</Filter>
     </None>
@@ -266,6 +260,9 @@
       <Filter>Mardown Files</Filter>
     </None>
     <None Include="README.md" />
+    <None Include="markdown\MasterPlan.md">
+      <Filter>Mardown Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\AssetManager.h">
@@ -383,6 +380,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\VulkanUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ServiceLocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

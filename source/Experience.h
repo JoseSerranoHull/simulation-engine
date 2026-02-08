@@ -18,6 +18,7 @@
 #include "AssetManager.h"
 #include "Renderer.h"
 #include "StatsManager.h"
+#include "ServiceLocator.h"
 
 // Scene & System Includes
 #include "Scene.h"

@@ -15,6 +15,7 @@
 #include "SwapChain.h"
 #include "Image.h"
 #include "RenderPass.h"
+#include "ServiceLocator.h"
 
 /**
  * @struct QueueFamilyIndices
@@ -52,7 +53,7 @@ public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Orchestrates the full Vulkan initialization sequence. */
-    VulkanEngine(GLFWwindow* const window, VulkanContext* const inContext);
+    VulkanEngine(GLFWwindow* const window);
 
     /** @brief Destructor: Triggers GPU safety checks before releasing hardware handles. */
     ~VulkanEngine();
@@ -100,7 +101,6 @@ public:
 
 private:
     // --- Internal State & Hardware Cache ---
-    VulkanContext* context;
     VkFormat depthFormat;
     QueueFamilyIndices queueIndices;
     VkSampleCountFlagBits msaaSamples;

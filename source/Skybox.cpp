@@ -9,8 +9,8 @@
 /**
  * @brief Constructor: Initializes skybox geometry, descriptors, and the graphics pipeline.
  */
-Skybox::Skybox(VulkanContext* const inContext, const VkRenderPass renderPass, Cubemap* const inTexture, const VkSampleCountFlagBits inMsaa)
-    : context(inContext), cubemapTexture(inTexture), msaaSamples(inMsaa)
+Skybox::Skybox(const VkRenderPass renderPass, Cubemap* const inTexture, const VkSampleCountFlagBits inMsaa)
+    : cubemapTexture(inTexture), msaaSamples(inMsaa)
 {
     createVertexBuffer();
     createDescriptorResources();
@@ -21,6 +21,7 @@ Skybox::Skybox(VulkanContext* const inContext, const VkRenderPass renderPass, Cu
  * @brief Destructor: Releases all allocated GPU resources.
  */
 Skybox::~Skybox() {
+    VulkanContext* context = ServiceLocator::GetContext();
     if (context != nullptr && context->device != VK_NULL_HANDLE) {
         vkDestroyBuffer(context->device, vertexBuffer, nullptr);
         vkFreeMemory(context->device, vertexMemory, nullptr);
@@ -67,6 +68,8 @@ void Skybox::createVertexBuffer() const {
     VkBuffer stagingBuffer{ VK_NULL_HANDLE };
     VkDeviceMemory stagingMemory{ VK_NULL_HANDLE };
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     VulkanUtils::createBuffer(context->device, context->physicalDevice, bufferSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
@@ -94,6 +97,8 @@ void Skybox::createVertexBuffer() const {
  * @brief Sets up descriptors for the Cubemap sampler.
  */
 void Skybox::createDescriptorResources() const {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: Create the Descriptor Set Layout for the fragment sampler
     VkDescriptorSetLayoutBinding samplerLayoutBinding{
         EngineConstants::INDEX_ZERO, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -140,12 +145,14 @@ void Skybox::createDescriptorResources() const {
  */
 void Skybox::createPipeline(const VkRenderPass renderPass) const {
     // Step 1: Load Skybox Shaders
-    const ShaderModule vertShader(context, "./shaders/skybox_vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    const ShaderModule fragShader(context, "./shaders/skybox_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    const ShaderModule vertShader("./shaders/skybox_vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    const ShaderModule fragShader("./shaders/skybox_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
     const VkPipelineShaderStageCreateInfo shaderStages[2U] = {
         vertShader.getStageInfo(),
         fragShader.getStageInfo()
     };
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     // Step 2: Pipeline Layout Creation (Primary exception boundary)
     const std::array<VkDescriptorSetLayout, 2U> layouts = {

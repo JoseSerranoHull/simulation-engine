@@ -4,8 +4,8 @@
  * @brief Initializes the wrapper. Note: This class borrows the device pointer
  * from the context to perform destruction later.
  */
-RenderPass::RenderPass(VulkanContext* const ctx, const VkRenderPass pass)
-    : context(ctx), renderPass(pass)
+RenderPass::RenderPass(const VkRenderPass pass)
+    : renderPass(pass)
 {
 }
 
@@ -15,6 +15,8 @@ RenderPass::RenderPass(VulkanContext* const ctx, const VkRenderPass pass)
  * commands using it are still in flight; ensure SyncManager has fenced the frame.
  */
 RenderPass::~RenderPass() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Parasoft Fix: Explicit safety checks for borrowed context and hardware handles
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
         if (renderPass != VK_NULL_HANDLE) {

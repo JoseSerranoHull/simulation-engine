@@ -36,13 +36,15 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     // Step 1: Foundation - Initialize OS Window and Hardware Contexts
     initWindow(title);
     context = std::make_unique<VulkanContext>();
-    vulkanEngine = std::make_unique<VulkanEngine>(window, context.get());
+    ServiceLocator::Provide(context.get());
+    vulkanEngine = std::make_unique<VulkanEngine>(window);
 
     // Step 2: Resource Infrastructure - Initialize Manager and Asset registry
-    resources = std::make_unique<VulkanResourceManager>(context.get());
+    resources = std::make_unique<VulkanResourceManager>();
+    ServiceLocator::Provide(resources.get());
     timeManager = std::make_unique<TimeManager>();
     statsManager = std::make_unique<StatsManager>();
-    assetManager = std::make_unique<AssetManager>(context.get());
+    assetManager = std::make_unique<AssetManager>();
 
     // Step 3: Hardware Linkage - Connect managers to the Vulkan device
     resources->init(vulkanEngine.get(), MAX_FRAMES_IN_FLIGHT);
@@ -50,10 +52,11 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
 
     // Step 4: Logic Layers - Initialize simulation and UI managers
     imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
-    renderer = std::make_unique<Renderer>(context.get());
-    scene = std::make_unique<Scene>(context.get());
-    inputManager = std::make_unique<InputManager>(window, context.get(), timeManager.get());
-    uiManager = std::make_unique<IMGUIManager>(context.get());
+    renderer = std::make_unique<Renderer>();
+    scene = std::make_unique<Scene>();
+    inputManager = std::make_unique<InputManager>(window, timeManager.get());
+    ServiceLocator::Provide(inputManager.get());
+    uiManager = std::make_unique<IMGUIManager>();
     climateManager = std::make_unique<ClimateManager>();
 
     // Step 5: State Synchronization - Align UI with initial simulation state
@@ -64,7 +67,7 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     inputManager->setSnowEnabled(climateManager->isSnowEnabled());
 
     // Step 6: Visual Systems - Initialize Post-Processing and Particles
-    postProcessor = SystemFactory::createPostProcessingSystem(context.get(), vulkanEngine.get());
+    postProcessor = SystemFactory::createPostProcessingSystem(vulkanEngine.get());
     postProcessor->resize(vulkanEngine->getSwapChainExtent());
 
     // Step 7: Configuration - Load scene-specific metadata
@@ -80,11 +83,11 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     const VkSampleCountFlagBits msaa = vulkanEngine->getMsaaSamples();
     const VkRenderPass transRP = postProcessor->getTransparentRenderPass();
 
-    dustParticleSystem = SystemFactory::createDustSystem(context.get(), transRP, msaa);
-    fireParticleSystem = SystemFactory::createFireSystem(context.get(), transRP, msaa);
-    smokeParticleSystem = SystemFactory::createSmokeSystem(context.get(), transRP, msaa);
-    rainParticleSystem = SystemFactory::createRainSystem(context.get(), transRP, msaa);
-    snowParticleSystem = SystemFactory::createSnowSystem(context.get(), transRP, msaa);
+    dustParticleSystem = SystemFactory::createDustSystem(transRP, msaa);
+    fireParticleSystem = SystemFactory::createFireSystem(transRP, msaa);
+    smokeParticleSystem = SystemFactory::createSmokeSystem(transRP, msaa);
+    rainParticleSystem = SystemFactory::createRainSystem(transRP, msaa);
+    snowParticleSystem = SystemFactory::createSnowSystem(transRP, msaa);
 
     // Step 9: Finalization - Hardware handshake and Asset loading
     initVulkan();
@@ -204,6 +207,8 @@ void Experience::mouseCallback(GLFWwindow* pWindow, double xpos, double ypos) {
  * to the depth buffer to ensure internal particles remain visible.
  */
 void Experience::createGraphicsPipelines() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: Hardware validation
     if (postProcessor == nullptr) {
         throw std::runtime_error("Experience: Cannot create pipelines, PostProcessor is null!");
@@ -218,16 +223,16 @@ void Experience::createGraphicsPipelines() {
     pipelines.clear();
 
     // Step 3: Load Shader Modules (Managed by RAII unique_ptr)
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/phong_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/phong_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/sand_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/base_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/glass_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/transparent_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/water_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/water_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/shadow_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>(context.get(), "./shaders/shadow_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/sand_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/base_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/glass_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/transparent_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/shadow_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/shadow_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
 
     // Aliases for readability (Parasoft: Use const pointers for aliases)
     ShaderModule* const phongVert = shaderModules[0].get();
@@ -245,18 +250,17 @@ void Experience::createGraphicsPipelines() {
     // Arguments: (context, renderPass, layout, vert, frag, depthTest, depthWrite, stencil, msaa)
 
     // Opaque Pipelines (Require Depth Writing)
-    pipelines.push_back(std::make_unique<Pipeline>(context.get(), offscreenPass, context->materialSetLayout, phongVert, phongFrag, true, true, true, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(context.get(), offscreenPass, context->materialSetLayout, phongVert, sandFrag, true, true, true, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(context.get(), offscreenPass, context->materialSetLayout, phongVert, baseFrag, true, true, true, msaa));
+    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, context->materialSetLayout, phongVert, phongFrag, true, true, true, msaa));
+    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, context->materialSetLayout, phongVert, sandFrag, true, true, true, msaa));
+    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, context->materialSetLayout, phongVert, baseFrag, true, true, true, msaa));
 
     // Transparent/Fluid Pipelines (depthWrite = FALSE)
-    pipelines.push_back(std::make_unique<Pipeline>(context.get(), transPass, context->materialSetLayout, phongVert, glassFrag, true, false, false, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(context.get(), offscreenPass, context->materialSetLayout, phongVert, alphaFrag, false, false, true, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(context.get(), transPass, context->materialSetLayout, waterVert, waterFrag, true, false, false, msaa));
+    pipelines.push_back(std::make_unique<Pipeline>(transPass, context->materialSetLayout, phongVert, glassFrag, true, false, false, msaa));
+    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, context->materialSetLayout, phongVert, alphaFrag, false, false, true, msaa));
+    pipelines.push_back(std::make_unique<Pipeline>(transPass, context->materialSetLayout, waterVert, waterFrag, true, false, false, msaa));
 
     // Shadow Map Pipeline (Requires 1x Sample Count)
     pipelines.push_back(std::make_unique<Pipeline>(
-        context.get(),
         resources->getShadowRenderPass(),
         context->materialSetLayout,
         shadowVert,
@@ -278,12 +282,14 @@ void Experience::createGraphicsPipelines() {
   * and handles procedural placement.
   */
 void Experience::loadAssets() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: Setup GPU Command Recording for Transfer and reset registries
     const VkCommandBuffer setupCmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
     std::vector<VkBuffer> stagingBuffers{};
     std::vector<VkDeviceMemory> stagingMemories{};
 
-    scene = std::make_unique<Scene>(context.get());
+    scene = std::make_unique<Scene>();
 
     meshes.clear();
     transparentMeshes.clear();
@@ -516,14 +522,14 @@ void Experience::loadAssets() {
     // Step 9: Procedural Globe & Base Generation (Geometry Utils)
     static constexpr uint32_t GLOBE_SEGMENTS = 64U;
 
-    auto baseModel = std::make_unique<Model>(context.get());
+    auto baseModel = std::make_unique<Model>();
     auto bMesh = assetManager->processMeshData(GeometryUtils::generateCylinder(GLOBE_SEGMENTS, 2.4f, 1.75f, 0.8f), rattanMat, setupCmd, stagingBuffers, stagingMemories);
     categorizeMesh(bMesh.get());
     baseModel->addMesh(std::move(bMesh));
     baseModel->setPosition({ 0.0f, -0.9f, 0.0f });
     scene->addModel("ProceduralBase", std::move(baseModel));
 
-    auto sandModel = std::make_unique<Model>(context.get());
+    auto sandModel = std::make_unique<Model>();
     auto sMesh = assetManager->processMeshData(GeometryUtils::generateSandPlug(GLOBE_SEGMENTS, 1.78f, 1.8f, 0.4f), sandMat, setupCmd, stagingBuffers, stagingMemories);
     categorizeMesh(sMesh.get());
     sandModel->addMesh(std::move(sMesh));
@@ -531,7 +537,7 @@ void Experience::loadAssets() {
     scene->addModel("ProceduralSand", std::move(sandModel));
 
     const auto glassMatFinal = assetManager->createMaterial(placeholder, placeholder, whiteTex, blackTex, blackTex, pipelines[3].get());
-    auto glassModel = std::make_unique<Model>(context.get());
+    auto glassModel = std::make_unique<Model>();
     auto glassMesh = assetManager->processMeshData(GeometryUtils::generateSphere(GLOBE_SEGMENTS, 1.8f, -0.5f), glassMatFinal, setupCmd, stagingBuffers, stagingMemories);
     categorizeMesh(glassMesh.get());
     glassModel->addMesh(std::move(glassMesh));
@@ -565,12 +571,11 @@ void Experience::initSkybox() {
     };
 
     // 2. Initialize the GPU Cubemap texture (RAII managed)
-    skyboxTexture = std::make_unique<Cubemap>(context.get(), skyboxFaces);
+    skyboxTexture = std::make_unique<Cubemap>(skyboxFaces);
 
     // 3. Initialize the Skybox rendering logic
     // We pass the offscreen render pass to allow the skybox to be processed by Bloom/HDR
     skybox = std::make_unique<Skybox>(
-        context.get(),
         postProcessor->getOffscreenRenderPass(),
         skyboxTexture.get(),
         vulkanEngine->getMsaaSamples()
@@ -586,6 +591,8 @@ void Experience::initSkybox() {
  * records commands, and presents the resulting image.
  */
 void Experience::drawFrame() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: CPU-GPU Throttling - Wait for the previous frame's GPU execution to finish
     SyncManager* const sync = resources->getSyncManager();
     const VkFence currentFence = sync->getInFlightFence(currentFrame);
@@ -843,7 +850,7 @@ void Experience::updateUniformBuffer(const uint32_t currentImage) {
 void Experience::cleanup() {
     // Step 1: Wait for GPU to finish all pending work
     if (context && context->device != VK_NULL_HANDLE) {
-        static_cast<void>(vkDeviceWaitIdle(context->device));
+        vkDeviceWaitIdle(context->device);
     }
 
     // Step 2: Destroy high-level systems (UI, Renderer, Managers)

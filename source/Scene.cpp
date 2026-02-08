@@ -8,7 +8,7 @@
 /**
  * @brief Constructor: Links the scene to the Vulkan hardware context.
  */
-Scene::Scene(VulkanContext* const inContext) : context(inContext) {}
+Scene::Scene() {}
 
 /**
  * @brief Updates all procedural animations and model transforms for the frame.

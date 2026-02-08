@@ -32,7 +32,7 @@ public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Links the scene to the Vulkan hardware context. */
-    explicit Scene(VulkanContext* const inContext);
+    explicit Scene();
 
     /** @brief Default destructor. */
     ~Scene() = default;
@@ -70,6 +70,5 @@ public:
 
 private:
     // --- Internal State ---
-    VulkanContext* context;                             /**< Pointer to centralized Vulkan state. */
     std::map<std::string, std::unique_ptr<Model>> models; /**< Map-based model storage for O(log n) lookup. */
 };

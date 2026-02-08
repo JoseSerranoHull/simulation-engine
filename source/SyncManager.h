@@ -7,6 +7,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class SyncManager
@@ -23,19 +24,19 @@ public:
 
     // --- Lifecycle ---
 
-    explicit SyncManager(VulkanContext* const inContext);
+    explicit SyncManager();
     ~SyncManager();
 
     // RAII: Prevent accidental copies of synchronization handles
     SyncManager(const SyncManager&) = delete;
     SyncManager& operator=(const SyncManager&) = delete;
 
-    void init(const VulkanContext* const ctx, uint32_t maxFrames, uint32_t imageCount);
+    void init(uint32_t maxFrames, uint32_t imageCount);
 
     /** * @brief Allocates command buffers from the provided pool.
      * Satisfies Encapsulation by allowing the class to manage its own private vector.
      */
-    void allocateCommandBuffers(const VulkanContext* const ctx, VkCommandPool pool, uint32_t count);
+    void allocateCommandBuffers(VkCommandPool pool, uint32_t count);
 
     // --- Accessors ---
 
@@ -67,8 +68,6 @@ public:
     uint32_t getCurrentFrame() const { return currentFrame; }
 
 private:
-    VulkanContext* context{ nullptr };
-
     uint32_t currentFrame = 0U;
 
     std::vector<VkCommandBuffer> commandBuffers{};

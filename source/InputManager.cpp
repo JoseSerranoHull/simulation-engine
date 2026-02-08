@@ -3,9 +3,8 @@
 /**
  * @brief Constructor: Initializes hardware-dependent mouse offsets and camera perspectives.
  */
-InputManager::InputManager(GLFWwindow* const inWindow, VulkanContext* const inContext, TimeManager* const inTime)
+InputManager::InputManager(GLFWwindow* const inWindow, TimeManager* const inTime)
     : window(inWindow),
-    context(inContext),
     timeManager(inTime),
     activeCameraIndex(static_cast<int32_t>(EngineConstants::INDEX_ZERO)),
     lastX(0.0f),

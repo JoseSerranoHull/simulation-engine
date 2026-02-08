@@ -171,11 +171,10 @@
     <ClCompile Include="source\VulkanUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="markdown\Complete Lab Book (1 - 8) - Real-Time Graphics.md" />
-    <None Include="markdown\Complete Lab Book (A - H) - C++ Programming and Design.md" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md" />
     <None Include="markdown\Licenses.md" />
+    <None Include="markdown\MasterPlan.md" />
     <None Include="README.md" />
     <None Include="shaders\base.frag" />
     <None Include="shaders\dust.comp" />
@@ -241,6 +240,7 @@
     <ClInclude Include="source\Renderer.h" />
     <ClInclude Include="source\RenderPass.h" />
     <ClInclude Include="source\Scene.h" />
+    <ClInclude Include="source\ServiceLocator.h" />
     <ClInclude Include="source\ShaderModule.h" />
     <ClInclude Include="source\SimpleAllocator.h" />
     <ClInclude Include="source\Skybox.h" />

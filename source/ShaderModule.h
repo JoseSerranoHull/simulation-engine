@@ -10,6 +10,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class ShaderModule
@@ -21,7 +22,6 @@ private:
     inline static const char* ENTRY_POINT = "main";
     static constexpr uint32_t SEEK_BEGIN = 0U;
 
-    VulkanContext* context{ nullptr };
     VkShaderModule shaderModule{ VK_NULL_HANDLE };
     VkShaderStageFlagBits stage{ VK_SHADER_STAGE_VERTEX_BIT };
 
@@ -52,8 +52,8 @@ public:
     /**
      * @brief Constructs and initializes a Vulkan Shader Module from a SPIR-V file.
      */
-    explicit ShaderModule(VulkanContext* const inContext, const std::string& filepath, const VkShaderStageFlagBits inStage)
-        : context(inContext), stage(inStage)
+    explicit ShaderModule(const std::string& filepath, const VkShaderStageFlagBits inStage)
+        : stage(inStage)
     {
         const std::vector<char> code = readFile(filepath);
 
@@ -66,6 +66,8 @@ public:
          */
         createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
+        VulkanContext* context = ServiceLocator::GetContext();
+
         if (vkCreateShaderModule(context->device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
             throw std::runtime_error("ShaderModule: Failed to create GPU module from -> " + filepath);
         }
@@ -73,6 +75,7 @@ public:
 
     /** @brief Destructor: Releases the shader module handle back to the Vulkan driver. */
     ~ShaderModule() {
+        VulkanContext* context = ServiceLocator::GetContext();
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE) && (shaderModule != VK_NULL_HANDLE)) {
             vkDestroyShaderModule(context->device, shaderModule, nullptr);
             shaderModule = VK_NULL_HANDLE;

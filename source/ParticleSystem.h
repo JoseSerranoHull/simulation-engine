@@ -11,6 +11,7 @@
 #include "ShaderModule.h"
 #include "CommonStructs.h"
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class ParticleSystem
@@ -28,7 +29,6 @@ public:
      * Orchestrates the creation of compute simulation and graphics rendering pipelines.
      */
     explicit ParticleSystem(
-        VulkanContext* const inContext,
         const VkRenderPass renderPass,
         const VkDescriptorSetLayout inGlobalSetLayout,
         const std::string& compPath,
@@ -93,7 +93,6 @@ private:
     static constexpr uint32_t SET_INDEX_GLOBAL = 0U;
 
     // --- Core Dependencies ---
-    VulkanContext* context;
     VkDescriptorSetLayout globalSetLayout;
 
     // --- Configuration ---

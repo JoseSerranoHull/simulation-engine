@@ -5,6 +5,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class RenderPass
@@ -14,14 +15,13 @@
  */
 class RenderPass final {
 private:
-    VulkanContext* context{ nullptr };
     VkRenderPass   renderPass{ VK_NULL_HANDLE };
 
 public:
     /**
      * @brief Constructor: Takes ownership of an existing Render Pass handle.
      */
-    RenderPass(VulkanContext* const ctx, const VkRenderPass pass);
+    RenderPass(const VkRenderPass pass);
 
     /** @brief Destructor: Releases the render pass handle via vkDestroyRenderPass. */
     ~RenderPass();

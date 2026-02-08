@@ -33,7 +33,7 @@ public:
     static constexpr float    DEPTH_CLEAR_VAL = 1.0f;
 
     /** @brief Constructor: Links the renderer to the global Vulkan context. */
-    explicit Renderer(VulkanContext* const inContext) : context(inContext) {}
+    explicit Renderer() {}
 
     /** @brief Destructor: Standard default as this class does not own heavy GPU handles. */
     ~Renderer() = default;
@@ -72,9 +72,7 @@ public:
     ) const;
 
 private:
-    VulkanContext* context{ nullptr };
-
-    // --- Private Pass-Specific Recorders ---
+	// --- Private Pass-Specific Recorders ---
 
     /** @brief Records Compute dispatches and Graphics draw calls for all particle systems.
      * Updated to const ParticleSystem* to satisfy MISRA2004.16_7.

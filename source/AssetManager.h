@@ -4,8 +4,6 @@
 #include <vulkan/vulkan.h>
 #include <string>
 #include <vector>
-#include <map>
-#include <unordered_map>
 #include <memory>
 #include <functional>
 #include <iostream>
@@ -16,7 +14,6 @@
 #include "Material.h"
 #include "Model.h"
 #include "Mesh.h"
-#include "VulkanContext.h"
 #include "Pipeline.h"
 #include "OBJLoader.h"
 
@@ -37,7 +34,7 @@ public:
     // --- Lifecycle ---
 
     /** @brief Initializes the manager with the shared Vulkan context and logging stream. */
-    explicit AssetManager(VulkanContext* const inContext, std::ostream& logStream = std::cout);
+    explicit AssetManager(std::ostream& logStream = std::cout);
 
     /** @brief Cleans up the asset registry. */
     ~AssetManager();
@@ -99,7 +96,6 @@ private:
     // --- Internal State & Resources ---
 
     std::ostream& log;              /**< Reference to the engine's log stream. */
-    VulkanContext* context;         /**< Pointer to the centralized Vulkan state. */
     VkDescriptorPool descriptorPool; /**< Pool handle for material descriptors. */
 
     /** @brief Local cache to prevent redundant texture loading and VRAM duplication. */

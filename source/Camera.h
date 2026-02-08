@@ -2,7 +2,6 @@
 
 /* parasoft-begin-suppress ALL */
 #include "libs.h"
-#include "VulkanContext.h"
 /* parasoft-end-suppress ALL */
 
 /**

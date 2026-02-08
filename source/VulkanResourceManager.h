@@ -25,7 +25,7 @@ public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Links the manager to the centralized Vulkan hardware context. */
-    explicit VulkanResourceManager(VulkanContext* const ctx);
+    explicit VulkanResourceManager();
 
     /** @brief Destructor: Triggers the full cleanup of allocated GPU handles. */
     ~VulkanResourceManager();
@@ -79,7 +79,6 @@ public:
 
 private:
     // --- Context & Synchronization ---
-    VulkanContext* context;
     std::unique_ptr<SyncManager> syncManager;
 
     // --- Global Pools ---

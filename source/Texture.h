@@ -4,11 +4,11 @@
 #include "libs.h"
 #include "VulkanUtils.h"
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 #include <stb_image.h>
 #include <cmath>
 #include <algorithm>
 #include <string>
-#include <cstring>
 /* parasoft-end-suppress ALL */
 
 /**
@@ -23,7 +23,6 @@ public:
     static constexpr uint32_t MIP_LEVEL_ONE = 1U;
 
 private:
-    VulkanContext* context{ nullptr };
     VkImage image{ VK_NULL_HANDLE };
     VkImageView imageView{ VK_NULL_HANDLE };
     VkSampler sampler{ VK_NULL_HANDLE };
@@ -39,8 +38,8 @@ public:
      * @brief Loads an image from disk and uploads it to Device Local memory.
      * Performs automatic mipmap generation for improved texture filtering at distance.
      */
-    Texture(VulkanContext* const inContext, const std::string& path)
-        : context(inContext), ownsResources(true)
+    Texture(const std::string& path)
+        : ownsResources(true)
     {
         int32_t texWidth{ 0 };
         int32_t texHeight{ 0 };
@@ -66,6 +65,8 @@ public:
         // 2. Create Host-Visible Staging Buffer to move pixels to the GPU
         VkBuffer stagingBuffer{ VK_NULL_HANDLE };
         VkDeviceMemory stagingMemory{ VK_NULL_HANDLE };
+
+        VulkanContext* context = ServiceLocator::GetContext();
 
         VulkanUtils::createBuffer(context->device, context->physicalDevice, imageSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -110,7 +111,7 @@ public:
      * Used for Refraction Bridge snapshots where the PostProcessor owns the image.
      */
     Texture(VulkanContext* const inContext, VkImage existingImage, VkImageView existingView, VkSampler existingSampler)
-        : context(inContext), image(existingImage), imageView(existingView), sampler(existingSampler), ownsResources(false)
+        : image(existingImage), imageView(existingView), sampler(existingSampler), ownsResources(false)
     {
     }
 
@@ -118,6 +119,7 @@ public:
      * @brief Destructor: Releases GPU handles ONLY if this object owns them.
      */
     ~Texture() {
+        VulkanContext* context = ServiceLocator::GetContext();
         if (ownsResources && (context != nullptr) && (context->device != VK_NULL_HANDLE)) {
             vkDestroySampler(context->device, sampler, nullptr);
             vkDestroyImageView(context->device, imageView, nullptr);

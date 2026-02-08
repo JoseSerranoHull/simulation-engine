@@ -6,6 +6,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 /**
  * @class SwapChain
@@ -18,7 +19,7 @@ public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Links the swapchain state to the Vulkan context. */
-    explicit SwapChain(VulkanContext* const inContext);
+    explicit SwapChain();
 
     /** @brief Destructor: Triggers cleanup of all hardware presentation handles. */
     ~SwapChain();
@@ -78,7 +79,6 @@ public:
 
 private:
     // --- Internal State & Hardware Handles ---
-    VulkanContext* context;             /**< Pointer to the centralized Vulkan state. */
     VkSwapchainKHR swapChain;           /**< Hardware handle for the swapchain. */
     VkFormat swapChainImageFormat;      /**< Presentation image format. */
     VkExtent2D swapChainExtent;         /**< Current presentation resolution. */

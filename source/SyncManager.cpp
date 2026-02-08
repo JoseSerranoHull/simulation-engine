@@ -6,7 +6,7 @@
 /**
  * @brief Constructor: Links the manager to the centralized Vulkan context.
  */
-SyncManager::SyncManager(VulkanContext* const inContext) : context(inContext) {
+SyncManager::SyncManager() {
     // Note: The actual allocation of buffers and primitives is handled by 
     // VulkanResourceManager to satisfy hardware dependencies during init.
 }
@@ -16,6 +16,7 @@ SyncManager::SyncManager(VulkanContext* const inContext) : context(inContext) {
  */
 SyncManager::~SyncManager() {
     try {
+        VulkanContext* context = ServiceLocator::GetContext();
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
 
             // 1. Cleanup per-frame semaphores and fences
@@ -49,7 +50,7 @@ SyncManager::~SyncManager() {
 /**
  * @brief Initializes synchronization primitives.
  */
-void SyncManager::init(const VulkanContext* const ctx, uint32_t maxFrames, uint32_t imageCount) {
+void SyncManager::init(uint32_t maxFrames, uint32_t imageCount) {
     commandBuffers.resize(maxFrames);
     imageAvailableSemaphores.resize(maxFrames);
     inFlightFences.resize(maxFrames);
@@ -60,21 +61,23 @@ void SyncManager::init(const VulkanContext* const ctx, uint32_t maxFrames, uint3
     VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     for (uint32_t i = 0U; i < maxFrames; ++i) {
         // Accessing ctx->device is allowed because ctx is a pointer to a constant VulkanContext.
-        static_cast<void>(vkCreateSemaphore(ctx->device, &semInfo, nullptr, &imageAvailableSemaphores[i]));
-        static_cast<void>(vkCreateFence(ctx->device, &fenceInfo, nullptr, &inFlightFences[i]));
+        static_cast<void>(vkCreateSemaphore(context->device, &semInfo, nullptr, &imageAvailableSemaphores[i]));
+        static_cast<void>(vkCreateFence(context->device, &fenceInfo, nullptr, &inFlightFences[i]));
     }
 
     for (uint32_t i = 0U; i < imageCount; ++i) {
-        static_cast<void>(vkCreateSemaphore(ctx->device, &semInfo, nullptr, &renderFinishedSemaphores[i]));
+        static_cast<void>(vkCreateSemaphore(context->device, &semInfo, nullptr, &renderFinishedSemaphores[i]));
     }
 }
 
 /**
  * @brief Allocates command buffers.
  */
-void SyncManager::allocateCommandBuffers(const VulkanContext* const ctx, VkCommandPool pool, uint32_t count) {
+void SyncManager::allocateCommandBuffers(VkCommandPool pool, uint32_t count) {
     commandBuffers.resize(static_cast<size_t>(count));
 
     VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -82,7 +85,9 @@ void SyncManager::allocateCommandBuffers(const VulkanContext* const ctx, VkComma
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = count;
 
-    if (vkAllocateCommandBuffers(ctx->device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    VulkanContext* context = ServiceLocator::GetContext();
+
+    if (vkAllocateCommandBuffers(context->device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("SyncManager: Failed to allocate hardware command buffers!");
     }
 }

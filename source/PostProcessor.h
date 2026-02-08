@@ -30,7 +30,6 @@ public:
      * @brief Constructor: Initializes the post-processing framework.
      */
     explicit PostProcessor(
-        VulkanContext* const inContext,
         const uint32_t inWidth,
         const uint32_t inHeight,
         const VkFormat inSwapChainFormat,
@@ -70,7 +69,6 @@ public:
 
 private:
     // Dependencies
-    VulkanContext* context{ nullptr };
     uint32_t width{ 0U };
     uint32_t height{ 0U };
     VkFormat swapChainFormat{ VK_FORMAT_UNDEFINED };

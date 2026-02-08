@@ -8,6 +8,7 @@
 
 #include "Material.h"
 #include "VulkanContext.h"
+#include "ServiceLocator.h"
 
 class Pipeline;
 
@@ -27,8 +28,6 @@ public:
     static constexpr uint32_t INSTANCE_COUNT_ONE = 1U;
 
 private:
-    VulkanContext* context{ nullptr };
-
     // GPU Resource Handles (Owned by AssetManager)
     VkBuffer     buffer{ VK_NULL_HANDLE };
     uint32_t     indexCount{ 0U };
@@ -43,7 +42,7 @@ public:
     /**
      * @brief Constructor: Links the mesh to its vertex/index buffer and material.
      */
-    Mesh(VulkanContext* const inContext, const VkBuffer inBuffer, const uint32_t inIndexCount,
+    Mesh(const VkBuffer inBuffer, const uint32_t inIndexCount,
         const VkDeviceSize inIndexOffset, std::shared_ptr<Material> inMaterial);
 
     /**

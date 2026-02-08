@@ -8,9 +8,9 @@
 /**
  * @brief Constructor: Initializes geometry metadata and shared material ownership.
  */
-Mesh::Mesh(VulkanContext* const inContext, const VkBuffer inBuffer, const uint32_t inIndexCount,
+Mesh::Mesh(const VkBuffer inBuffer, const uint32_t inIndexCount,
     const VkDeviceSize inIndexOffset, std::shared_ptr<Material> inMaterial)
-    : context(inContext), buffer(inBuffer), indexCount(inIndexCount),
+    : buffer(inBuffer), indexCount(inIndexCount),
     indexOffset(inIndexOffset), material(std::move(inMaterial))
 {
     // Implementation Note: 'buffer' is a handle to a resource managed by AssetManager.
@@ -24,7 +24,6 @@ Mesh::Mesh(VulkanContext* const inContext, const VkBuffer inBuffer, const uint32
  */
 Mesh::~Mesh() {
     buffer = VK_NULL_HANDLE;
-    context = nullptr;
 }
 
 /**
@@ -47,13 +46,8 @@ bool Mesh::hasTransparency() const {
  * Orchestrates pipeline binding, descriptor mapping (Global/Material),
  * and indexed draw execution.
  */
- /**
-  * @brief Records the drawing sequence to the provided Vulkan Command Buffer.
-  * Adheres to CODSTA-CPP.54 (const member) and CODSTA-CPP.53 (const local).
-  */
 void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* pipelineOverride) const {
     // 1. Resolve active pipeline
-    // FIX (CODSTA-CPP.53): Declared as const to prevent accidental reassignment
     const Pipeline* const activePipeline = (pipelineOverride != nullptr)
         ? pipelineOverride
         : ((material != nullptr) ? material->getPipeline() : nullptr);

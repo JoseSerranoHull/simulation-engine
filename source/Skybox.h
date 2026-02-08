@@ -11,6 +11,7 @@
 #include "ShaderModule.h"
 #include "VulkanContext.h"
 #include "CommonStructs.h"
+#include "ServiceLocator.h"
 
 /**
  * @class Skybox
@@ -26,7 +27,6 @@ public:
      * @brief Constructor: Initializes skybox geometry and graphics pipeline.
      */
     explicit Skybox(
-        VulkanContext* const inContext,
         const VkRenderPass renderPass,
         Cubemap* const inTexture,
         const VkSampleCountFlagBits msaaSamples
@@ -47,7 +47,6 @@ public:
 
 private:
     // --- Dependencies ---
-    VulkanContext* context{ nullptr };
     Cubemap* cubemapTexture{ nullptr };
 
     // --- GPU Resources ---

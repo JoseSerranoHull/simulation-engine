@@ -6,6 +6,7 @@
 
 #include "VulkanContext.h"
 #include "VulkanUtils.h"
+#include "ServiceLocator.h"
 
 /**
  * @class Image
@@ -20,7 +21,7 @@ public:
     /**
      * @brief Constructor: Allocates and initializes a GPU image with a corresponding view.
      */
-    Image(VulkanContext* const ctx, const uint32_t width, const uint32_t height,
+    Image(const uint32_t width, const uint32_t height,
         const VkSampleCountFlagBits samples, const VkFormat fmt, const VkImageTiling tiling,
         const VkImageUsageFlags usage, const VkMemoryPropertyFlags properties,
         const VkImageAspectFlags aspect);
@@ -45,7 +46,6 @@ public:
 
 private:
     // --- Internal State & GPU Handles ---
-    VulkanContext* context;      /**< Pointer to the centralized Vulkan state. */
     VkImage image;               /**< Raw hardware image handle. */
     VkDeviceMemory imageMemory;  /**< Dedicated memory allocation for this image. */
     VkImageView imageView;       /**< View handle for shader and framebuffer access. */

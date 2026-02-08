@@ -32,7 +32,7 @@ public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Initializes managers and sets up the camera array. */
-    explicit InputManager(GLFWwindow* const inWindow, VulkanContext* const inContext, TimeManager* const inTime);
+    explicit InputManager(GLFWwindow* const inWindow, TimeManager* const inTime);
 
     /** @brief Default destructor. */
     ~InputManager() = default;
@@ -93,7 +93,6 @@ public:
 private:
     // --- Hardware Dependencies ---
     GLFWwindow* window;
-    VulkanContext* context;
     TimeManager* timeManager;
 
     // --- Internal Camera State ---

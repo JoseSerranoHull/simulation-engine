@@ -12,9 +12,8 @@
 /**
  * @brief Constructor: Links the manager to the centralized Vulkan hardware context.
  */
-VulkanResourceManager::VulkanResourceManager(VulkanContext* const ctx)
-    : context(ctx),
-    descriptorPool(VK_NULL_HANDLE),
+VulkanResourceManager::VulkanResourceManager()
+    : descriptorPool(VK_NULL_HANDLE),
     transferCommandPool(VK_NULL_HANDLE),
     shadowImage(VK_NULL_HANDLE),
     shadowImageMemory(VK_NULL_HANDLE),
@@ -53,11 +52,12 @@ void VulkanResourceManager::init(const VulkanEngine* const engine, const uint32_
     createUniformBuffers(imageCount);
 
     // Step 4: Initialize CPU-GPU Synchronization (SyncManager)
-    syncManager = std::make_unique<SyncManager>(context);
-    syncManager->init(context, maxFrames, imageCount);
+    syncManager = std::make_unique<SyncManager>();
+    syncManager->init(maxFrames, imageCount);
 
     // Step 5: Allocate Primary Graphics Command Buffers
-    syncManager->allocateCommandBuffers(context, context->graphicsCommandPool, maxFrames);
+    VulkanContext* context = ServiceLocator::GetContext();
+    syncManager->allocateCommandBuffers(context->graphicsCommandPool, maxFrames);
 }
 
 // ========================================================================
@@ -88,6 +88,8 @@ void VulkanResourceManager::createLayouts() const {
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &context->globalSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("VulkanResourceManager: Failed to create global descriptor set layout!");
@@ -124,6 +126,8 @@ void VulkanResourceManager::createPools(const VulkanEngine* const engine) {
     descPoolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     descPoolInfo.pPoolSizes = poolSizes.data();
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     vkCreateDescriptorPool(context->device, &descPoolInfo, nullptr, &descriptorPool);
 
     // Step 2: Graphics and Transfer Command Pools
@@ -149,6 +153,8 @@ void VulkanResourceManager::createPools(const VulkanEngine* const engine) {
 void VulkanResourceManager::createShadowResources(const VulkanEngine* const engine) {
     const VkFormat shadowFormat = engine->getDepthFormat();
     const uint32_t res = EngineConstants::SHADOW_MAP_RES;
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     // Step 1: Create Shadow Map Image and View
     VulkanUtils::createImage(context->device, context->physicalDevice, res, res, 1U,
@@ -196,6 +202,8 @@ void VulkanResourceManager::createUniformBuffers(const uint32_t imageCount) {
     uniformBuffersMemory.resize(static_cast<size_t>(imageCount));
     uniformBuffersMapped.resize(static_cast<size_t>(imageCount));
 
+    VulkanContext* context = ServiceLocator::GetContext();
+
     for (uint32_t i = 0U; i < imageCount; ++i) {
         VulkanUtils::createBuffer(context->device, context->physicalDevice, sizeof(UniformBufferObject),
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -211,6 +219,8 @@ void VulkanResourceManager::createUniformBuffers(const uint32_t imageCount) {
  */
 void VulkanResourceManager::updateDescriptorSets(const VulkanEngine* const engine, const PostProcessor* const postProcessor) {
     const uint32_t imageCount = engine->getSwapChainImageCount();
+
+    VulkanContext* context = ServiceLocator::GetContext();
 
     // Step 1: Allocate Global Descriptor Sets if registry is empty
     if (descriptorSets.empty()) {
@@ -249,6 +259,8 @@ void VulkanResourceManager::updateDescriptorSets(const VulkanEngine* const engin
  * @brief Safely releases all managed Vulkan handles and mapped memory.
  */
 void VulkanResourceManager::cleanup() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if ((context == nullptr) || (context->device == VK_NULL_HANDLE)) {
         return;
     }

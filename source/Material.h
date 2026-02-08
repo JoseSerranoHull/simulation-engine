@@ -8,7 +8,6 @@
 
 #include "Texture.h"
 #include "Pipeline.h"
-#include "VulkanContext.h"
 
 /**
  * @class Material
@@ -18,7 +17,6 @@
  */
 class Material final {
 private:
-    VulkanContext* context{ nullptr };
     VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
     Pipeline* pipeline{ nullptr };
 
@@ -44,7 +42,6 @@ public:
      * Maps the full suite of textures to this material instance and takes ownership of references.
      */
     Material(
-        VulkanContext* const inContext,
         Pipeline* const inPipeline,
         const VkDescriptorSet inDescriptorSet,
         std::shared_ptr<Texture> inColor,
@@ -52,7 +49,7 @@ public:
         std::shared_ptr<Texture> inAo,
         std::shared_ptr<Texture> inMetallic,
         std::shared_ptr<Texture> inRoughness
-    ) : context(inContext),
+    ) : 
         descriptorSet(inDescriptorSet),
         pipeline(inPipeline),
         baseColor(std::move(inColor)),

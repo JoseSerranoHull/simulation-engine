@@ -26,22 +26,22 @@ public:
     /**
      * @brief Instantiates the HDR Post-Processing stack.
      */
-    static std::unique_ptr<PostProcessor>  createPostProcessingSystem(VulkanContext* const ctx, VulkanEngine* const eng);
+    static std::unique_ptr<PostProcessor>  createPostProcessingSystem(VulkanEngine* const eng);
 
     /** @brief Creates the compute-driven Dust particle system. */
-    static std::unique_ptr<ParticleSystem> createDustSystem(VulkanContext* const ctx, const VkRenderPass rp, const VkSampleCountFlagBits msaa);
+    static std::unique_ptr<ParticleSystem> createDustSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
 
     /** @brief Creates the Fire particle system (Additively blended). */
-    static std::unique_ptr<ParticleSystem> createFireSystem(VulkanContext* const ctx, const VkRenderPass rp, const VkSampleCountFlagBits msaa);
+    static std::unique_ptr<ParticleSystem> createFireSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
 
     /** @brief Creates the Smoke particle system (Alpha blended). */
-    static std::unique_ptr<ParticleSystem> createSmokeSystem(VulkanContext* const ctx, const VkRenderPass rp, const VkSampleCountFlagBits msaa);
+    static std::unique_ptr<ParticleSystem> createSmokeSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
 
     /** @brief Creates the Rain particle system with velocity-aligned stretching. */
-    static std::unique_ptr<ParticleSystem> createRainSystem(VulkanContext* const ctx, const VkRenderPass rp, const VkSampleCountFlagBits msaa);
+    static std::unique_ptr<ParticleSystem> createRainSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
 
     /** @brief Creates the Snow particle system with oscillating horizontal drift. */
-    static std::unique_ptr<ParticleSystem> createSnowSystem(VulkanContext* const ctx, const VkRenderPass rp, const VkSampleCountFlagBits msaa);
+    static std::unique_ptr<ParticleSystem> createSnowSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
 
     /**
      * @brief Instantiates a dynamic Point Light.

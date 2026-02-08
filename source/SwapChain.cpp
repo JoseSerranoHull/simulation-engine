@@ -4,9 +4,8 @@
  * @brief Constructor: Initializes the container.
  * Note: Hardware handle allocation is typically performed by the VulkanResourceManager.
  */
-SwapChain::SwapChain(VulkanContext* const inContext)
-    : context(inContext),
-    swapChain(VK_NULL_HANDLE),
+SwapChain::SwapChain()
+    : swapChain(VK_NULL_HANDLE),
     swapChainImageFormat(VK_FORMAT_UNDEFINED),
     swapChainExtent{ 0U, 0U }
 {
@@ -31,6 +30,8 @@ SwapChain::~SwapChain() {
  * Order: Framebuffers -> Image Views -> Swapchain KHR.
  */
 void SwapChain::cleanup() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Parasoft Safety: Verify context and device validity before calling Vulkan API
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
 

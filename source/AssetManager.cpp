@@ -13,12 +13,11 @@
 /**
  * @brief Constructor: Initializes the AssetManager with context and logging.
  */
-AssetManager::AssetManager(VulkanContext* const inContext, std::ostream& logStream)
+AssetManager::AssetManager(std::ostream& logStream)
     : log(logStream),
-    context(inContext),
     descriptorPool(VK_NULL_HANDLE)
 {
-    log << "Engine: AssetManager Initialized." << std::endl;
+    log << "Engine: AssetManager Initialized via Service Locator." << std::endl;
 }
 
 /**
@@ -51,7 +50,7 @@ std::shared_ptr<Texture> AssetManager::loadTexture(const std::string& path) {
     }
 
     // Step 2: Resource Creation via Texture constructor.
-    auto newTexture = std::make_shared<Texture>(context, path);
+    auto newTexture = std::make_shared<Texture>(path);
 
     // Step 3: Registration in cache and logging.
     textureCache[path] = newTexture;
@@ -71,7 +70,7 @@ std::unique_ptr<Model> AssetManager::loadModel(
     std::vector<VkDeviceMemory>& stagingMemories)
 {
     // Step 1: Initialize the Model container.
-    auto model = std::make_unique<Model>(context);
+    auto model = std::make_unique<Model>();
 
     // Step 2: Parse raw geometry data from disk using OBJLoader.
     const auto meshData = OBJLoader::loadOBJ(path.c_str());
@@ -103,6 +102,8 @@ std::shared_ptr<Material> AssetManager::createMaterial(
     std::shared_ptr<Texture> roughness,
     Pipeline* const pipeline
 ) const {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: Validation of hardware prerequisite (Descriptor Pool).
     if (descriptorPool == VK_NULL_HANDLE) {
         throw std::runtime_error("AssetManager: createMaterial called before setDescriptorPool!");
@@ -161,6 +162,8 @@ std::unique_ptr<Mesh> AssetManager::processMeshData(
     std::vector<VkBuffer>& stagingBuffers,
     std::vector<VkDeviceMemory>& stagingMemories)
 {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: Resource requirement calculation.
     const VkDeviceSize vertexSize = static_cast<VkDeviceSize>(sizeof(Vertex)) * static_cast<VkDeviceSize>(data.vertices.size());
     const VkDeviceSize indexSize = static_cast<VkDeviceSize>(sizeof(uint32_t)) * static_cast<VkDeviceSize>(data.indices.size());
@@ -211,9 +214,7 @@ std::unique_ptr<Mesh> AssetManager::processMeshData(
     stagingMemories.push_back(stagingMemory);
 
     // Step 8: Final Object Assembly.
-    auto mesh = std::make_unique<Mesh>(
-        context, deviceBuffer, static_cast<uint32_t>(data.indices.size()), vertexSize, material
-    );
+    auto mesh = std::make_unique<Mesh>(deviceBuffer, static_cast<uint32_t>(data.indices.size()), vertexSize, material);
     mesh->setName(data.name);
 
     return mesh;

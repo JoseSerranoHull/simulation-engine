@@ -4,12 +4,14 @@
  * @brief Constructor: Allocates GPU memory and initializes a Vulkan Image and View.
  * Orchestrates the creation of hardware handles via the utility layer.
  */
-Image::Image(VulkanContext* const ctx, const uint32_t width, const uint32_t height,
+Image::Image(const uint32_t width, const uint32_t height,
     const VkSampleCountFlagBits samples, const VkFormat fmt,
     const VkImageTiling tiling, const VkImageUsageFlags usage,
     const VkMemoryPropertyFlags properties, const VkImageAspectFlags aspect)
-    : context(ctx), format(fmt)
+    : format(fmt)
 {
+	VulkanContext* context = ServiceLocator::GetContext();
+
     // Step 1: Create the hardware Image handle and allocate backing Device Memory.
     // Mip levels are fixed at 1U for generic offscreen attachments.
     VulkanUtils::createImage(context->device, context->physicalDevice, width, height,
@@ -23,6 +25,8 @@ Image::Image(VulkanContext* const ctx, const uint32_t width, const uint32_t heig
  * @brief Destructor: Safely releases GPU resources in reverse order of allocation.
  */
 Image::~Image() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
 
         // Step 1: Destroy the Image View first to avoid dangling references.

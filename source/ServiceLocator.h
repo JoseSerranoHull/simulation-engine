@@ -1,8 +1,12 @@
 #pragma once
+
+/* parasoft-begin-suppress ALL */
 #include <stdexcept>
 #include <memory>
+/* parasoft-end-suppress ALL */
 
 // Forward declarations
+class SystemFactory;
 struct VulkanContext;
 class VulkanResourceManager;
 class InputManager;
@@ -30,8 +34,13 @@ public:
         return m_input;
     }
 
+    static void Provide(SystemFactory* factory) { m_factory = factory; }
+
+    static SystemFactory* GetFactory() { return m_factory; }
+
 private:
     static inline VulkanContext* m_context = nullptr;
     static inline VulkanResourceManager* m_resources = nullptr;
     static inline InputManager* m_input = nullptr;
+    static inline SystemFactory* m_factory = nullptr;
 };

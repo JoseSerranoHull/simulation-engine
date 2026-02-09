@@ -7,6 +7,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "CommonStructs.h"
+#include "ISystem.h"
 
 /** * @enum WeatherState
  * @brief Internal operational states for the procedural weather simulation.
@@ -24,7 +25,7 @@ enum class WeatherMode : int { AUTO = 0, SUMMER = 1, RAIN = 2, SNOW = 3 };
  * * Orchestrates the transition between different weather states, calculates time-of-day
  * sun positions, and maintains interpolation targets for various visual components.
  */
-class ClimateManager final {
+class ClimateManager final : public ISystem {
 public:
     // --- Core Lifecycle & Updates ---
 
@@ -33,6 +34,11 @@ public:
      */
     void update(const float dt, const float totalTime, const bool autoOrbit,
         const float orbitRadius, const float orbitSpeed, const float configIntensity);
+
+    /** @brief Standard ISystem update override (Unused for this system, as it requires command buffer context).
+	* The actual update logic is handled in the overloaded update() method that accepts a command buffer.
+	*/
+    void update(float deltaTime) override { /* Interface stub */ }
 
     /**
      * @brief Resets the manager to factory defaults (Clear Summer, Auto-cycle).

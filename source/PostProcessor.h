@@ -11,6 +11,7 @@
 #include "VulkanContext.h"
 #include "Texture.h"
 #include "CommonStructs.h"
+#include "ISystem.h"
 
 /**
  * @class PostProcessor
@@ -18,7 +19,7 @@
  * Manages the transition from high-poly scene geometry to a resolved 2D image
  * with effects like Bloom and refraction-ready snapshots.
  */
-class PostProcessor final {
+class PostProcessor final : public ISystem{
 public:
     // --- Layout and Pipeline Constants ---
     static constexpr uint32_t FULLSCREEN_TRI_VERTS = 3U;
@@ -66,6 +67,9 @@ public:
     VkImageView getBackgroundImageView() const { return backgroundImageView; }
     VkSampler getBackgroundSampler() const { return backgroundSampler; }
     VkImage getResolveImage() const { return resolveImage; }
+
+    /** @brief Standard ISystem update override (Unused for this base class, as it requires command buffer context).*/
+    void update(float deltaTime) override { /* Interface stub */ }
 
 private:
     // Dependencies

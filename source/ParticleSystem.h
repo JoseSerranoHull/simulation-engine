@@ -10,6 +10,7 @@
 #include "Particle.h"
 #include "ShaderModule.h"
 #include "CommonStructs.h"
+#include "ISystem.h"
 #include "VulkanContext.h"
 #include "ServiceLocator.h"
 
@@ -20,7 +21,7 @@
  * the Compute shader to update physics while the Graphics shader reads them for
  * instantiation and rendering.
  */
-class ParticleSystem final {
+class ParticleSystem final : public ISystem{
 public:
     // --- Lifecycle ---
 
@@ -65,6 +66,11 @@ public:
      * @brief Retrieves dynamic light data from the simulated particles for UBO injection.
      */
     std::vector<SparkLight> getLightData() const;
+
+	/** @brief Standard ISystem update override (Unused for this system, as it requires command buffer context).
+	* The actual update logic is handled in the overloaded update() method that accepts a command buffer.
+	*/
+    void update(float deltaTime) override { /* Interface stub */ }
 
 private:
     /**

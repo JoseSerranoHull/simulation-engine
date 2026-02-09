@@ -3,56 +3,40 @@
 /* parasoft-begin-suppress ALL */
 #include <memory>
 #include <string>
-#include <glm/glm.hpp>
+#include <map>
+#include <functional>
 /* parasoft-end-suppress ALL */
 
-#include "VulkanContext.h"
-#include "VulkanEngine.h"
-#include "PostProcessor.h"
-#include "ParticleSystem.h"
-#include "PointLight.h"
-#include "ClimateManager.h"
+#include "ISystem.h"
 
 /**
  * @class SystemFactory
- * @brief Provides a centralized interface for instantiating high-level engine systems.
- * This factory encapsulates the complex initialization logic required for post-processing,
- * compute-based particles, and environmental lighting.
+ * @brief Registry-based factory that manages system creation logic.
  */
 class SystemFactory final {
 public:
-    // --- Factory Methods ---
+    // A Creator is a function that returns a unique_ptr to an ISystem
+    using Creator = std::function<std::unique_ptr<ISystem>()>;
 
     /**
-     * @brief Instantiates the HDR Post-Processing stack.
+     * @brief Registers a new system type with the factory.
+     * Satisfies Open-Closed Principle: Register new systems without modifying this file.
      */
-    static std::unique_ptr<PostProcessor>  createPostProcessingSystem(VulkanEngine* const eng);
-
-    /** @brief Creates the compute-driven Dust particle system. */
-    static std::unique_ptr<ParticleSystem> createDustSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
-
-    /** @brief Creates the Fire particle system (Additively blended). */
-    static std::unique_ptr<ParticleSystem> createFireSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
-
-    /** @brief Creates the Smoke particle system (Alpha blended). */
-    static std::unique_ptr<ParticleSystem> createSmokeSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
-
-    /** @brief Creates the Rain particle system with velocity-aligned stretching. */
-    static std::unique_ptr<ParticleSystem> createRainSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
-
-    /** @brief Creates the Snow particle system with oscillating horizontal drift. */
-    static std::unique_ptr<ParticleSystem> createSnowSystem(const VkRenderPass rp, const VkSampleCountFlagBits msaa);
+    void registerSystem(const std::string& name, Creator creator) {
+        m_registry[name] = creator;
+    }
 
     /**
-     * @brief Instantiates a dynamic Point Light.
+     * @brief Instantiates a system by its registered name.
      */
-    static std::unique_ptr<PointLight>     createLightSystem(const glm::vec3& pos, const glm::vec3& color, const float intensity);
-
-    /** @brief Creates the logic manager for day/night cycles and weather state. */
-    static std::unique_ptr<ClimateManager> createClimateSystem();
+    std::unique_ptr<ISystem> create(const std::string& name) const {
+        auto it = m_registry.find(name);
+        if (it != m_registry.end()) {
+            return it->second();
+        }
+        return nullptr;
+    }
 
 private:
-    // Static utility class: Constructor and Destructor are private to prevent instantiation.
-    SystemFactory() = default;
-    ~SystemFactory() = default;
+    std::map<std::string, Creator> m_registry;
 };

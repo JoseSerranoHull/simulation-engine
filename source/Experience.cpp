@@ -33,63 +33,108 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     framebufferResized(false),
     currentFrame(EngineConstants::INDEX_ZERO)
 {
-    // Step 1: Foundation - Initialize OS Window and Hardware Contexts
+    // Step 1: Foundation
     initWindow(title);
     context = std::make_unique<VulkanContext>();
     ServiceLocator::Provide(context.get());
     vulkanEngine = std::make_unique<VulkanEngine>(window);
 
-    // Step 2: Resource Infrastructure - Initialize Manager and Asset registry
+    // Step 2: Infrastructure & Factory Setup
     resources = std::make_unique<VulkanResourceManager>();
     ServiceLocator::Provide(resources.get());
+
+    // NEW: Initialize and Provide the Factory
+    systemFactory = std::make_unique<SystemFactory>();
+    ServiceLocator::Provide(systemFactory.get());
+
     timeManager = std::make_unique<TimeManager>();
     statsManager = std::make_unique<StatsManager>();
     assetManager = std::make_unique<AssetManager>();
 
-    // Step 3: Hardware Linkage - Connect managers to the Vulkan device
+    // Step 3: Hardware Linkage
     resources->init(vulkanEngine.get(), MAX_FRAMES_IN_FLIGHT);
     assetManager->setDescriptorPool(resources->getDescriptorPool());
 
-    // Step 4: Logic Layers - Initialize simulation and UI managers
+    // Step 4: Logic Layers
     imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
     renderer = std::make_unique<Renderer>();
     scene = std::make_unique<Scene>();
     inputManager = std::make_unique<InputManager>(window, timeManager.get());
     ServiceLocator::Provide(inputManager.get());
+
     uiManager = std::make_unique<IMGUIManager>();
     climateManager = std::make_unique<ClimateManager>();
 
-    // Step 5: State Synchronization - Align UI with initial simulation state
-    inputManager->setDustEnabled(climateManager->isDustEnabled());
-    inputManager->setFireEnabled(climateManager->isFireEnabled());
-    inputManager->setSmokeEnabled(climateManager->isSmokeEnabled());
-    inputManager->setRainEnabled(climateManager->isRainEnabled());
-    inputManager->setSnowEnabled(climateManager->isSnowEnabled());
-
-    // Step 6: Visual Systems - Initialize Post-Processing and Particles
-    postProcessor = SystemFactory::createPostProcessingSystem(vulkanEngine.get());
-    postProcessor->resize(vulkanEngine->getSwapChainExtent());
-
-    // Step 7: Configuration - Load scene-specific metadata
+    // Step 5: Configuration
     cachedConfig = ConfigLoader::loadConfig("./config/config.txt");
     if (cachedConfig.empty()) {
-        throw std::runtime_error("Experience: Failed to load config.txt! Check file path.");
+        throw std::runtime_error("Experience: Failed to load config.txt!");
     }
 
-    // Step 8: Entity Setup - Initialize light and particle systems
+    // ============================================================
+    // Step 6: SYSTEM REGISTRATION (OCP Refactor)
+    // ============================================================
+
+    // 6.1 Post-Processing Recipe
+    systemFactory->registerSystem("PostProcessor", [&]() -> std::unique_ptr<ISystem> {
+        return std::make_unique<PostProcessor>(
+            vulkanEngine->getSwapChainExtent().width,
+            vulkanEngine->getSwapChainExtent().height,
+            vulkanEngine->getSwapChainFormat(),
+            vulkanEngine->getFinalRenderPass(),
+            vulkanEngine->getMsaaSamples()
+        );
+    });
+
+    // 6.2 Light Recipe
     const ObjectTransform& lightCfg = cachedConfig.at("MainLight");
-    mainLight = SystemFactory::createLightSystem(lightCfg.pos, lightCfg.color, lightCfg.params.at("intensity"));
+    systemFactory->registerSystem("MainLight", [&]() -> std::unique_ptr<ISystem> {
+        return std::make_unique<PointLight>(
+            lightCfg.pos,
+            lightCfg.color,
+            lightCfg.params.at("intensity")
+        );
+    });
 
-    const VkSampleCountFlagBits msaa = vulkanEngine->getMsaaSamples();
-    const VkRenderPass transRP = postProcessor->getTransparentRenderPass();
+    // 6.3 Particle System Recipe Template
+    auto registerParticle = [&](const std::string& name, const std::string& comp, const std::string& vert, const std::string& frag, glm::vec3 pos, uint32_t count) {
+        systemFactory->registerSystem(name, [&, comp, vert, frag, pos, count]() -> std::unique_ptr<ISystem> {
+            return std::make_unique<ParticleSystem>(
+                postProcessor->getTransparentRenderPass(),
+                context->globalSetLayout,
+                comp, vert, frag, pos, count, vulkanEngine->getMsaaSamples()
+            );
+        });
+    };
 
-    dustParticleSystem = SystemFactory::createDustSystem(transRP, msaa);
-    fireParticleSystem = SystemFactory::createFireSystem(transRP, msaa);
-    smokeParticleSystem = SystemFactory::createSmokeSystem(transRP, msaa);
-    rainParticleSystem = SystemFactory::createRainSystem(transRP, msaa);
-    snowParticleSystem = SystemFactory::createSnowSystem(transRP, msaa);
+    // ============================================================
+    // Step 7: SYSTEM CREATION
+    // ============================================================
 
-    // Step 9: Finalization - Hardware handshake and Asset loading
+    // Create PostProcessor first (needed for particle render passes)
+    auto genericPP = systemFactory->create("PostProcessor");
+    postProcessor.reset(static_cast<PostProcessor*>(genericPP.release()));
+    postProcessor->resize(vulkanEngine->getSwapChainExtent());
+
+    // Create Light
+    auto genericLight = systemFactory->create("MainLight");
+    mainLight.reset(static_cast<PointLight*>(genericLight.release()));
+
+    // Register and Create Particles
+    registerParticle("Dust", "./shaders/dust_comp.spv", "./shaders/dust_vert.spv", "./shaders/dust_frag.spv", { 0.0f, 1.2f, 0.0f }, 1000U);
+    registerParticle("Fire", "./shaders/fire_comp.spv", "./shaders/fire_vert.spv", "./shaders/fire_frag.spv", { -0.8f, -0.15f, -0.5f }, 500U);
+    registerParticle("Smoke", "./shaders/smoke_comp.spv", "./shaders/smoke_vert.spv", "./shaders/smoke_frag.spv", { -0.8f, -0.15f, -0.5f }, 500U);
+    registerParticle("Rain", "./shaders/rain_comp.spv", "./shaders/rain_vert.spv", "./shaders/rain_frag.spv", { 0.0f, 1.8f, 0.0f }, 5000U);
+    registerParticle("Snow", "./shaders/snow_comp.spv", "./shaders/snow_vert.spv", "./shaders/snow_frag.spv", { 0.0f, 1.8f, 0.0f }, 3000U);
+
+    dustParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Dust").release()));
+    fireParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Fire").release()));
+    smokeParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Smoke").release()));
+    rainParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Rain").release()));
+    snowParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Snow").release()));
+
+    // Step 8: Finalization
+    syncWeatherToggles(); // Use existing helper to align UI/Climate
     initVulkan();
     uiManager->init(window, vulkanEngine.get());
     initSkybox();

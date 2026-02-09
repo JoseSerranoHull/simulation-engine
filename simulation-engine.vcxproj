@@ -226,6 +226,7 @@
     <ClInclude Include="source\Image.h" />
     <ClInclude Include="source\IMGUIManager.h" />
     <ClInclude Include="source\InputManager.h" />
+    <ClInclude Include="source\ISystem.h" />
     <ClInclude Include="source\libs.h" />
     <ClInclude Include="source\Light.h" />
     <ClInclude Include="source\Material.h" />

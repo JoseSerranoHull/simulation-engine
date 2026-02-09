@@ -1,6 +1,7 @@
 #pragma once
 
 /* parasoft-begin-suppress ALL */
+#include "ISystem.h"
 #include "libs.h"
 /* parasoft-end-suppress ALL */
 
@@ -10,7 +11,7 @@
  * Provides core properties for color and intensity, serving as the foundation
  * for Point, Directional, and Spot lights.
  */
-class Light {
+class Light : public ISystem {
 public:
     static constexpr float DEFAULT_INTENSITY = 1.0f;
 
@@ -61,4 +62,7 @@ public:
     void setIntensity(const float i) {
         intensity = i;
     }
+
+	/** @brief Standard ISystem update override (Unused for this base class, as it requires command buffer context).*/
+    void update(float deltaTime) override { /* Interface stub */ }
 };

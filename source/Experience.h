@@ -83,6 +83,7 @@ private:
     std::unique_ptr<VulkanContext> context;
     std::unique_ptr<VulkanEngine> vulkanEngine;
     std::unique_ptr<VulkanResourceManager> resources;
+    std::unique_ptr<SystemFactory> systemFactory;
 
     // --- High-Level Logic Managers ---
     std::unique_ptr<TimeManager> timeManager;

@@ -62,7 +62,12 @@ public:
     /**
      * @brief Records draw commands for this specific mesh.
      */
-    void draw(VkCommandBuffer commandBuffer, VkDescriptorSet globalSet, const Pipeline* pipelineOverride = nullptr) const;
+    void draw(
+        VkCommandBuffer commandBuffer,
+        VkDescriptorSet globalSet,
+        const Pipeline* pipelineOverride = nullptr,
+        const glm::mat4& worldMatrix = glm::mat4(1.0f) // Pre-calculated matrix from ECS
+    ) const;
 
     // --- Logic Queries ---
 

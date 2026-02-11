@@ -11,7 +11,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "VulkanContext.h"
-#include "CommonStructs.h"
+#include "Common.h"
 #include "SwapChain.h"
 #include "Image.h"
 #include "RenderPass.h"

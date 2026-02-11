@@ -10,7 +10,7 @@
 #include "ShaderModule.h"
 #include "VulkanContext.h"
 #include "Texture.h"
-#include "CommonStructs.h"
+#include "Common.h"
 #include "ISystem.h"
 
 /**

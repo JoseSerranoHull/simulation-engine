@@ -137,6 +137,15 @@
     <ClCompile Include="source\VulkanUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\Entity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\EntityManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SceneLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\base.frag">
@@ -274,7 +283,7 @@
     <ClInclude Include="source\ClimateManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\CommonStructs.h">
+    <ClInclude Include="source\Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\ConfigLoader.h">
@@ -386,6 +395,45 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\ISystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Components.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Tag.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Transform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ComponentArray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ComponentType.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Entity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\EntityManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\IComponentArray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\IECSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\MemoryUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SceneLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\EntityFactory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

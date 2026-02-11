@@ -48,4 +48,14 @@ public:
      * @brief Generates a cylinder with independent top and bottom radii.
      */
     static OBJLoader::MeshData generateCylinder(const uint32_t segments, const float bottomRadius, const float topRadius, const float height, const glm::vec3& color = glm::vec3(0.25f, 0.15f, 0.1f));
+
+    /**
+     * @brief Generates a simple plane mesh for the base of the snow globe.
+	 */
+    static OBJLoader::MeshData generatePlane(float width, float depth);
+
+    /**
+     * @brief Generates a capsule mesh by combining hemispherical ends with a cylindrical body.
+	 */
+	static OBJLoader::MeshData generateCapsule(float radius, float height, int segments, int stacks);
 };

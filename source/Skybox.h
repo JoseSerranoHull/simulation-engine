@@ -10,7 +10,7 @@
 #include "Cubemap.h"
 #include "ShaderModule.h"
 #include "VulkanContext.h"
-#include "CommonStructs.h"
+#include "Common.h"
 #include "ServiceLocator.h"
 
 /**

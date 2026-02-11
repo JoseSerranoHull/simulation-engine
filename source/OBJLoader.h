@@ -11,7 +11,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "Vertex.h"
-#include "CommonStructs.h"
+#include "Common.h"
 
 /**
  * @namespace OBJLoader

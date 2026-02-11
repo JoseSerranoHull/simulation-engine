@@ -9,7 +9,7 @@
 
 #include "Camera.h"
 #include "VulkanContext.h"
-#include "CommonStructs.h"
+#include "Common.h"
 #include "TimeManager.h"
 
 /**

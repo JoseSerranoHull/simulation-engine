@@ -39,6 +39,20 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     ServiceLocator::Provide(context.get());
     vulkanEngine = std::make_unique<VulkanEngine>(window);
 
+    entityManager = std::make_unique<GE::ECS::EntityManager>();
+
+    // Initialize with 1000 entities and space for 32 component types
+    entityManager->Initialize(1000, 32);
+
+    // Register our component types
+    entityManager->RegisterComponent<GE::Scene::Components::Transform>();
+    entityManager->RegisterComponent<GE::Scene::Components::Tag>();
+    entityManager->RegisterComponent<GE::Components::MeshRenderer>();
+    entityManager->RegisterComponent<GE::Components::LightComponent>();
+    entityManager->RegisterComponent<GE::Components::PhysicsComponent>();
+
+	ServiceLocator::Provide(entityManager.get());
+
     // Step 2: Infrastructure & Factory Setup
     resources = std::make_unique<VulkanResourceManager>();
     ServiceLocator::Provide(resources.get());
@@ -58,7 +72,7 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     // Step 4: Logic Layers
     imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
     renderer = std::make_unique<Renderer>();
-    scene = std::make_unique<Scene>();
+    scene = std::make_unique<GE::Scene::Scene>();
     inputManager = std::make_unique<InputManager>(window, timeManager.get());
     ServiceLocator::Provide(inputManager.get());
 
@@ -319,278 +333,40 @@ void Experience::createGraphicsPipelines() {
 }
 
 /**
- * @brief Loads all 3D geometry, textures, and materials.
+ * @brief Loads all 3D geometry, textures, and materials via the Data-Driven Scene Loader.
+ * This replaces the previous ~150 lines of manual asset loading.
  */
- /**
-  * @brief Loads all 3D geometry, textures, and materials.
-  * Orchestrates the transfer of data from disk to GPU via staging buffers
-  * and handles procedural placement.
-  */
 void Experience::loadAssets() {
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // Step 1: Setup GPU Command Recording for Transfer and reset registries
+    // Step 1: Setup GPU Command Recording for Transfer
     const VkCommandBuffer setupCmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
     std::vector<VkBuffer> stagingBuffers{};
     std::vector<VkDeviceMemory> stagingMemories{};
 
-    scene = std::make_unique<Scene>();
+    // Step 2: Reset Scene and Registries
+    // Note: Namespacing to GE::Scene
+    scene = std::make_unique<GE::Scene::Scene>();
 
     meshes.clear();
     transparentMeshes.clear();
     ownedModels.clear();
 
-    // Step 2: Utility Assets - Load shared textures and reusable materials
-    const auto whiteTex = assetManager->loadTexture("./textures/white.png");
-    const auto blackTex = assetManager->loadTexture("./textures/black.png");
-    const auto matteTex = assetManager->loadTexture("./textures/matte_rough.png");
-    const auto placeholder = assetManager->loadTexture("./textures/vikingroom/viking_room.png");
+    // Step 3: DATA-DRIVEN LOADING (Step 5 of ECSPlan)
+    GE::Scene::SceneLoader loader;
+    loader.load(
+        "./config/snow_globe.ini",
+        entityManager.get(),
+        assetManager.get(),
+        scene.get(),
+        pipelines,
+        setupCmd,
+        stagingBuffers,
+        stagingMemories,
+        ownedModels // Collects models to keep Mesh raw pointers valid
+    );
 
-    // Bridge PostProcessor background for material use
-    const auto sceneTex = std::shared_ptr<Texture>(postProcessor->getBackgroundTexture(), [](Texture*) {
-        /* Ownership managed by PostProcessor */
-        });
-
-    // Step 3: Define Standard PBR Materials
-    const auto sandMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/sand/GroundSand005_COL_2K.jpg"),
-        assetManager->loadTexture("./textures/sand/GroundSand005_NRM_2K.jpg"),
-        whiteTex, blackTex, whiteTex, pipelines[1].get());
-
-    const auto rattanMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/base/Poliigon_RattanWeave_6945_BaseColor.jpg"),
-        assetManager->loadTexture("./textures/base/Poliigon_RattanWeave_6945_Normal.jpg"),
-        assetManager->loadTexture("./textures/base/Poliigon_RattanWeave_6945_AmbientOcclusion.jpg"),
-        blackTex, whiteTex, pipelines[2].get());
-
-    const auto propMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/vikingroom/viking_room.png"),
-        placeholder, whiteTex, blackTex, matteTex, pipelines[0].get());
-
-    const auto cactusMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/cacti/10436_Cactus_v1_Diffuse.jpg"),
-        assetManager->loadTexture("./textures/cacti/10436_Cactus_v1_NormalMap.png"),
-        whiteTex, blackTex, matteTex, pipelines[0].get());
-
-    const auto magicMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/magiccircle/Magic1.png"),
-        placeholder, assetManager->loadTexture("./textures/magiccircle/Magic1.png"),
-        blackTex, whiteTex, pipelines[4].get());
-
-    const auto grassMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/grass/Trava Kolosok.jpg"),
-        placeholder, assetManager->loadTexture("./textures/grass/Trava Kolosok Cut.jpg"),
-        blackTex, whiteTex, pipelines[4].get());
-
-    // Step 4: Load Sorceress-specific Materials
-    const auto sBodyMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/sorceress/Drenai_Body_BaseColor.png"),
-        assetManager->loadTexture("./textures/sorceress/Drenai_Body_Normal.jpg"),
-        whiteTex, assetManager->loadTexture("./textures/sorceress/Drenai_Body_Metallic.jpg"),
-        assetManager->loadTexture("./textures/sorceress/Drenai_Body_Roughness.jpg"), pipelines[0].get());
-
-    const auto sSkirtMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/sorceress/Drenai_Skirt_BaseColor.jpg"),
-        assetManager->loadTexture("./textures/sorceress/Drenai_Skirt_Normal.jpg"),
-        whiteTex, assetManager->loadTexture("./textures/sorceress/Drenai_Skirt_Metallic.jpg"),
-        assetManager->loadTexture("./textures/sorceress/Drenai_Skirt_Roughness.jpg"), pipelines[0].get());
-
-    const auto sBookMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/sorceress/book_02_-_Default_BaseColor.jpg"),
-        assetManager->loadTexture("./textures/sorceress/book_02_-_Default_Normal.jpg"),
-        whiteTex, assetManager->loadTexture("./textures/sorceress/book_02_-_Default_Metallic.jpg"),
-        assetManager->loadTexture("./textures/sorceress/book_02_-_Default_Roughness.jpg"), pipelines[0].get());
-
-    const auto orbMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/sorceress/DefaultMaterial_Base_Color.jpg"),
-        placeholder, assetManager->loadTexture("./textures/sorceress/DefaultMaterial_Opacity.jpg"),
-        blackTex, whiteTex, pipelines[4].get());
-
-    const auto spellMat = assetManager->createMaterial(
-        assetManager->loadTexture("./textures/sorceress/basecolor.jpg"),
-        placeholder, assetManager->loadTexture("./textures/sorceress/basecolor.jpg"),
-        blackTex, whiteTex, pipelines[4].get());
-
-    // Step 5: Initialize Helper Lambdas for Asset Organization
-    auto sorcSelector = [&](const std::string& meshName) -> std::shared_ptr<Material> {
-        std::string n = meshName;
-        for (char& c : n) {
-            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        }
-        if (n == "tiles_low") {
-            return nullptr;
-        }
-        if (n == "skirt") {
-            return sSkirtMat;
-        }
-        if (n == "book") {
-            return sBookMat;
-        }
-        if ((n == "object003") || (n == "sphere_low")) {
-            return orbMat;
-        }
-        if (n == "effects") {
-            return spellMat;
-        }
-        return sBodyMat;
-        };
-
-    auto categorizeMesh = [&](Mesh* const m) {
-        if (m != nullptr) {
-            const Pipeline* const p = m->getMaterial()->getPipeline();
-
-            // Glass (3) and Water (5) are categorized as transparent
-            if ((p == pipelines[3].get()) || (p == pipelines[5].get())) {
-                transparentMeshes.push_back(m);
-            }
-            else {
-                // Opaque and Alpha-blended (Pipeline 4) objects
-                meshes.push_back(m);
-            }
-        }
-        };
-
-    // Step 6: Named Constants for Procedural Placement
-    static constexpr uint32_t CACTUS_COUNT = 3U;
-    static constexpr uint32_t ROCK_COUNT = 11U;
-    static constexpr uint32_t GRASS_COUNT = 8U;
-    static constexpr float ROCK_PLACEMENT_RADIUS = 1.3f;
-    static constexpr float ROCK_Y_OFFSET = -0.12f;
-    static constexpr float ROCK_ANGLE_STEP = 0.7f;
-    static constexpr float ROCK_UNIFORM_SCALE = 0.0004f;
-
-    // Step 7: Model Loading & Configuration (Sorceress, Magic Circle, Viking House, Oasis)
-
-    // 7.1 Desert Queen
-    auto sorceressModel = assetManager->loadModel("./models/sorceress/Pose_Body.obj", sorcSelector, setupCmd, stagingBuffers, stagingMemories);
-    for (auto& m : sorceressModel->getMeshes()) {
-        categorizeMesh(m.get());
-    }
-    if (cachedConfig.count(SceneKeys::DESERT_QUEEN) > 0U) {
-        sorceressModel->setPosition(cachedConfig.at(SceneKeys::DESERT_QUEEN).pos);
-        sorceressModel->setScale(cachedConfig.at(SceneKeys::DESERT_QUEEN).scale);
-    }
-    scene->addModel(SceneKeys::DESERT_QUEEN, std::move(sorceressModel));
-
-    // 7.2 Magic Circle
-    auto magicCircle = assetManager->loadModel("./models/magiccircle/Magic1.obj", [&](const std::string&) {
-        return magicMat;
-        }, setupCmd, stagingBuffers, stagingMemories);
-    for (auto& m : magicCircle->getMeshes()) {
-        categorizeMesh(m.get());
-    }
-    magicCircle->setShadowCasting(false);
-    if (cachedConfig.count(SceneKeys::MAGIC_CIRCLE) > 0U) {
-        magicCircle->setPosition(cachedConfig.at(SceneKeys::MAGIC_CIRCLE).pos);
-        magicCircle->setRotation(cachedConfig.at(SceneKeys::MAGIC_CIRCLE).rot);
-        magicCircle->setScale(cachedConfig.at(SceneKeys::MAGIC_CIRCLE).scale);
-    }
-    scene->addModel(SceneKeys::MAGIC_CIRCLE, std::move(magicCircle));
-
-    // 7.3 Viking House
-    auto vikingHouse = assetManager->loadModel("./models/vikingroom/viking_room.obj", [&](const std::string&) {
-        return propMat;
-        }, setupCmd, stagingBuffers, stagingMemories);
-    for (auto& m : vikingHouse->getMeshes()) {
-        categorizeMesh(m.get());
-    }
-    if (cachedConfig.count(SceneKeys::VIKING_HOUSE) > 0U) {
-        vikingHouse->setPosition(cachedConfig.at(SceneKeys::VIKING_HOUSE).pos);
-        vikingHouse->setScale(cachedConfig.at(SceneKeys::VIKING_HOUSE).scale);
-    }
-    scene->addModel(SceneKeys::VIKING_HOUSE, std::move(vikingHouse));
-
-    // 7.4 Oasis / Water Cube
-    const auto waterNorm = assetManager->loadTexture("./textures/watercube/watermapnormalmap.jpg");
-    const auto waterMat = assetManager->createMaterial(placeholder, waterNorm, whiteTex, blackTex, blackTex, pipelines[5].get());
-    auto oasisModel = assetManager->loadModel("./models/watercube/wideflatcube.obj", [&](const std::string&) {
-        return waterMat;
-        }, setupCmd, stagingBuffers, stagingMemories);
-    for (auto& m : oasisModel->getMeshes()) {
-        categorizeMesh(m.get());
-    }
-	oasisModel->setShadowCasting(false);
-    if (cachedConfig.count(SceneKeys::OASIS) > 0U) {
-        oasisModel->setPosition(cachedConfig.at(SceneKeys::OASIS).pos);
-        oasisModel->setScale(cachedConfig.at(SceneKeys::OASIS).scale);
-    }
-    scene->addModel(SceneKeys::OASIS, std::move(oasisModel));
-
-    // Step 8: Procedural Instance Generation (Vegetation and Rocks)
-
-    for (uint32_t i = 0U; i < GRASS_COUNT; ++i) {
-        auto grassModel = assetManager->loadModel("./models/grass/Trava Kolosok.obj", [&](const std::string&) {
-            return grassMat;
-            }, setupCmd, stagingBuffers, stagingMemories);
-        const float angle = static_cast<float>(i) * 1.5f;
-        const float dist = 0.2f + (static_cast<float>(i) * 0.05f);
-        grassModel->setPosition({ (i < 4U ? -0.4f : 0.6f) + std::cos(angle) * dist, -0.1f, (i < 4U ? 0.4f : 0.5f) + std::sin(angle) * dist });
-        grassModel->setScale({ 0.00025f, 0.00025f, 0.00025f });
-        for (auto& m : grassModel->getMeshes()) {
-            categorizeMesh(m.get());
-        }
-        ownedModels.push_back(std::move(grassModel));
-    }
-
-    for (uint32_t i = 1U; i <= CACTUS_COUNT; ++i) {
-        const std::string key = "Cactus" + std::to_string(i);
-        auto cactus = assetManager->loadModel("./models/cacti/10436_Cactus_v1_max2010_it2.obj", [&](const std::string&) {
-            return cactusMat;
-            }, setupCmd, stagingBuffers, stagingMemories);
-        for (auto& m : cactus->getMeshes()) {
-            categorizeMesh(m.get());
-        }
-        if (cachedConfig.count(key) > 0U) {
-            cactus->setPosition(cachedConfig.at(key).pos);
-            cactus->setRotation(cachedConfig.at(key).rot);
-            cactus->setScale(cachedConfig.at(key).scale);
-        }
-        scene->addModel(key, std::move(cactus));
-    }
-
-    const auto rockNorm = assetManager->loadTexture("./textures/rocks/Rock_Normal.png");
-    for (uint32_t i = 0U; i < ROCK_COUNT; ++i) {
-        const std::string texPath = "./textures/rocks/Rock" + std::to_string(i == 0U ? 1U : i) + "_Diffuse.png";
-        const auto rMat = assetManager->createMaterial(assetManager->loadTexture(texPath), rockNorm, whiteTex, blackTex, matteTex, pipelines[0].get());
-        auto rock = assetManager->loadModel("./models/rocks/Rock" + std::to_string(i) + ".obj", [&](const std::string&) {
-            return rMat;
-            }, setupCmd, stagingBuffers, stagingMemories);
-        for (auto& m : rock->getMeshes()) {
-            categorizeMesh(m.get());
-        }
-        const float angle = static_cast<float>(i) * ROCK_ANGLE_STEP;
-        rock->setPosition({ std::cos(angle) * ROCK_PLACEMENT_RADIUS, ROCK_Y_OFFSET, std::sin(angle) * ROCK_PLACEMENT_RADIUS });
-        rock->setScale({ ROCK_UNIFORM_SCALE, ROCK_UNIFORM_SCALE, ROCK_UNIFORM_SCALE });
-        scene->addModel("Rock" + std::to_string(i), std::move(rock));
-    }
-
-    // Step 9: Procedural Globe & Base Generation (Geometry Utils)
-    static constexpr uint32_t GLOBE_SEGMENTS = 64U;
-
-    auto baseModel = std::make_unique<Model>();
-    auto bMesh = assetManager->processMeshData(GeometryUtils::generateCylinder(GLOBE_SEGMENTS, 2.4f, 1.75f, 0.8f), rattanMat, setupCmd, stagingBuffers, stagingMemories);
-    categorizeMesh(bMesh.get());
-    baseModel->addMesh(std::move(bMesh));
-    baseModel->setPosition({ 0.0f, -0.9f, 0.0f });
-    scene->addModel("ProceduralBase", std::move(baseModel));
-
-    auto sandModel = std::make_unique<Model>();
-    auto sMesh = assetManager->processMeshData(GeometryUtils::generateSandPlug(GLOBE_SEGMENTS, 1.78f, 1.8f, 0.4f), sandMat, setupCmd, stagingBuffers, stagingMemories);
-    categorizeMesh(sMesh.get());
-    sandModel->addMesh(std::move(sMesh));
-    sandModel->setPosition({ 0.0f, -0.1f, 0.0f });
-    scene->addModel("ProceduralSand", std::move(sandModel));
-
-    const auto glassMatFinal = assetManager->createMaterial(placeholder, placeholder, whiteTex, blackTex, blackTex, pipelines[3].get());
-    auto glassModel = std::make_unique<Model>();
-    auto glassMesh = assetManager->processMeshData(GeometryUtils::generateSphere(GLOBE_SEGMENTS, 1.8f, -0.5f), glassMatFinal, setupCmd, stagingBuffers, stagingMemories);
-    categorizeMesh(glassMesh.get());
-    glassModel->addMesh(std::move(glassMesh));
-    glassModel->setPosition({ 0.0f, -0.3f, 0.0f });
-    glassModel->setShadowCasting(false);
-    ownedModels.push_back(std::move(glassModel));
-
-    // Step 10: Final GPU Submission & Staging Cleanup
+    // Step 4: Final GPU Submission & Staging Cleanup
     VulkanUtils::endSingleTimeCommands(context->device, context->graphicsCommandPool, context->graphicsQueue, setupCmd);
 
     for (size_t i = 0U; i < stagingBuffers.size(); ++i) {
@@ -598,8 +374,10 @@ void Experience::loadAssets() {
         vkFreeMemory(context->device, stagingMemories[i], nullptr);
     }
 
+    // Step 5: Finalize Environmental FX
     initSkybox();
 }
+
 /**
  * @brief Initializes the environmental skybox.
  * Loads the 6 faces of the cubemap and prepares the Skybox pipeline.
@@ -637,6 +415,7 @@ void Experience::initSkybox() {
  */
 void Experience::drawFrame() {
     VulkanContext* context = ServiceLocator::GetContext();
+    auto* em = entityManager.get(); // Cache for ECS access
 
     // Step 1: CPU-GPU Throttling - Wait for the previous frame's GPU execution to finish
     SyncManager* const sync = resources->getSyncManager();
@@ -649,7 +428,7 @@ void Experience::drawFrame() {
     // Step 2: High-Level Logic Updates - Update input and scene state
     inputManager->update(dt);
     if (scene != nullptr) {
-        scene->update(dt);
+        scene->update(dt); // Now uses ECS internal lookups
     }
 
     // Step 3: Presentation Handshake - Acquire an image from the Swapchain
@@ -683,47 +462,35 @@ void Experience::drawFrame() {
     const VkFence frameFence = sync->getInFlightFence(currentFrame);
     static_cast<void>(vkResetFences(context->device, 1U, &frameFence));
 
-    // Step 4: Command Buffer Recording - Update UBO and record draw calls
+    // Step 4: Command Buffer Recording
     updateUniformBuffer(imageIndex);
 
-    const VkCommandBuffer cb = sync->getCommandBuffer(currentFrame);
+    const VkCommandBuffer cb = resources->getSyncManager()->getCommandBuffer(currentFrame);
     static_cast<void>(vkResetCommandBuffer(cb, 0U));
 
     const VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     static_cast<void>(vkBeginCommandBuffer(cb, &beginInfo));
 
-    // Update Particle Systems (Physics/Compute steps)
-    if (dustParticleSystem != nullptr) {
-        dustParticleSystem->update(cb, dt, inputManager->getDustEnabled(), totalTime, currentUBO.lightColor);
-    }
-    if (fireParticleSystem != nullptr) {
-        const glm::vec3 origin = (scene && scene->hasModel("Cactus1"))
-            ? scene->getModels().at("Cactus1")->getPosition()
-            : glm::vec3(-0.8f, -0.15f, -0.5f);
-        fireParticleSystem->update(cb, dt, inputManager->getFireEnabled(), totalTime, currentUBO.lightColor, origin);
-    }
-    if (smokeParticleSystem != nullptr) {
-        const glm::vec3 origin = (scene && scene->hasModel("Cactus1"))
-            ? scene->getModels().at("Cactus1")->getPosition()
-            : glm::vec3(-0.8f, -0.15f, -0.5f);
-        smokeParticleSystem->update(cb, dt, inputManager->getSmokeEnabled(), totalTime, currentUBO.lightColor, origin);
-    }
-    if (rainParticleSystem != nullptr) {
-        rainParticleSystem->update(cb, dt, inputManager->getRainEnabled(), totalTime, currentUBO.lightColor);
-    }
-    if (snowParticleSystem != nullptr) {
-        snowParticleSystem->update(cb, dt, inputManager->getSnowEnabled(), totalTime, currentUBO.lightColor);
+    // NEW: ECS lookup for Particle Emitters (e.g., finding the fire origin on Cactus1)
+    glm::vec3 fireOrigin(-0.8f, -0.15f, -0.5f);
+    if (scene && scene->hasEntity("Cactus1")) {
+        auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(scene->getEntityID("Cactus1"));
+        if (trans) fireOrigin = trans->m_position;
     }
 
-    // Record the actual geometry draw calls via the Renderer
+    // Update Particle Systems
+    if (dustParticleSystem) dustParticleSystem->update(cb, timeManager->getDelta(), inputManager->getDustEnabled(), timeManager->getTotal(), currentUBO.lightColor);
+    if (fireParticleSystem) fireParticleSystem->update(cb, timeManager->getDelta(), inputManager->getFireEnabled(), timeManager->getTotal(), currentUBO.lightColor, fireOrigin);
+    if (smokeParticleSystem) smokeParticleSystem->update(cb, timeManager->getDelta(), inputManager->getSmokeEnabled(), timeManager->getTotal(), currentUBO.lightColor, fireOrigin);
+    if (rainParticleSystem) rainParticleSystem->update(cb, timeManager->getDelta(), inputManager->getRainEnabled(), timeManager->getTotal(), currentUBO.lightColor);
+    if (snowParticleSystem) snowParticleSystem->update(cb, timeManager->getDelta(), inputManager->getSnowEnabled(), timeManager->getTotal(), currentUBO.lightColor);
+
+    // Record Draw Calls via Refactored Renderer
     std::vector<Pipeline*> rawPipelines;
-    for (const auto& p : pipelines) {
-        rawPipelines.push_back(p.get());
-    }
-
+    for (const auto& p : pipelines) rawPipelines.push_back(p.get());
     renderer->recordFrame(
-        cb, vulkanEngine->getSwapChainExtent(), scene->getModels(), ownedModels, meshes, transparentMeshes,
-        skybox.get(), dustParticleSystem.get(), fireParticleSystem.get(), smokeParticleSystem.get(),
+        cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
+        dustParticleSystem.get(), fireParticleSystem.get(), smokeParticleSystem.get(),
         rainParticleSystem.get(), snowParticleSystem.get(), postProcessor.get(),
         resources->getDescriptorSet(imageIndex), resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
         rawPipelines, inputManager->getDustEnabled(), inputManager->getFireEnabled(), inputManager->getSmokeEnabled(),
@@ -796,54 +563,40 @@ void Experience::drawFrame() {
 
 /**
  * @brief Syncs CPU simulation state to the GPU Uniform Buffer.
+ * Orchestrates climate simulation, manual user overrides, and hardware buffer updates.
  */
- /**
-  * @brief Syncs CPU simulation state to the GPU Uniform Buffer.
-  * Orchestrates climate simulation, manual user overrides, and hardware buffer updates.
-  */
 void Experience::updateUniformBuffer(const uint32_t currentImage) {
     void* const mappedData = resources->getMappedBuffer(currentImage);
-    if (mappedData == nullptr) {
-        return;
-    }
+    if (!mappedData) return;
 
+    auto* em = entityManager.get();
     const float dt = timeManager->getDelta();
     const float totalTime = timeManager->getTotal();
     const ObjectTransform& lightCfg = cachedConfig.at("MainLight");
 
-    // Step 1: Handle high-level simulation reset requests ('R' Key)
-    // This is now the only place where Climate states are forced into the Input toggles.
-    if (inputManager->consumeResetRequest()) {
-        performFullReset();
-    }
+    // Climate Simulation
+    climateManager->update(dt, totalTime, inputManager->getAutoOrbit(), lightCfg.params.at("orbitRadius"), lightCfg.params.at("orbitSpeed"), lightCfg.params.at("intensity"));
+    if (climateManager->checkTransition()) syncWeatherToggles();
 
-    // Step 2: Update Climate simulation
-    climateManager->update(dt, totalTime, inputManager->getAutoOrbit(),
-        lightCfg.params.at("orbitRadius"),
-        lightCfg.params.at("orbitSpeed"),
-        lightCfg.params.at("intensity"));
-
-    // we push those new default toggles to the InputManager.
-    if (climateManager->checkTransition()) {
-        syncWeatherToggles();
-    }
-
-    // Step 3: Apply Climate scaling/tints to scene models (Cacti and Water)
     const float cactusMultiplier = climateManager->getCactusScale();
-
     for (uint32_t i = 1U; i <= 3U; ++i) {
-        const std::string key = "Cactus" + std::to_string(i);
-        Model* const pCactus = scene->getModel(key);
-
-        if (pCactus != nullptr) {
-            pCactus->setScale(cachedConfig.at(key).scale * cactusMultiplier);
+        std::string key = "Cactus" + std::to_string(i);
+        if (scene->hasEntity(key)) {
+            auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(scene->getEntityID(key));
+            if (trans) {
+                trans->m_scale = cachedConfig.at(key).scale * cactusMultiplier;
+                trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+            }
         }
     }
 
-    Model* const pOasis = scene->getModel("Oasis");
-    if (pOasis != nullptr) {
-        pOasis->setScale(cachedConfig.at("Oasis").scale * climateManager->getWaterScale());
-        pOasis->setPosition(cachedConfig.at("Oasis").pos + glm::vec3(0.0f, climateManager->getWaterOffset(), 0.0f));
+    if (scene->hasEntity("Oasis")) {
+        auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(scene->getEntityID("Oasis"));
+        if (trans) {
+            trans->m_scale = cachedConfig.at("Oasis").scale * climateManager->getWaterScale();
+            trans->m_position = cachedConfig.at("Oasis").pos + glm::vec3(0.0f, climateManager->getWaterOffset(), 0.0f);
+            trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+        }
     }
 
     // Step 4: Synchronize global light data (Sun Position, Color, Intensity)
@@ -868,7 +621,6 @@ void Experience::updateUniformBuffer(const uint32_t currentImage) {
     ubo.time = totalTime;
 
     // Synchronize dynamic Fire/Spark lights from the particle simulation
-    // This now respects the user's manual toggle even if the climate is currently "Summer".
     if (fireParticleSystem != nullptr && inputManager->getFireEnabled()) {
         const auto sparkData = fireParticleSystem->getLightData();
         for (uint32_t i = 0U; i < EngineConstants::MAX_SPARK_LIGHTS; ++i) {

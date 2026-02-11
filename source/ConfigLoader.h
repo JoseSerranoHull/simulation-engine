@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 /* parasoft-end-suppress ALL */
 
-#include "CommonStructs.h"
+#include "Common.h"
 
 /**
  * @struct ObjectTransform

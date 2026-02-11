@@ -3,6 +3,8 @@
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>
 #include <memory>
+
+#include "EntityManager.h"
 /* parasoft-end-suppress ALL */
 
 // Forward declarations
@@ -17,6 +19,7 @@ public:
     static void Provide(VulkanContext* context) { m_context = context; }
     static void Provide(VulkanResourceManager* resources) { m_resources = resources; }
     static void Provide(InputManager* input) { m_input = input; }
+    static void Provide(GE::ECS::EntityManager* entityManager) { m_entityManager = entityManager; }
 
     // Retrieve services
     static VulkanContext* GetContext() {
@@ -34,6 +37,11 @@ public:
         return m_input;
     }
 
+    static GE::ECS::EntityManager* GetEntityManager() {
+        if (!m_entityManager) throw std::runtime_error("ServiceLocator: EntityManager not provided!");
+        return m_entityManager;
+    }
+
     static void Provide(SystemFactory* factory) { m_factory = factory; }
 
     static SystemFactory* GetFactory() { return m_factory; }
@@ -43,4 +51,5 @@ private:
     static inline VulkanResourceManager* m_resources = nullptr;
     static inline InputManager* m_input = nullptr;
     static inline SystemFactory* m_factory = nullptr;
+	static inline GE::ECS::EntityManager* m_entityManager = nullptr;
 };

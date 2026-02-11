@@ -9,7 +9,7 @@
 #include "VulkanUtils.h"
 #include "Particle.h"
 #include "ShaderModule.h"
-#include "CommonStructs.h"
+#include "Common.h"
 #include "ISystem.h"
 #include "VulkanContext.h"
 #include "ServiceLocator.h"

@@ -49,11 +49,7 @@ public:
     void recordFrame(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
-        const std::map<std::string, std::unique_ptr<Model>>& models,
-        const std::vector<std::unique_ptr<Model>>& ownedModels,
-        const std::vector<Mesh*>& opaqueMeshes,
-        const std::vector<Mesh*>& transparentMeshes,
-        const Skybox* const skybox,                // FIX: Added const for MISRA
+        const Skybox* const skybox,
         const ParticleSystem* const dustSystem,
         const ParticleSystem* const fireSystem,
         const ParticleSystem* const smokeSystem,
@@ -93,31 +89,28 @@ private:
     ) const;
 
     /** @brief Records the depth-only pass for shadow map generation. */
-    void recordShadowPass(
+    void Renderer::recordShadowPass(
         const VkCommandBuffer cb,
         const VkRenderPass renderPass,
         const VkFramebuffer framebuffer,
-        const std::map<std::string, std::unique_ptr<Model>>& models,
-        const std::vector<std::unique_ptr<Model>>& ownedModels,
         const Pipeline* const shadowPipeline,
-        const VkDescriptorSet globalSet
-    ) const; // Added const
-
-    /** @brief Records the main forward rendering pass for opaque geometry. */
-    void recordOpaquePass(
-        const VkCommandBuffer cb,
-        const VkExtent2D& extent,
-        const std::vector<Mesh*>& opaque,
-        const Skybox* const skybox,
-        const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet
     ) const;
 
-    /** @brief Records the alpha-blended pass for glass and environmental effects. */
-    void recordTransparentPass(
+    /** @brief Records the main forward rendering pass for opaque geometry. */
+    void Renderer::recordOpaquePass(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
-        const std::vector<Mesh*>& transparent,
+        const Skybox* const skybox,
+        const PostProcessor* const postProcessor,
+        const VkDescriptorSet globalSet,
+        const std::vector<Pipeline*>& pipelines
+    ) const;
+
+    /** @brief Records the alpha-blended pass for glass and environmental effects. */
+    void Renderer::recordTransparentPass(
+        const VkCommandBuffer cb,
+        const VkExtent2D& extent,
         const ParticleSystem* const dust,
         const ParticleSystem* const fire,
         const ParticleSystem* const smoke,
@@ -125,6 +118,7 @@ private:
         const ParticleSystem* const snow,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
+        const std::vector<Pipeline*>& pipelines,
         const bool dustEnabled,
         const bool fireEnabled,
         const bool smokeEnabled,

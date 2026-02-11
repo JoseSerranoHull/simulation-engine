@@ -6,7 +6,7 @@
 #include <string>
 /* parasoft-end-suppress ALL */
 
-#include "CommonStructs.h"
+#include "Common.h"
 #include "ISystem.h"
 
 /** * @enum WeatherState

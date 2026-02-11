@@ -221,3 +221,93 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
     }
     return data;
 }
+
+/**
+ * @brief Generates a simple flat plane for the snow globe base.
+ */
+OBJLoader::MeshData GeometryUtils::generatePlane(float width, float depth) {
+    OBJLoader::MeshData data;
+    float hw = width * 0.5f;
+    float hd = depth * 0.5f;
+
+    data.vertices = {
+        {{-hw, 0.0f, -hd}, {0, 1, 0}, {0, 0}},
+        {{ hw, 0.0f, -hd}, {0, 1, 0}, {1, 0}},
+        {{ hw, 0.0f,  hd}, {0, 1, 0}, {1, 1}},
+        {{-hw, 0.0f,  hd}, {0, 1, 0}, {0, 1}}
+    };
+    data.indices = { 0, 1, 2, 2, 3, 0 };
+    return data;
+}
+
+/**
+ * @brief Generates a capsule mesh (cylinder with two hemispherical caps).
+ * Matches the local Vertex structure (position, color, texcoord, normal).
+ */
+OBJLoader::MeshData GeometryUtils::generateCapsule(float radius, float height, int segments, int stacks) {
+    OBJLoader::MeshData mesh;
+    const float halfHeight = height * 0.5f;
+
+    // --- 1. Vertex Generation ---
+    // We iterate through the vertical stacks (hemisphere 1 + cylinder + hemisphere 2)
+    for (int stack = 0; stack <= 2 * stacks; ++stack) {
+        // Vertical angle from -90 to +90 degrees
+        float phi = -glm::half_pi<float>() + glm::pi<float>() * (float)stack / (float)(2 * stacks);
+
+        float cosPhi = std::cos(phi);
+        float sinPhi = std::sin(phi);
+
+        for (int slice = 0; slice <= segments; ++slice) {
+            // Horizontal angle
+            float theta = 2.0f * glm::pi<float>() * (float)slice / (float)segments;
+            float cosTheta = std::cos(theta);
+            float sinTheta = std::sin(theta);
+
+            Vertex v;
+
+            // 1. Position Logic: Offset the y-coordinate based on which cap we are in
+            v.position.x = radius * cosPhi * cosTheta;
+            v.position.z = radius * cosPhi * sinTheta;
+
+            // If in the bottom hemisphere, shift down; if in top, shift up.
+            float yShift = (stack <= stacks) ? -halfHeight : halfHeight;
+            v.position.y = (radius * sinPhi) + yShift;
+
+            // 2. Normal Logic: Normalized vector from the center of the respective cap/cylinder
+            v.normal = glm::normalize(glm::vec3(
+                v.position.x,
+                v.position.y - yShift,
+                v.position.z
+            ));
+
+            // 3. Color Logic: Default to White
+            v.color = glm::vec3(1.0f);
+
+            // 4. TexCoord Logic: Map slice to X and stack to Y
+            v.texcoord.x = (float)slice / (float)segments;
+            v.texcoord.y = (float)stack / (float)(2 * stacks);
+
+            mesh.vertices.push_back(v);
+        }
+    }
+
+    // --- 2. Index Generation (CCW Winding) ---
+    for (int stack = 0; stack < 2 * stacks; ++stack) {
+        for (int slice = 0; slice < segments; ++slice) {
+            uint32_t first = stack * (segments + 1) + slice;
+            uint32_t second = first + (segments + 1);
+
+            // Triangle 1
+            mesh.indices.push_back(first);
+            mesh.indices.push_back(second);
+            mesh.indices.push_back(first + 1);
+
+            // Triangle 2
+            mesh.indices.push_back(second);
+            mesh.indices.push_back(second + 1);
+            mesh.indices.push_back(first + 1);
+        }
+    }
+
+    return mesh;
+}

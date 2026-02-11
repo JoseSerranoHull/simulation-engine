@@ -1,4 +1,7 @@
 #include "Renderer.h"
+#include "ServiceLocator.h"
+#include "EntityManager.h"
+#include "Components.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
@@ -10,10 +13,6 @@
 void Renderer::recordFrame(
     const VkCommandBuffer cb,
     const VkExtent2D& extent,
-    const std::map<std::string, std::unique_ptr<Model>>& models,
-    const std::vector<std::unique_ptr<Model>>& ownedModels,
-    const std::vector<Mesh*>& opaqueMeshes,
-    const std::vector<Mesh*>& transparentMeshes,
     const Skybox* const skybox,
     const ParticleSystem* const dustSystem,
     const ParticleSystem* const fireSystem,
@@ -32,16 +31,13 @@ void Renderer::recordFrame(
     const bool enableSnow
 ) const {
     // Step 1: Shadow Mapping Pass
-    // Records depth information from the light's perspective into the shadow map.
-    recordShadowPass(cb, shadowPass, shadowFramebuffer, models, ownedModels,
+    recordShadowPass(cb, shadowPass, shadowFramebuffer,
         pipelines.at(PIPELINE_IDX_SHADOW), globalDescriptorSet);
 
     // Step 2: Main Opaque Pass
-    // Renders the skybox and all non-transparent scene geometry.
-    recordOpaquePass(cb, extent, opaqueMeshes, skybox, postProcessor, globalDescriptorSet);
+    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, pipelines);
 
     // Step 3: Resolve Synchronization Barrier
-    // Transition the MSAA resolve target for refractive sampling.
     const VkImageMemoryBarrier resolveBarrier{
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         nullptr,
@@ -59,15 +55,13 @@ void Renderer::recordFrame(
         VK_PIPELINE_STAGE_TRANSFER_BIT, 0U, 0U, nullptr, 0U, nullptr, 1U, &resolveBarrier);
 
     // Step 4: Refraction Bridge
-    // Copies the resolved opaque scene to a texture for glass/water refraction.
     if (postProcessor != nullptr) {
         postProcessor->copyScene(cb);
     }
 
     // Step 5: Transparent & Particle Pass
-    // Renders glass, liquids, and environmental particles with alpha blending.
-    recordTransparentPass(cb, extent, transparentMeshes, dustSystem, fireSystem, smokeSystem,
-        rainSystem, snowSystem, postProcessor, globalDescriptorSet,
+    recordTransparentPass(cb, extent, dustSystem, fireSystem, smokeSystem,
+        rainSystem, snowSystem, postProcessor, globalDescriptorSet, pipelines,
         enableDust, enableFire, enableSmoke, enableRain, enableSnow);
 }
 
@@ -78,11 +72,12 @@ void Renderer::recordShadowPass(
     const VkCommandBuffer cb,
     const VkRenderPass renderPass,
     const VkFramebuffer framebuffer,
-    const std::map<std::string, std::unique_ptr<Model>>& models,
-    const std::vector<std::unique_ptr<Model>>& ownedModels,
     const Pipeline* const shadowPipeline,
     const VkDescriptorSet globalSet
 ) const {
+    auto* em = ServiceLocator::GetEntityManager();
+    auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
+
     VkRenderPassBeginInfo shadowPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     shadowPassInfo.renderPass = renderPass;
     shadowPassInfo.framebuffer = framebuffer;
@@ -102,17 +97,17 @@ void Renderer::recordShadowPass(
     const VkRect2D ss{ {0, 0}, {EngineConstants::SHADOW_MAP_RES, EngineConstants::SHADOW_MAP_RES} };
     vkCmdSetScissor(cb, 0U, 1U, &ss);
 
-    // Step 1: Draw global scene models
-    for (const auto& [name, model] : models) {
-        if (model->castsShadows()) {
-            model->draw(cb, globalSet, shadowPipeline);
-        }
-    }
+    // ECS Iteration: Draw only shadow-casters
+    for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
+        const auto& mr = meshRenderers.Data()[i];
+        if (mr.castShadows && mr.mesh) {
+            GE::ECS::EntityID entityID = meshRenderers.Index()[i];
+            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
 
-    // Step 2: Draw instanced foliage or specialized meshes
-    for (const auto& model : ownedModels) {
-        if (model && model->castsShadows()) {
-            model->draw(cb, globalSet, shadowPipeline);
+            if (transform) {
+                // We use the pre-calculated World Matrix from the Transform component
+                mr.mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
+            }
         }
     }
 
@@ -125,11 +120,14 @@ void Renderer::recordShadowPass(
 void Renderer::recordOpaquePass(
     const VkCommandBuffer cb,
     const VkExtent2D& extent,
-    const std::vector<Mesh*>& opaque,
     const Skybox* const skybox,
     const PostProcessor* const postProcessor,
-    const VkDescriptorSet globalSet
+    const VkDescriptorSet globalSet,
+    const std::vector<Pipeline*>& pipelines
 ) const {
+    auto* em = ServiceLocator::GetEntityManager();
+    auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
+
     VkRenderPassBeginInfo opaquePassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     opaquePassInfo.renderPass = postProcessor->getOffscreenRenderPass();
     opaquePassInfo.framebuffer = postProcessor->getOffscreenFramebuffer();
@@ -155,9 +153,19 @@ void Renderer::recordOpaquePass(
         skybox->draw(cb, globalSet);
     }
 
-    for (Mesh* const mesh : opaque) {
-        if (mesh != nullptr) {
-            mesh->draw(cb, globalSet);
+    // ECS Iteration: Filter for Opaque objects
+    for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
+        const auto& mr = meshRenderers.Data()[i];
+        if (!mr.mesh || !mr.material) continue;
+
+        // Logic: If the pipeline is NOT 3 (Glass) or 5 (Water), it is Opaque/Alpha-Tested
+        const Pipeline* p = mr.material->getPipeline();
+        if (p != pipelines[3] && p != pipelines[5]) {
+            GE::ECS::EntityID entityID = meshRenderers.Index()[i];
+            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
+            if (transform) {
+                mr.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+            }
         }
     }
 
@@ -194,7 +202,6 @@ void Renderer::recordParticlePass(
 void Renderer::recordTransparentPass(
     const VkCommandBuffer cb,
     const VkExtent2D& extent,
-    const std::vector<Mesh*>& transparent,
     const ParticleSystem* const dust,
     const ParticleSystem* const fire,
     const ParticleSystem* const smoke,
@@ -202,20 +209,24 @@ void Renderer::recordTransparentPass(
     const ParticleSystem* const snow,
     const PostProcessor* const postProcessor,
     const VkDescriptorSet globalSet,
+    const std::vector<Pipeline*>& pipelines,
     const bool dustEnabled,
     const bool fireEnabled,
     const bool smokeEnabled,
     const bool rainEnabled,
     const bool snowEnabled
 ) const {
+    auto* em = ServiceLocator::GetEntityManager();
+    auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
+
     VkRenderPassBeginInfo transPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     transPassInfo.renderPass = postProcessor->getTransparentRenderPass();
     transPassInfo.framebuffer = postProcessor->getOffscreenFramebuffer();
     transPassInfo.renderArea.extent = extent;
 
-    const std::array<VkClearValue, 3U> dummyValues{};
-    transPassInfo.clearValueCount = static_cast<uint32_t>(dummyValues.size());
-    transPassInfo.pClearValues = dummyValues.data();
+    // Depth/Color already cleared by Opaque Pass; we reuse attachments here
+    transPassInfo.clearValueCount = 0U;
+    transPassInfo.pClearValues = nullptr;
 
     vkCmdBeginRenderPass(cb, &transPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -225,13 +236,27 @@ void Renderer::recordTransparentPass(
     const VkRect2D sc{ {0, 0}, extent };
     vkCmdSetScissor(cb, 0U, 1U, &sc);
 
-    for (Mesh* const mesh : transparent) {
-        if (mesh != nullptr) {
-            mesh->draw(cb, globalSet);
+    // ECS Iteration: Filter for Transparent objects (Glass/Water)
+    for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
+        const auto& mr = meshRenderers.Data()[i];
+        if (!mr.mesh || !mr.material) continue;
+
+        const Pipeline* p = mr.material->getPipeline();
+        if (p == pipelines[3] || p == pipelines[5]) {
+            GE::ECS::EntityID entityID = meshRenderers.Index()[i];
+            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
+            if (transform) {
+                mr.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+            }
         }
     }
 
-    recordParticlePass(cb, dust, fire, smoke, rain, snow, dustEnabled, fireEnabled, smokeEnabled, rainEnabled, snowEnabled, globalSet);
+    // Record Particle draw calls within the transparent render pass
+    if (dustEnabled && (dust != nullptr)) { dust->draw(cb, globalSet); }
+    if (fireEnabled && (fire != nullptr)) { fire->draw(cb, globalSet); }
+    if (smokeEnabled && (smoke != nullptr)) { smoke->draw(cb, globalSet); }
+    if (rainEnabled && (rain != nullptr)) { rain->draw(cb, globalSet); }
+    if (snowEnabled && (snow != nullptr)) { snow->draw(cb, globalSet); }
 
     vkCmdEndRenderPass(cb);
 }

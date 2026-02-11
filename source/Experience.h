@@ -19,6 +19,8 @@
 #include "Renderer.h"
 #include "StatsManager.h"
 #include "ServiceLocator.h"
+#include "EntityManager.h"
+#include "Components.h"
 
 // Scene & System Includes
 #include "Scene.h"
@@ -27,7 +29,7 @@
 #include "PostProcessor.h"
 #include "Skybox.h"
 #include "Cubemap.h"
-#include "CommonStructs.h"
+#include "Common.h"
 #include "ConfigLoader.h"
 #include "GeometryUtils.h"
 #include "SyncManager.h"
@@ -35,6 +37,7 @@
 #include "ClimateManager.h"
 #include "SystemFactory.h"
 #include "VulkanResourceManager.h"
+#include "SceneLoader.h"
 
 /**
  * @class Experience
@@ -78,6 +81,9 @@ private:
     const uint32_t WINDOW_WIDTH;
     const uint32_t WINDOW_HEIGHT;
     bool framebufferResized;
+
+    // --- ECS Core ---
+    std::unique_ptr<GE::ECS::EntityManager> entityManager;
 
     // Core Hardware Contexts
     std::unique_ptr<VulkanContext> context;

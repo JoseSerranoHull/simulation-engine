@@ -1,7 +1,7 @@
-#include "Mesh.h"
+#include "../include/Mesh.h"
 
 /* parasoft-begin-suppress ALL */
-#include "Pipeline.h"
+#include "../include/Pipeline.h"
 #include <utility>
 /* parasoft-end-suppress ALL */
 
@@ -79,5 +79,4 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* p
         // 6. Draw call
         vkCmdDrawIndexed(cb, indexCount, INSTANCE_COUNT_ONE, 0U, 0, 0U);
     }
-}
 }

@@ -1,5 +1,5 @@
-#include "SceneLoader.h"
-#include "GeometryUtils.h"
+#include "../include/SceneLoader.h"
+#include "../include/GeometryUtils.h"
 
 /* parasoft-begin-suppress ALL */
 #include <fstream>
@@ -79,16 +79,39 @@ namespace GE::Scene {
     }
 
     void SceneLoader::handleMaterial(const std::string& id, const std::map<std::string, std::string>& props, AssetManager* am, const std::vector<std::unique_ptr<Pipeline>>& pipelines) {
-        auto getTex = [&](const std::string& key) {
-            return (props.count(key) && m_textures.count(props.at(key))) ? m_textures[props.at(key)] : nullptr;
+
+        // Helper to get a texture or return a default fallback to prevent nullptr crashes
+        auto getSafeTex = [&](const std::string& key, const std::string& fallbackID) {
+            if (props.count(key) && m_textures.count(props.at(key))) {
+                return m_textures[props.at(key)];
+            }
+            // Fallback to a guaranteed texture defined in your [Texture] registry
+            return m_textures.count(fallbackID) ? m_textures[fallbackID] : nullptr;
             };
 
         int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 0;
 
-        m_materials[id] = am->createMaterial(
-            getTex("Albedo"), getTex("Normal"), getTex("AO"),
-            getTex("Metallic"), getTex("Roughness"), pipelines[pipeIdx].get()
+        // Provide sensible defaults (White for Albedo/Metallic, Black for AO/Roughness)
+        auto mat = am->createMaterial(
+            getSafeTex("Albedo", "White"),
+            getSafeTex("Normal", "Placeholder"),
+            getSafeTex("AO", "White"),
+            getSafeTex("Metallic", "Black"),
+            getSafeTex("Roughness", "Matte"),
+            pipelines[pipeIdx].get()
         );
+
+        bool shadows = (props.count("CastShadows") ? (props.at("CastShadows") == "true") : true);
+        mat->SetCastsShadows(shadows);
+
+        if (props.count("Pass")) {
+            std::string passVal = props.at("Pass");
+            if (passVal == "Transparent") mat->SetPassType(RenderPassType::Transparent);
+            else if (passVal == "ShadowOnly") mat->SetPassType(RenderPassType::ShadowOnly);
+            else mat->SetPassType(RenderPassType::Opaque);
+        }
+
+        m_materials[id] = mat;
     }
 
     void SceneLoader::handleEntity(GE::ECS::EntityManager* em) {
@@ -107,27 +130,101 @@ namespace GE::Scene {
 
     void SceneLoader::handleMeshRenderer(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, AssetManager* am, VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm, std::vector<std::unique_ptr<Model>>& outOwnedModels) {
         GE::Components::MeshRenderer mr;
-        auto mat = m_materials.count(props.at("Material")) ? m_materials[props.at("Material")] : nullptr;
-        mr.material = mat.get();
-        mr.castShadows = (props.count("CastShadows") && props.at("CastShadows") == "true");
 
+        // Resolve a default material if provided (used as fallback or for procedural)
+        std::shared_ptr<Material> defaultMat = nullptr;
+        if (props.count("Material") && m_materials.count(props.at("Material"))) {
+            defaultMat = m_materials.at(props.at("Material"));
+        }
+
+        // --- CASE A: Procedural Geometry ---
         if (props.count("Type") && props.at("Type") == "procedural") {
             std::string shape = props.at("Shape");
             OBJLoader::MeshData data;
-            if (shape == "Plane") data = GeometryUtils::generatePlane(parseFloat(props.at("Width")), parseFloat(props.at("Depth")));
-            else if (shape == "Capsule") data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);
 
-            // Transfer geometry to GPU and keep reference
-            mr.mesh = am->processMeshData(data, mat, cmd, sb, sm).release();
+            if (shape == "Plane") {
+                data = GeometryUtils::generatePlane(parseFloat(props.at("Width")), parseFloat(props.at("Depth")));
+            }
+            else if (shape == "Capsule") {
+                data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);
+            }
+            // (Add other shapes like Sphere or Cylinder here as needed)
+
+            auto meshPtr = am->processMeshData(data, defaultMat, cmd, sb, sm);
+
+            // Create the dummy model to keep the mesh alive in Experience::ownedModels
+            auto dummyModel = std::make_unique<Model>();
+
+            Mesh* rawMeshPtr = meshPtr.get();
+            dummyModel->addMesh(std::move(meshPtr));
+
+            GE::Components::SubMesh sub;
+            sub.mesh = rawMeshPtr; // Point to the mesh now owned by dummyModel
+            sub.material = defaultMat.get();
+            mr.subMeshes.push_back(sub);
+
+            outOwnedModels.push_back(std::move(dummyModel));
         }
+        // --- CASE B: Complex .obj Model with potential Material Map ---
         else if (props.count("Mesh")) {
-            auto model = am->loadModel(props.at("Mesh"), [&](const std::string&) { return mat; }, cmd, sb, sm);
-            if (!model->getMeshes().empty()) {
-                mr.mesh = model->getMeshes()[0].get();
+            // 1. Parse the MaterialMap: "SubmeshName:MaterialID,SubmeshName:MaterialID"
+            std::map<std::string, std::string> matLookup;
+            if (props.count("MaterialMap")) {
+                std::stringstream ss(props.at("MaterialMap"));
+                std::string pair;
+                while (std::getline(ss, pair, ',')) {
+                    size_t colon = pair.find(':');
+                    if (colon != std::string::npos) {
+                        std::string mName = pair.substr(0, colon);
+                        std::string mMat = pair.substr(colon + 1);
+
+                        // Simple trim logic for cleaner parsing
+                        mName.erase(0, mName.find_first_not_of(" \t"));
+                        mName.erase(mName.find_last_not_of(" \t") + 1);
+                        mMat.erase(0, mMat.find_first_not_of(" \t"));
+                        mMat.erase(mMat.find_last_not_of(" \t") + 1);
+
+                        matLookup[mName] = mMat;
+                    }
+                }
+            }
+
+            // 2. Define the selector lambda for the AssetManager
+            auto selector = [&](const std::string& meshName) -> std::shared_ptr<Material> {
+                std::string lowerMesh = meshName;
+                std::transform(lowerMesh.begin(), lowerMesh.end(), lowerMesh.begin(), ::tolower);
+
+                // Check if this sub-mesh name matches any key in our MaterialMap
+                for (auto const& [key, matID] : matLookup) {
+                    std::string lowerKey = key;
+                    std::transform(lowerKey.begin(), lowerKey.end(), lowerKey.begin(), ::tolower);
+
+                    if (lowerMesh.find(lowerKey) != std::string::npos) {
+                        return m_materials.count(matID) ? m_materials.at(matID) : defaultMat;
+                    }
+                }
+                return defaultMat; // Fallback
+                };
+
+            // 3. Load the model using our dynamic selector
+            auto model = am->loadModel(props.at("Mesh"), selector, cmd, sb, sm);
+
+            // CRITICAL: If the model failed to load, we must stop here
+            if (!model) {
+                std::cerr << "SceneLoader: Failed to load mesh: " << props.at("Mesh") << std::endl;
+                return;
+            }
+
+            for (auto& meshPtr : model->getMeshes()) {
+                GE::Components::SubMesh sub;
+                sub.mesh = meshPtr.get();
+                sub.material = meshPtr->getMaterial();
+                mr.subMeshes.push_back(sub);
             }
             outOwnedModels.push_back(std::move(model));
         }
 
+        // Attach the finalized component to the entity currently being parsed
         em->AddComponent(m_currentEntity, mr);
     }
 

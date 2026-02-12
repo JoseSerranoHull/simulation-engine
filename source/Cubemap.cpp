@@ -1,6 +1,6 @@
-#include "VulkanUtils.h"
-#include "Cubemap.h"
-#include "Common.h"
+#include "../include/VulkanUtils.h"
+#include "../include/Cubemap.h"
+#include "../include/Common.h"
 
 /* parasoft-begin-suppress ALL */
 #include <stb_image.h>

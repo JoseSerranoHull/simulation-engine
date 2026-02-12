@@ -1,4 +1,4 @@
-#include "PointLight.h"
+#include "../include/PointLight.h"
 
 /**
  * @brief Non-inline destructor definition to satisfy OOP.25.

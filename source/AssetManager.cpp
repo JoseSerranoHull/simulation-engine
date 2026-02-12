@@ -1,4 +1,4 @@
-#include "AssetManager.h"
+#include "../include/AssetManager.h"
 
 /* parasoft-begin-suppress ALL */
 #include <iostream>

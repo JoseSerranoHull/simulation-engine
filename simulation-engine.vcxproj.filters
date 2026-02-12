@@ -146,6 +146,12 @@
     <ClCompile Include="source\SceneLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\Logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\EntityFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\base.frag">
@@ -272,168 +278,171 @@
     <None Include="markdown\MasterPlan.md">
       <Filter>Mardown Files</Filter>
     </None>
+    <None Include="config\snow_globe.ini">
+      <Filter>Config Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\AssetManager.h">
+    <ClInclude Include="include\AssetManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Camera.h">
+    <ClInclude Include="include\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ClimateManager.h">
+    <ClInclude Include="include\ClimateManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Common.h">
+    <ClInclude Include="include\Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ConfigLoader.h">
+    <ClInclude Include="include\ComponentArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Cubemap.h">
+    <ClInclude Include="include\Components.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Experience.h">
+    <ClInclude Include="include\ComponentType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\GeometryUtils.h">
+    <ClInclude Include="include\ConfigLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Image.h">
+    <ClInclude Include="include\Cubemap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\IMGUIManager.h">
+    <ClInclude Include="include\Entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\InputManager.h">
+    <ClInclude Include="include\VulkanUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\libs.h">
+    <ClInclude Include="include\VulkanResourceManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Light.h">
+    <ClInclude Include="include\VulkanEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Material.h">
+    <ClInclude Include="include\VulkanContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Mesh.h">
+    <ClInclude Include="include\EntityFactory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Model.h">
+    <ClInclude Include="include\EntityManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\OBJLoader.h">
+    <ClInclude Include="include\Experience.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Particle.h">
+    <ClInclude Include="include\GeometryUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ParticleSystem.h">
+    <ClInclude Include="include\IComponentArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Pipeline.h">
+    <ClInclude Include="include\IECSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\PointLight.h">
+    <ClInclude Include="include\Image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\PostProcessor.h">
+    <ClInclude Include="include\IMGUIManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Renderer.h">
+    <ClInclude Include="include\InputManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\RenderPass.h">
+    <ClInclude Include="include\ISystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Scene.h">
+    <ClInclude Include="include\libs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ShaderModule.h">
+    <ClInclude Include="include\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\SimpleAllocator.h">
+    <ClInclude Include="include\Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Skybox.h">
+    <ClInclude Include="include\Vertex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\StatsManager.h">
+    <ClInclude Include="include\Transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\SwapChain.h">
+    <ClInclude Include="include\TimeManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\SyncManager.h">
+    <ClInclude Include="include\Tag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\SystemFactory.h">
+    <ClInclude Include="include\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Texture.h">
+    <ClInclude Include="include\Material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\TimeManager.h">
+    <ClInclude Include="include\SystemFactory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Vertex.h">
+    <ClInclude Include="include\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanContext.h">
+    <ClInclude Include="include\SceneLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanEngine.h">
+    <ClInclude Include="include\ServiceLocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanResourceManager.h">
+    <ClInclude Include="include\ShaderModule.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanUtils.h">
+    <ClInclude Include="include\SimpleAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ServiceLocator.h">
+    <ClInclude Include="include\Skybox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ISystem.h">
+    <ClInclude Include="include\StatsManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Components.h">
+    <ClInclude Include="include\SwapChain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Tag.h">
+    <ClInclude Include="include\MemoryUtilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Transform.h">
+    <ClInclude Include="include\SyncManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ComponentArray.h">
+    <ClInclude Include="include\RenderPass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\ComponentType.h">
+    <ClInclude Include="include\Mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Entity.h">
+    <ClInclude Include="include\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\EntityManager.h">
+    <ClInclude Include="include\Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\IComponentArray.h">
+    <ClInclude Include="include\OBJLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\IECSystem.h">
+    <ClInclude Include="include\PostProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Logger.h">
+    <ClInclude Include="include\Particle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\MemoryUtilities.h">
+    <ClInclude Include="include\PointLight.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\SceneLoader.h">
+    <ClInclude Include="include\ParticleSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\EntityFactory.h">
+    <ClInclude Include="include\Pipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

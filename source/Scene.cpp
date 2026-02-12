@@ -1,6 +1,6 @@
-#include "Scene.h"
-#include "ServiceLocator.h"
-#include "EntityManager.h"
+#include "../include/Scene.h"
+#include "../include/ServiceLocator.h"
+#include "../include/EntityManager.h"
 
 /* parasoft-begin-suppress ALL */
 #include <GLFW/glfw3.h>

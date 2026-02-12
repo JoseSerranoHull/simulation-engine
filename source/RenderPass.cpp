@@ -1,4 +1,4 @@
-#include "RenderPass.h"
+#include "../include/RenderPass.h"
 
 /**
  * @brief Initializes the wrapper. Note: This class borrows the device pointer

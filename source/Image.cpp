@@ -1,4 +1,4 @@
-#include "Image.h"
+#include "../include/Image.h"
 
 /**
  * @brief Constructor: Allocates GPU memory and initializes a Vulkan Image and View.

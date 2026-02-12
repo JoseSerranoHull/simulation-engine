@@ -1,4 +1,4 @@
-#include "Light.h"
+#include "../include/Light.h"
 
 /**
  * @brief Virtual destructor: Ensures proper cleanup of derived light types.

@@ -1,7 +1,7 @@
-#include "EntityManager.h"
+#include "../include/EntityManager.h"
 
-#include "EntityFactory.h"
-#include "MemoryUtilities.h"
+#include "../include/EntityFactory.h"
+#include "../include/MemoryUtilities.h"
 
 namespace GE::ECS
 {

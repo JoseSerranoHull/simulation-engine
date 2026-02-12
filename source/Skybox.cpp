@@ -1,4 +1,4 @@
-#include "Skybox.h"
+#include "../include/Skybox.h"
 
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>

@@ -1,5 +1,5 @@
 /* parasoft-begin-suppress ALL */
-#include "SyncManager.h"
+#include "../include/SyncManager.h"
 #include <iostream>
 /* parasoft-end-suppress ALL */
 

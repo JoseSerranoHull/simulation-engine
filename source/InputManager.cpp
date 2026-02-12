@@ -1,4 +1,4 @@
-#include "InputManager.h"
+#include "../include/InputManager.h"
 
 /**
  * @brief Constructor: Initializes hardware-dependent mouse offsets and camera perspectives.

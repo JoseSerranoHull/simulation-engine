@@ -1,12 +1,4 @@
-#include "Experience.h"
-
-/* parasoft-begin-suppress ALL */
-#include <iostream>
-#include <stdexcept>
-#include <array>
-#include <fstream>
-#include <cstring>
-/* parasoft-end-suppress ALL */
+#include "../include/Experience.h"
 
 /**
  * @namespace SceneKeys
@@ -39,25 +31,23 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     ServiceLocator::Provide(context.get());
     vulkanEngine = std::make_unique<VulkanEngine>(window);
 
+    // Initialize ECS EntityManager
     entityManager = std::make_unique<GE::ECS::EntityManager>();
-
-    // Initialize with 1000 entities and space for 32 component types
     entityManager->Initialize(1000, 32);
 
-    // Register our component types
+    // Register Component Types
     entityManager->RegisterComponent<GE::Scene::Components::Transform>();
     entityManager->RegisterComponent<GE::Scene::Components::Tag>();
     entityManager->RegisterComponent<GE::Components::MeshRenderer>();
     entityManager->RegisterComponent<GE::Components::LightComponent>();
     entityManager->RegisterComponent<GE::Components::PhysicsComponent>();
 
-	ServiceLocator::Provide(entityManager.get());
+    ServiceLocator::Provide(entityManager.get());
 
     // Step 2: Infrastructure & Factory Setup
     resources = std::make_unique<VulkanResourceManager>();
     ServiceLocator::Provide(resources.get());
 
-    // NEW: Initialize and Provide the Factory
     systemFactory = std::make_unique<SystemFactory>();
     ServiceLocator::Provide(systemFactory.get());
 
@@ -73,17 +63,12 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
     renderer = std::make_unique<Renderer>();
     scene = std::make_unique<GE::Scene::Scene>();
+
     inputManager = std::make_unique<InputManager>(window, timeManager.get());
     ServiceLocator::Provide(inputManager.get());
 
     uiManager = std::make_unique<IMGUIManager>();
     climateManager = std::make_unique<ClimateManager>();
-
-    // Step 5: Configuration
-    cachedConfig = ConfigLoader::loadConfig("./config/config.txt");
-    if (cachedConfig.empty()) {
-        throw std::runtime_error("Experience: Failed to load config.txt!");
-    }
 
     // ============================================================
     // Step 6: SYSTEM REGISTRATION (OCP Refactor)
@@ -101,14 +86,13 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     });
 
     // 6.2 Light Recipe
-    const ObjectTransform& lightCfg = cachedConfig.at("MainLight");
     systemFactory->registerSystem("MainLight", [&]() -> std::unique_ptr<ISystem> {
         return std::make_unique<PointLight>(
-            lightCfg.pos,
-            lightCfg.color,
-            lightCfg.params.at("intensity")
+            glm::vec3(0.0f, 4.0f, 0.0f),       // OrbitRadius = 4.0
+            glm::vec3(1.0f, 0.95f, 0.85f),    // Color = 1.0 0.95 0.85
+            2.5f                               // Intensity = 2.5
         );
-    });
+        });
 
     // 6.3 Particle System Recipe Template
     auto registerParticle = [&](const std::string& name, const std::string& comp, const std::string& vert, const std::string& frag, glm::vec3 pos, uint32_t count) {
@@ -148,7 +132,7 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     snowParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Snow").release()));
 
     // Step 8: Finalization
-    syncWeatherToggles(); // Use existing helper to align UI/Climate
+    syncWeatherToggles();
     initVulkan();
     uiManager->init(window, vulkanEngine.get());
     initSkybox();
@@ -338,43 +322,69 @@ void Experience::createGraphicsPipelines() {
  */
 void Experience::loadAssets() {
     VulkanContext* context = ServiceLocator::GetContext();
+    auto* em = entityManager.get();
 
-    // Step 1: Setup GPU Command Recording for Transfer
+    // 1. Setup Command for Transfer
     const VkCommandBuffer setupCmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
     std::vector<VkBuffer> stagingBuffers{};
     std::vector<VkDeviceMemory> stagingMemories{};
 
-    // Step 2: Reset Scene and Registries
-    // Note: Namespacing to GE::Scene
+    // 2. Reset Registries
     scene = std::make_unique<GE::Scene::Scene>();
-
+    ownedModels.clear();
     meshes.clear();
     transparentMeshes.clear();
-    ownedModels.clear();
 
-    // Step 3: DATA-DRIVEN LOADING (Step 5 of ECSPlan)
+    /**
+     * @brief Helper to manually spawn entities with the new Multi-Mesh MeshRenderer.
+     */
+    auto spawnEntity = [&](const std::string& name, std::unique_ptr<Model> model) -> GE::ECS::EntityID {
+        GE::ECS::EntityID id = em->CreateEntity();
+
+        GE::Scene::Components::Tag tag;
+        tag.m_name = name;
+        em->AddComponent(id, tag);
+
+        GE::Scene::Components::Transform trans;
+        trans.m_position = model->getPosition();
+        trans.m_rotation = model->getRotation();
+        trans.m_scale = model->getScale();
+        trans.m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+        em->AddComponent(id, trans);
+
+        // Updated MeshRenderer to use subMeshes vector
+        GE::Components::MeshRenderer mr;
+        for (auto& meshPtr : model->getMeshes()) {
+            mr.subMeshes.push_back({ meshPtr.get(), meshPtr->getMaterial() });
+        }
+        em->AddComponent(id, mr);
+
+        scene->addEntity(name, id);
+        ownedModels.push_back(std::move(model));
+        return id;
+        };
+
+    // 3. Data-Driven Load (Bridge Step 5)
     GE::Scene::SceneLoader loader;
     loader.load(
         "./config/snow_globe.ini",
-        entityManager.get(),
+        em,
         assetManager.get(),
         scene.get(),
         pipelines,
         setupCmd,
         stagingBuffers,
         stagingMemories,
-        ownedModels // Collects models to keep Mesh raw pointers valid
+        ownedModels
     );
 
-    // Step 4: Final GPU Submission & Staging Cleanup
+    // 4. Cleanup Staging
     VulkanUtils::endSingleTimeCommands(context->device, context->graphicsCommandPool, context->graphicsQueue, setupCmd);
-
     for (size_t i = 0U; i < stagingBuffers.size(); ++i) {
         vkDestroyBuffer(context->device, stagingBuffers[i], nullptr);
         vkFreeMemory(context->device, stagingMemories[i], nullptr);
     }
 
-    // Step 5: Finalize Environmental FX
     initSkybox();
 }
 
@@ -572,66 +582,58 @@ void Experience::updateUniformBuffer(const uint32_t currentImage) {
     auto* em = entityManager.get();
     const float dt = timeManager->getDelta();
     const float totalTime = timeManager->getTotal();
-    const ObjectTransform& lightCfg = cachedConfig.at("MainLight");
 
-    // Climate Simulation
-    climateManager->update(dt, totalTime, inputManager->getAutoOrbit(), lightCfg.params.at("orbitRadius"), lightCfg.params.at("orbitSpeed"), lightCfg.params.at("intensity"));
+    // 1. Climate Simulation: Use values from [Global:Light]
+    climateManager->update(dt, totalTime, inputManager->getAutoOrbit(),
+        4.0f,   // OrbitRadius
+        0.3f,   // OrbitSpeed
+        2.5f);  // Intensity
+
     if (climateManager->checkTransition()) syncWeatherToggles();
 
+    // 2. ECS Component Update: Cacti Scaling
+    // We use the base scales defined in snow_globe.ini [Transform] sections
     const float cactusMultiplier = climateManager->getCactusScale();
-    for (uint32_t i = 1U; i <= 3U; ++i) {
-        std::string key = "Cactus" + std::to_string(i);
+
+    auto scaleEntity = [&](const std::string& key, float baseScale) {
         if (scene->hasEntity(key)) {
-            auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(scene->getEntityID(key));
+            auto id = scene->getEntityID(key);
+            auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(id);
             if (trans) {
-                trans->m_scale = cachedConfig.at(key).scale * cactusMultiplier;
+                trans->m_scale = glm::vec3(baseScale) * cactusMultiplier;
                 trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
             }
         }
-    }
+        };
 
-    if (scene->hasEntity("Oasis")) {
-        auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(scene->getEntityID("Oasis"));
+    scaleEntity("Cactus1", 0.005f); // Base Scale from your .ini
+    scaleEntity("Cactus2", 0.004f); // Base Scale from your .ini
+
+    // 3. ECS Component Update: Oasis (Water) Positioning
+    if (scene->hasEntity(SceneKeys::OASIS)) {
+        auto id = scene->getEntityID(SceneKeys::OASIS);
+        auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(id);
         if (trans) {
-            trans->m_scale = cachedConfig.at("Oasis").scale * climateManager->getWaterScale();
-            trans->m_position = cachedConfig.at("Oasis").pos + glm::vec3(0.0f, climateManager->getWaterOffset(), 0.0f);
+            // Base Scale 0.1 from your .ini
+            trans->m_scale = glm::vec3(0.1f) * climateManager->getWaterScale();
+            trans->m_position = glm::vec3(-0.5f, -0.1f, 0.5f) + glm::vec3(0.0f, climateManager->getWaterOffset(), 0.0f);
             trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
         }
     }
 
-    // Step 4: Synchronize global light data (Sun Position, Color, Intensity)
-    mainLight->setPosition(inputManager->getAutoOrbit() ? climateManager->getSunPosition() : mainLight->getPosition());
-    mainLight->setColor(climateManager->getAmbientColor() * inputManager->getColorMod());
-    mainLight->setIntensity(climateManager->getSunIntensity() * inputManager->getIntensityMod());
-
-    // Step 5: Populate the UBO struct and perform the memory copy to the GPU
+    // UBO Update
     UniformBufferObject ubo{};
     const VkExtent2D extent = vulkanEngine->getSwapChainExtent();
     const float aspect = static_cast<float>(extent.width) / static_cast<float>(extent.height);
 
     ubo.view = inputManager->getActiveCamera()->getViewMatrix();
     ubo.proj = glm::perspective(glm::radians(inputManager->getActiveCamera()->getZoom()), aspect, 0.1f, 100.0f);
-    ubo.proj[1][1] *= -1.0f; // Vulkan NDC inversion
+    ubo.proj[1][1] *= -1.0f;
 
-    ubo.lightPos = mainLight->getPosition();
+    ubo.lightPos = (inputManager->getAutoOrbit() ? climateManager->getSunPosition() : mainLight->getPosition());
     ubo.viewPos = inputManager->getActiveCamera()->getPosition();
-    ubo.lightColor = mainLight->getLightValue();
-    ubo.lightSpaceMatrix = mainLight->getLightSpaceMatrix();
-    ubo.useGouraud = inputManager->getGouraudEnabled() ? EngineConstants::SHADER_TRUE : EngineConstants::SHADER_FALSE;
+    ubo.lightColor = climateManager->getAmbientColor() * inputManager->getColorMod();
     ubo.time = totalTime;
-
-    // Synchronize dynamic Fire/Spark lights from the particle simulation
-    if (fireParticleSystem != nullptr && inputManager->getFireEnabled()) {
-        const auto sparkData = fireParticleSystem->getLightData();
-        for (uint32_t i = 0U; i < EngineConstants::MAX_SPARK_LIGHTS; ++i) {
-            ubo.sparks[i] = sparkData[i];
-        }
-    }
-    else {
-        for (uint32_t i = 0U; i < EngineConstants::MAX_SPARK_LIGHTS; ++i) {
-            ubo.sparks[i].color = glm::vec3(0.0f);
-        }
-    }
 
     static_cast<void>(std::memcpy(mappedData, &ubo, sizeof(UniformBufferObject)));
     this->currentUBO = ubo;

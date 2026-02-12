@@ -1,4 +1,4 @@
-#include "Model.h"
+#include "../include/Model.h"
 
 /* parasoft-begin-suppress ALL */
 #include <glm/gtc/matrix_transform.hpp>

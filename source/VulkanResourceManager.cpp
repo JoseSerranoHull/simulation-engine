@@ -1,4 +1,4 @@
-#include "VulkanResourceManager.h"
+#include "../include/VulkanResourceManager.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>

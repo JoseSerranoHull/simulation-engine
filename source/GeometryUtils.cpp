@@ -1,4 +1,4 @@
-#include "GeometryUtils.h"
+#include "../include/GeometryUtils.h"
 
 /* parasoft-begin-suppress ALL */
 #include <cmath>

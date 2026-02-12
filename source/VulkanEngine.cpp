@@ -1,5 +1,5 @@
-#include "VulkanEngine.h"
-#include "VulkanUtils.h"
+#include "../include/VulkanEngine.h"
+#include "../include/VulkanUtils.h"
 
 /* parasoft-begin-suppress ALL */
 #include <iostream>

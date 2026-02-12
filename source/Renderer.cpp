@@ -1,7 +1,7 @@
-#include "Renderer.h"
-#include "ServiceLocator.h"
-#include "EntityManager.h"
-#include "Components.h"
+#include "../include/Renderer.h"
+#include "../include/ServiceLocator.h"
+#include "../include/EntityManager.h"
+#include "../include/Components.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
@@ -100,13 +100,16 @@ void Renderer::recordShadowPass(
     // ECS Iteration: Draw only shadow-casters
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
-        if (mr.castShadows && mr.mesh) {
-            GE::ECS::EntityID entityID = meshRenderers.Index()[i];
-            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
+        GE::ECS::EntityID entityID = meshRenderers.Index()[i];
+        auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
 
-            if (transform) {
-                // We use the pre-calculated World Matrix from the Transform component
-                mr.mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
+        if (transform) {
+            // Nested loop for sub-meshes
+            for (const auto& sub : mr.subMeshes) {
+                // Logic: Only draw if the mesh exists AND the material permits shadows
+                if (sub.mesh && sub.material && sub.material->GetCastsShadows()) {
+                    sub.mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
+                }
             }
         }
     }
@@ -156,15 +159,15 @@ void Renderer::recordOpaquePass(
     // ECS Iteration: Filter for Opaque objects
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
-        if (!mr.mesh || !mr.material) continue;
+        GE::ECS::EntityID entityID = meshRenderers.Index()[i];
+        auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
 
-        // Logic: If the pipeline is NOT 3 (Glass) or 5 (Water), it is Opaque/Alpha-Tested
-        const Pipeline* p = mr.material->getPipeline();
-        if (p != pipelines[3] && p != pipelines[5]) {
-            GE::ECS::EntityID entityID = meshRenderers.Index()[i];
-            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
-            if (transform) {
-                mr.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+        if (transform) {
+            for (const auto& sub : mr.subMeshes) {
+                // Logic: Only draw if the material explicitly asks for the Opaque pass
+                if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Opaque) {
+                    sub.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+                }
             }
         }
     }
@@ -239,24 +242,19 @@ void Renderer::recordTransparentPass(
     // ECS Iteration: Filter for Transparent objects (Glass/Water)
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
-        if (!mr.mesh || !mr.material) continue;
+        auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(meshRenderers.Index()[i]);
 
-        const Pipeline* p = mr.material->getPipeline();
-        if (p == pipelines[3] || p == pipelines[5]) {
-            GE::ECS::EntityID entityID = meshRenderers.Index()[i];
-            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
-            if (transform) {
-                mr.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+        if (transform) {
+            for (const auto& sub : mr.subMeshes) {
+                // Logic: Only draw if the material explicitly asks for the Transparent pass
+                if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Transparent) {
+                    sub.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+                }
             }
         }
     }
 
-    // Record Particle draw calls within the transparent render pass
-    if (dustEnabled && (dust != nullptr)) { dust->draw(cb, globalSet); }
-    if (fireEnabled && (fire != nullptr)) { fire->draw(cb, globalSet); }
-    if (smokeEnabled && (smoke != nullptr)) { smoke->draw(cb, globalSet); }
-    if (rainEnabled && (rain != nullptr)) { rain->draw(cb, globalSet); }
-    if (snowEnabled && (snow != nullptr)) { snow->draw(cb, globalSet); }
+    recordParticlePass(cb, dust, fire, smoke, rain, snow, dustEnabled, fireEnabled, smokeEnabled, rainEnabled, snowEnabled, globalSet);
 
     vkCmdEndRenderPass(cb);
 }

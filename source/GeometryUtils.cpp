@@ -227,14 +227,10 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
  */
 OBJLoader::MeshData GeometryUtils::generatePlane(float width, float depth) {
     OBJLoader::MeshData data;
-    float hw = width * 0.5f;
-    float hd = depth * 0.5f;
-
+    float w2 = width * 0.5f; float d2 = depth * 0.5f;
     data.vertices = {
-        {{-hw, 0.0f, -hd}, {0, 1, 0}, {0, 0}},
-        {{ hw, 0.0f, -hd}, {0, 1, 0}, {1, 0}},
-        {{ hw, 0.0f,  hd}, {0, 1, 0}, {1, 1}},
-        {{-hw, 0.0f,  hd}, {0, 1, 0}, {0, 1}}
+        {{-w2, 0.0f, -d2}, {0,1,0}, {0,0}}, {{ w2, 0.0f, -d2}, {0,1,0}, {1,0}},
+        {{ w2, 0.0f,  d2}, {0,1,0}, {1,1}}, {{-w2, 0.0f,  d2}, {0,1,0}, {0,1}}
     };
     data.indices = { 0, 1, 2, 2, 3, 0 };
     return data;

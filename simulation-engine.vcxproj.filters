@@ -152,6 +152,9 @@
     <ClCompile Include="source\EntityFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\SnowGlobeScenario.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\base.frag">
@@ -443,6 +446,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Pipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Scenario.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SnowGlobeScenario.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

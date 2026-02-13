@@ -98,112 +98,132 @@ void IMGUIManager::update(InputManager* const input, const StatsManager* const s
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    static_cast<void>(ImGui::Begin("Snow Globe Engine Diagnostics"));
+    static_cast<void>(ImGui::Begin("Engine Diagnostics & Simulation Control"));
 
     if (input != nullptr) {
-        // --- 1. Control Documentation ---
-        if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::BulletText("'F1', 'F2', 'F3': Switch Cameras");
-            ImGui::BulletText("'c/C': Toggle Cursor Capture");
-            ImGui::BulletText("WASD: Move | QE: Pan | Mouse: Look");
-            ImGui::BulletText("'l/L': Toggle Shading Model");
-            ImGui::BulletText("'t/T': Simulation Speed Scaling");
-            ImGui::BulletText("'r/R': Reset Simulation State");
-        }
-
+        // --- 1. Scenario Information ---
+        // Placeholder for the "Pin" regarding Scenario Selection
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Active Scenario: Snow Globe");
         ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Active Camera: %s", input->getActiveCameraLabel());
 
-        // --- 2. Performance Telemetry ---
-        ImGui::Separator();
-        ImGui::Text("Performance: %.1f FPS", static_cast<double>(ImGui::GetIO().Framerate));
-        if (stats != nullptr) {
-            ImGui::PlotLines("FPS History", stats->getHistoryData(),
-                static_cast<int>(stats->getCount()),
-                static_cast<int>(stats->getOffset()), nullptr, 0.0f, 165.0f, ImVec2(0, 80));
+        // --- 2. Camera Settings (Step 3 Implementation) ---
+        if (ImGui::CollapsingHeader("Camera Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+            Camera* activeCam = input->getActiveCamera();
+
+            ImGui::Text("Active View: %s", input->getActiveCameraLabel());
+
+            // Fulfills Lab Requirement: Orthographic Camera Toggle
+            bool isOrtho = (activeCam->getProjectionMode() == Camera::ProjectionMode::ORTHOGRAPHIC);
+            if (ImGui::Checkbox("Orthographic Projection", &isOrtho)) {
+                activeCam->setProjectionMode(isOrtho ?
+                    Camera::ProjectionMode::ORTHOGRAPHIC :
+                    Camera::ProjectionMode::PERSPECTIVE);
+            }
+
+            // Fulfills Lab Requirement: View from different positions/aligned to axis
+            if (isOrtho) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+                ImGui::TextWrapped("Debug Axis Alignment:");
+                ImGui::PopStyleColor();
+
+                if (ImGui::Button("Top (Y-Axis)")) {
+                    activeCam->setPosition(glm::vec3(0.0f, 10.0f, 0.0f));
+                    activeCam->setPitch(-89.9f); // Looking straight down
+                    activeCam->setYaw(-90.0f);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Side (X-Axis)")) {
+                    activeCam->setPosition(glm::vec3(10.0f, 0.0f, 0.0f));
+                    activeCam->setPitch(0.0f);
+                    activeCam->setYaw(180.0f); // Looking toward origin from +X
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Front (Z-Axis)")) {
+                    activeCam->setPosition(glm::vec3(0.0f, 0.0f, 10.0f));
+                    activeCam->setPitch(0.0f);
+                    activeCam->setYaw(-90.0f); // Looking toward origin from +Z
+                }
+            }
         }
 
-        // --- 3. Simulation Scaling ---
-        if (time != nullptr) {
-            ImGui::Separator();
-            ImGui::Text("Simulation Scale: %.2fx", static_cast<double>(time->getScale()));
+        // --- 3. Performance Telemetry ---
+        if (ImGui::CollapsingHeader("Telemetry")) {
+            ImGui::Text("Performance: %.1f FPS", static_cast<double>(ImGui::GetIO().Framerate));
+            if (stats != nullptr) {
+                ImGui::PlotLines("FPS History", stats->getHistoryData(),
+                    static_cast<int>(stats->getCount()),
+                    static_cast<int>(stats->getOffset()), nullptr, 0.0f, 165.0f, ImVec2(0, 80));
+            }
         }
 
-        // --- 4. Weather & Climate Management ---
+        // --- 4. Simulation Control (Lab Requirement: Start/Stop/Pause/Timestep) ---
+        if (ImGui::CollapsingHeader("Simulation Logic")) {
+            if (time != nullptr) {
+                ImGui::Text("Global Timestep: %.2fx", static_cast<double>(time->getScale()));
+                if (ImGui::Button("Reset Clock")) { /* Logic handled via InputManager 'r' */ }
+            }
+
+            // Note: Once the activeScenario is fully integrated, 
+            // we can add a Scenario::Pause toggle here.
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.5f, 1.0f), "Status: Running");
+        }
+
+        // --- 5. Scenario-Specific UI (Climate/Weather) ---
+        // This section will eventually move into a virtual method within the Scenario class
         if (climate != nullptr) {
-            ImGui::Separator();
-            ImGui::Text("Weather Management");
+            if (ImGui::CollapsingHeader("Environment (Snow Globe)")) {
+                static const char* modeNames[] = { "Normal (Auto)", "Summer (Lock)", "Rain (Lock)", "Snow (Lock)" };
+                int currentModeIdx = static_cast<int>(climate->getWeatherMode());
 
-            static const char* modeNames[] = { "Normal (Auto)", "Summer (Lock)", "Rain (Lock)", "Snow (Lock)" };
-            int currentModeIdx = static_cast<int>(climate->getWeatherMode());
+                if (ImGui::Combo("Season Mode", &currentModeIdx, modeNames, static_cast<int>(IM_ARRAYSIZE(modeNames)))) {
+                    climate->setWeatherMode(static_cast<WeatherMode>(currentModeIdx));
+                }
 
-            if (ImGui::Combo("Mode", &currentModeIdx, modeNames, static_cast<int>(IM_ARRAYSIZE(modeNames)))) {
-                climate->setWeatherMode(static_cast<WeatherMode>(currentModeIdx));
-            }
+                ImVec4 seasonColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+                switch (climate->getWeatherState()) {
+                case WeatherState::RAIN:   seasonColor = ImVec4(0.2f, 0.5f, 1.0f, 1.0f); break;
+                case WeatherState::SNOW:   seasonColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f); break;
+                default:                   seasonColor = ImVec4(1.0f, 0.4f, 0.1f, 1.0f); break;
+                }
+                ImGui::TextColored(seasonColor, "Current Season: %s", climate->getSeasonLabel());
 
-            ImVec4 seasonColor{ 1.0f, 1.0f, 1.0f, 1.0f };
-            switch (climate->getWeatherState()) {
-            case WeatherState::RAIN:   seasonColor = ImVec4(0.2f, 0.5f, 1.0f, 1.0f); break;
-            case WeatherState::SNOW:   seasonColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f); break;
-            case WeatherState::SUMMER:
-            default:                   seasonColor = ImVec4(1.0f, 0.4f, 0.1f, 1.0f); break;
-            }
-            ImGui::TextColored(seasonColor, "Season: %s", climate->getSeasonLabel());
-        }
+                ImGui::Separator();
 
-        // --- 5. System Overrides (Corrected to use Setters) ---
-        ImGui::Separator();
+                bool orbit = input->getAutoOrbit();
+                if (ImGui::Checkbox("Auto-Orbit Sun", &orbit)) { input->setAutoOrbit(orbit); }
 
-        // Gouraud Shading
-        bool gouraud = input->getGouraudEnabled();
-        if (ImGui::Checkbox("Gouraud Shading", &gouraud)) { input->setGouraudEnabled(gouraud); }
-
-        // Particle Toggles
-        bool dust = input->getDustEnabled();
-        if (ImGui::Checkbox("Simulate Dust", &dust)) { input->setDustEnabled(dust); }
-
-        bool fire = input->getFireEnabled();
-        if (ImGui::Checkbox("Simulate Fire", &fire)) { input->setFireEnabled(fire); }
-
-        bool smoke = input->getSmokeEnabled();
-        if (ImGui::Checkbox("Simulate Smoke", &smoke)) { input->setSmokeEnabled(smoke); }
-
-        bool rain = input->getRainEnabled();
-        if (ImGui::Checkbox("Simulate Rain", &rain)) { input->setRainEnabled(rain); }
-
-        bool snow = input->getSnowEnabled();
-        if (ImGui::Checkbox("Simulate Snow", &snow)) { input->setSnowEnabled(snow); }
-
-        bool bloom = input->getBloomEnabled();
-        if (ImGui::Checkbox("Post-Process Bloom", &bloom)) { input->setBloomEnabled(bloom); }
-
-        // --- 6. Lighting Control ---
-        ImGui::Separator();
-        bool orbit = input->getAutoOrbit();
-        if (ImGui::Checkbox("Auto-Orbit Sun", &orbit)) { input->setAutoOrbit(orbit); }
-
-        if (light != nullptr && !input->getAutoOrbit()) {
-            glm::vec3 pos = light->getPosition();
-            if (ImGui::SliderFloat3("Manual Sun", &pos.x, -5.0f, 5.0f)) {
-                light->setPosition(pos);
+                if (light != nullptr && !input->getAutoOrbit()) {
+                    glm::vec3 pos = light->getPosition();
+                    if (ImGui::SliderFloat3("Manual Sun", &pos.x, -5.0f, 5.0f)) {
+                        light->setPosition(pos);
+                    }
+                }
             }
         }
 
-        float intensity = input->getIntensityMod();
-        if (ImGui::SliderFloat("Intensity", &intensity, 0.0f, 5.0f)) {
-            input->setIntensityMod(intensity);
-        }
+        // --- 6. Global Rendering Overrides ---
+        if (ImGui::CollapsingHeader("Visual Overrides")) {
+            bool bloom = input->getBloomEnabled();
+            if (ImGui::Checkbox("Post-Process Bloom", &bloom)) { input->setBloomEnabled(bloom); }
 
-        glm::vec3 currentColor = input->getColorMod();
-        if (ImGui::ColorEdit3("Color Tint", &currentColor[0])) {
-            input->setColorMod(currentColor);
+            bool gouraud = input->getGouraudEnabled();
+            if (ImGui::Checkbox("Gouraud Shading", &gouraud)) { input->setGouraudEnabled(gouraud); }
+
+            float intensity = input->getIntensityMod();
+            if (ImGui::SliderFloat("Global Intensity", &intensity, 0.0f, 5.0f)) {
+                input->setIntensityMod(intensity);
+            }
+
+            glm::vec3 currentColor = input->getColorMod();
+            if (ImGui::ColorEdit3("Scene Color Tint", &currentColor[0])) {
+                input->setColorMod(currentColor);
+            }
         }
     }
 
     ImGui::End();
     ImGui::Render();
 }
-
 /**
  * @brief Records ImGui render commands into the current frame's command buffer.
  */

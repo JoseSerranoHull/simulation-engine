@@ -53,7 +53,9 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
 
     timeManager = std::make_unique<TimeManager>();
     statsManager = std::make_unique<StatsManager>();
+
     assetManager = std::make_unique<AssetManager>();
+    ServiceLocator::Provide(assetManager.get());
 
     // Step 3: Hardware Linkage
     resources->init(vulkanEngine.get(), MAX_FRAMES_IN_FLIGHT);
@@ -63,6 +65,8 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
     renderer = std::make_unique<Renderer>();
     scene = std::make_unique<GE::Scene::Scene>();
+
+    ServiceLocator::Provide(scene.get());
 
     inputManager = std::make_unique<InputManager>(window, timeManager.get());
     ServiceLocator::Provide(inputManager.get());
@@ -498,6 +502,13 @@ void Experience::drawFrame() {
     // Record Draw Calls via Refactored Renderer
     std::vector<Pipeline*> rawPipelines;
     for (const auto& p : pipelines) rawPipelines.push_back(p.get());
+
+    // Delegate Logic to Scenario (Fulfills Simulation Control & Timestep)
+    if (activeScenario && !activeScenario->IsPaused()) {
+        // Multiply dt by timeScale to fulfill "change timestep" requirement
+        activeScenario->OnUpdate(dt * activeScenario->GetTimeScale(), totalTime);
+    }
+
     renderer->recordFrame(
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
         dustParticleSystem.get(), fireParticleSystem.get(), smokeParticleSystem.get(),
@@ -576,66 +587,45 @@ void Experience::drawFrame() {
  * Orchestrates climate simulation, manual user overrides, and hardware buffer updates.
  */
 void Experience::updateUniformBuffer(const uint32_t currentImage) {
+    // 1. Memory Safety Handshake
     void* const mappedData = resources->getMappedBuffer(currentImage);
-    if (!mappedData) return;
-
-    auto* em = entityManager.get();
-    const float dt = timeManager->getDelta();
-    const float totalTime = timeManager->getTotal();
-
-    // 1. Climate Simulation: Use values from [Global:Light]
-    climateManager->update(dt, totalTime, inputManager->getAutoOrbit(),
-        4.0f,   // OrbitRadius
-        0.3f,   // OrbitSpeed
-        2.5f);  // Intensity
-
-    if (climateManager->checkTransition()) syncWeatherToggles();
-
-    // 2. ECS Component Update: Cacti Scaling
-    // We use the base scales defined in snow_globe.ini [Transform] sections
-    const float cactusMultiplier = climateManager->getCactusScale();
-
-    auto scaleEntity = [&](const std::string& key, float baseScale) {
-        if (scene->hasEntity(key)) {
-            auto id = scene->getEntityID(key);
-            auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(id);
-            if (trans) {
-                trans->m_scale = glm::vec3(baseScale) * cactusMultiplier;
-                trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
-            }
-        }
-        };
-
-    scaleEntity("Cactus1", 0.005f); // Base Scale from your .ini
-    scaleEntity("Cactus2", 0.004f); // Base Scale from your .ini
-
-    // 3. ECS Component Update: Oasis (Water) Positioning
-    if (scene->hasEntity(SceneKeys::OASIS)) {
-        auto id = scene->getEntityID(SceneKeys::OASIS);
-        auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(id);
-        if (trans) {
-            // Base Scale 0.1 from your .ini
-            trans->m_scale = glm::vec3(0.1f) * climateManager->getWaterScale();
-            trans->m_position = glm::vec3(-0.5f, -0.1f, 0.5f) + glm::vec3(0.0f, climateManager->getWaterOffset(), 0.0f);
-            trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
-        }
+    if (mappedData == nullptr) {
+        return;
     }
 
-    // UBO Update
-    UniformBufferObject ubo{};
+    // 2. Prepare Shared Frame Data
+    const float totalTime = timeManager->getTotal();
     const VkExtent2D extent = vulkanEngine->getSwapChainExtent();
     const float aspect = static_cast<float>(extent.width) / static_cast<float>(extent.height);
 
-    ubo.view = inputManager->getActiveCamera()->getViewMatrix();
-    ubo.proj = glm::perspective(glm::radians(inputManager->getActiveCamera()->getZoom()), aspect, 0.1f, 100.0f);
+    // Get the active camera (Handles its own Projection/View math)
+    Camera* const activeCam = inputManager->getActiveCamera();
+
+    // 3. Populate the GPU-ready structure
+    UniformBufferObject ubo{};
+
+    // --- Transformation Matrices ---
+    ubo.view = activeCam->getViewMatrix();
+
+    // Fulfills Requirement: Uses the helper that toggles Ortho vs Perspective
+    ubo.proj = activeCam->getProjectionMatrix(aspect);
+
+    // Vulkan NDC Correction: Flip Y-axis to match Screen Space
     ubo.proj[1][1] *= -1.0f;
 
-    ubo.lightPos = (inputManager->getAutoOrbit() ? climateManager->getSunPosition() : mainLight->getPosition());
-    ubo.viewPos = inputManager->getActiveCamera()->getPosition();
-    ubo.lightColor = climateManager->getAmbientColor() * inputManager->getColorMod();
+    // --- Global Lighting & View State ---
+    ubo.viewPos = activeCam->getPosition();
     ubo.time = totalTime;
 
+    // Logic: If the scenario is active, we can pull simulation-driven values.
+    // For a generic implementation, we use the primary light source and UI modifiers.
+    ubo.lightPos = mainLight->getPosition();
+    ubo.lightColor = mainLight->getColor() * inputManager->getColorMod();
+
+    // 4. Record and Synchronize
     static_cast<void>(std::memcpy(mappedData, &ubo, sizeof(UniformBufferObject)));
+
+    // Keep a local copy for CPU-side particle update lookups
     this->currentUBO = ubo;
 }
 
@@ -724,5 +714,39 @@ void Experience::syncWeatherToggles() const {
         inputManager->setSmokeEnabled(climateManager->isSmokeEnabled());
         inputManager->setRainEnabled(climateManager->isRainEnabled());
         inputManager->setSnowEnabled(climateManager->isSnowEnabled());
+    }
+}
+
+void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
+    // 1. Teardown existing logic
+    if (activeScenario) {
+        activeScenario->OnUnload();
+
+        // Use the new explicit clear method
+        scene->clearEntities();
+
+        // Also recommended: Clear the ECS EntityManager to prevent ID bloat
+        if (entityManager) {
+            entityManager->ClearAllEntities();
+        }
+    }
+
+    activeScenario = std::move(newScenario);
+
+    if (activeScenario) {
+        // 2. Context setup for loading (Staging buffers)
+        const VkCommandBuffer setupCmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
+        std::vector<VkBuffer> sb;
+        std::vector<VkDeviceMemory> sm;
+
+        // 3. Concrete scenario loads its specific assets
+        activeScenario->OnLoad(setupCmd, sb, sm);
+
+        // 4. Cleanup loading context
+        VulkanUtils::endSingleTimeCommands(context->device, context->graphicsCommandPool, context->graphicsQueue, setupCmd);
+        for (size_t i = 0; i < sb.size(); ++i) {
+            vkDestroyBuffer(context->device, sb[i], nullptr);
+            vkFreeMemory(context->device, sm[i], nullptr);
+        }
     }
 }

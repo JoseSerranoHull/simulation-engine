@@ -25,6 +25,7 @@
 #include "../include/EntityManager.h"
 #include "../include/Components.h"
 #include "../include/SceneLoader.h"
+#include "../include/Scenario.h"
 
 // Scene & System Includes
 #include "Scene.h"
@@ -78,6 +79,9 @@ public:
     static void keyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int mods);
     static void mouseCallback(GLFWwindow* pWindow, double xpos, double ypos);
 
+    /** @brief Requirement: Ability to change scenarios at runtime. */
+    void changeScenario(std::unique_ptr<GE::Scenario> newScenario);
+
 private:
     // --- Windowing & Core Infrastructure ---
     GLFWwindow* window;
@@ -95,6 +99,7 @@ private:
     std::unique_ptr<SystemFactory> systemFactory;
 
     // --- High-Level Logic Managers ---
+    std::unique_ptr<GE::Scenario> activeScenario;
     std::unique_ptr<TimeManager> timeManager;
     std::unique_ptr<InputManager> inputManager;
     std::unique_ptr<StatsManager> statsManager;

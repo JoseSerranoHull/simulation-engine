@@ -51,6 +51,9 @@ namespace GE::Scene
         /** @brief Gets the ID for a named entity. */
         GE::ECS::EntityID getEntityID(const std::string& key) const;
 
+        /** @brief NEW: Clears the name-to-ID registry for scenario transitions. */
+        void clearEntities() { entities.clear(); }
+
         /** @brief Returns the full name-to-ID map for the Renderer. */
         const std::map<std::string, GE::ECS::EntityID>& getEntityMap() const { return entities; }
 

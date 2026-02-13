@@ -23,6 +23,8 @@ enum class CameraMovement {
  */
 class Camera final {
 public:
+    enum class ProjectionMode { PERSPECTIVE, ORTHOGRAPHIC };
+
     // --- Named Constants ---
     static constexpr float PITCH_LIMIT = 89.0f;
     static constexpr float DEFAULT_YAW = -90.0f;
@@ -161,7 +163,27 @@ public:
         updateCameraVectors();
     }
 
+    /** * @brief Generates the Projection matrix based on the current mode.
+         * Fulfills Requirement: view a scenario from orthographic positions aligned to an axis.
+         */
+    glm::mat4 getProjectionMatrix(float aspect, float nearP = 0.1f, float farP = 100.0f) const {
+        if (m_mode == ProjectionMode::ORTHOGRAPHIC) {
+            // 'Zoom' acts as the vertical half-extent for the ortho box
+            // A value of 5.0f is a good default for your scene scale
+            float size = 5.0f;
+            return glm::ortho(-size * aspect, size * aspect, -size, size, nearP, farP);
+        }
+
+        return glm::perspective(glm::radians(Zoom), aspect, nearP, farP);
+    }
+
+    // --- Mode Controls ---
+    void setProjectionMode(ProjectionMode mode) { m_mode = mode; }
+    ProjectionMode getProjectionMode() const { return m_mode; }
+
 private:
+    ProjectionMode m_mode = ProjectionMode::PERSPECTIVE;
+
     // --- Vector Basis State ---
     glm::vec3 Position{ 0.0f, 0.0f, 0.0f };
     glm::vec3 Front{ 0.0f, 0.0f, -1.0f };

@@ -164,6 +164,12 @@ std::unique_ptr<Mesh> AssetManager::processMeshData(
 {
     VulkanContext* context = ServiceLocator::GetContext();
 
+    // --- CRITICAL SAFETY CHECK ---
+    if (data.vertices.empty() || data.indices.empty()) {
+        GE_LOG_ERROR("AssetManager: Attempted to process empty mesh data! Returning null.");
+        return nullptr;
+    }
+
     // Step 1: Resource requirement calculation.
     const VkDeviceSize vertexSize = static_cast<VkDeviceSize>(sizeof(Vertex)) * static_cast<VkDeviceSize>(data.vertices.size());
     const VkDeviceSize indexSize = static_cast<VkDeviceSize>(sizeof(uint32_t)) * static_cast<VkDeviceSize>(data.indices.size());

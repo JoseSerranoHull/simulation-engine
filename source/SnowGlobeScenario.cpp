@@ -2,6 +2,7 @@
 #include "../include/ServiceLocator.h"
 #include "../include/SceneLoader.h"
 #include "../include/Components.h"
+#include "../include/InputManager.h"
 
 namespace GE {
 

@@ -155,6 +155,15 @@
     <ClCompile Include="source\SnowGlobeScenario.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\PhysicsSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\TransformSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GenericScenario.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\base.frag">
@@ -282,6 +291,12 @@
       <Filter>Mardown Files</Filter>
     </None>
     <None Include="config\snow_globe.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab2.md">
+      <Filter>Mardown Files</Filter>
+    </None>
+    <None Include="config\physics_lab.ini">
       <Filter>Config Files</Filter>
     </None>
   </ItemGroup>
@@ -452,6 +467,39 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\SnowGlobeScenario.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Ray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Physics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Collider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PhysicsComponents.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Plane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Sphere.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PhysicsSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TransformSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GenericScenario.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Physics2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Line.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

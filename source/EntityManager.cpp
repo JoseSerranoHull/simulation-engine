@@ -31,13 +31,17 @@ namespace GE::ECS
         return result;
     }
 
-	// Currently not used
-    // void EntityManager::Update(const float dt)
-    // {
-    //     for (auto const &stageVec : m_systems)
-    //         for (auto &sys : stageVec)
-    //             sys->OnUpdate(dt);
-    // }
+	// Dispatch updates to all registered systems in stage order
+    void EntityManager::Update(const float dt)
+    {
+        for (const auto &stageVec : m_systems) {
+            for (auto *sys : stageVec) {
+                if (sys != nullptr) {
+                    sys->OnUpdate(dt);
+                }
+            }
+        }
+    }
 
     ERROR_CODE EntityManager::Shutdown()
     {
@@ -84,8 +88,8 @@ namespace GE::ECS
 
         for (uint32_t typeID = 0; typeID < m_maxComponentTypes; ++typeID)
         {
-            if (const uint32_t idx = m_allComponentIndices[typeID * m_maxEntities + id];
-                idx != UINT32_MAX && m_componentArrays[typeID]->Has(idx))
+            const uint32_t idx = m_allComponentIndices[typeID * m_maxEntities + id];
+            if (idx != UINT32_MAX && m_componentArrays[typeID]->Has(idx))
             {
                 m_componentArrays[typeID]->Remove(idx);
                 m_allComponentIndices[typeID * m_maxEntities + id] = UINT32_MAX;
@@ -165,6 +169,20 @@ namespace GE::ECS
         }
 
         GE_LOG_FATAL("System not found in its stage");
+        return ERROR_CODE::SYSTEM_NOT_REGISTERED;
+    }
+
+    ERROR_CODE EntityManager::UnregisterSystemByID(ISystemTypeID systemID) {
+        for (auto& stageVector : m_systems) {
+            for (auto it = stageVector.begin(); it != stageVector.end(); ++it) {
+                if ((*it)->GetID() == systemID) {
+                    // Optional: (*it)->Shutdown(); 
+                    delete* it; // Assumes the EntityManager owns the system pointer
+                    stageVector.erase(it);
+                    return ERROR_CODE::OK;
+                }
+            }
+        }
         return ERROR_CODE::SYSTEM_NOT_REGISTERED;
     }
 }

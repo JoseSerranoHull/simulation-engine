@@ -16,6 +16,7 @@
 #include "Mesh.h"
 #include "Pipeline.h"
 #include "OBJLoader.h"
+#include "../include/Logger.h"
 
 /**
  * @class AssetManager

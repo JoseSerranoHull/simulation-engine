@@ -82,6 +82,17 @@ public:
     /** @brief Requirement: Ability to change scenarios at runtime. */
     void changeScenario(std::unique_ptr<GE::Scenario> newScenario);
 
+	/** @brief Accessor for the active scenario instance. */
+    GE::Scenario* GetCurrentScenario() const { return activeScenario.get(); }
+
+    /** @brief Accessors for the Get Vulkan Engine. */
+    VulkanEngine* GetVulkanEngine() const { return vulkanEngine.get(); }
+
+	/** @brief Provides pipeline access to bind materials. */
+    const std::vector<std::unique_ptr<Pipeline>>& GetPipelines() const { return pipelines; }
+
+	/** @brief Makes the simulation make a step when paused. */
+    void stepSimulation(float fixedStep);
 private:
     // --- Windowing & Core Infrastructure ---
     GLFWwindow* window;

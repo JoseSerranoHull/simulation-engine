@@ -5,12 +5,11 @@
 #include <memory>
 /* parasoft-end-suppress ALL */
 
-#include "../include/EntityManager.h"
-#include "../include/AssetManager.h"
-#include "../include/Scene.h"
-#include "../include/InputManager.h" // <-- Add this include to fix incomplete type error
-
 // Forward declarations
+class Experience;
+namespace GE::ECS { class EntityManager; }
+class AssetManager;
+class InputManager;
 class SystemFactory;
 struct VulkanContext;
 class VulkanResourceManager;
@@ -27,8 +26,7 @@ public:
     static void Provide(GE::ECS::EntityManager* entityManager) { m_entityManager = entityManager; }
     static void Provide(AssetManager* assetManager) { m_assetManager = assetManager; }
     static void Provide(SystemFactory* factory) { m_factory = factory; }
-
-    // NEW: Provide the Scene Registry
+    static void Provide(Experience* experience) { m_experience = experience; }
     static void Provide(GE::Scene::Scene* scene) { m_scene = scene; }
 
     // --- Retrievers ---
@@ -62,10 +60,14 @@ public:
         return m_factory;
     }
 
-    // NEW: Retrieve the Scene Registry
     static GE::Scene::Scene* GetScene() {
         if (!m_scene) throw std::runtime_error("ServiceLocator: Scene not provided!");
         return m_scene;
+    }
+
+    static Experience* GetExperience() {
+        if (!m_experience) throw std::runtime_error("ServiceLocator: Experience not provided!");
+        return m_experience;
     }
 
 private:
@@ -75,7 +77,6 @@ private:
     static inline SystemFactory* m_factory = nullptr;
     static inline GE::ECS::EntityManager* m_entityManager = nullptr;
     static inline AssetManager* m_assetManager = nullptr;
-
-    // NEW: Static pointer for the scene
+    static inline Experience* m_experience = nullptr;
     static inline GE::Scene::Scene* m_scene = nullptr;
 };

@@ -4,9 +4,11 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <memory>
+#include <string>
 /* parasoft-end-suppress ALL */
 
 #include "Common.h"
+#include "Model.h"
 
 namespace GE {
     /**
@@ -27,14 +29,26 @@ namespace GE {
         /** @brief Fulfills Requirement: Ability to unload/teardown scenarios. */
         virtual void OnUnload() = 0;
 
+        /** @brief NEW: Hook for scenario-specific ImGui menus. */
+        virtual void OnGUI() {}
+
         // Lab Requirements: Simulation Controls
         bool  IsPaused()   const { return m_isPaused; }
         void  SetPaused(bool p) { m_isPaused = p; }
         float GetTimeScale() const { return m_timeScale; }
         void  SetTimeScale(float s) { m_timeScale = s; }
 
+        /** @brief Sets the data source path for this scenario instance. */
+        void SetConfigPath(const std::string& path) { m_configPath = path; }
+
     protected:
         bool  m_isPaused = false;
         float m_timeScale = 1.0f;
+
+        /** @brief Registry of models unique to this scenario for cleanup. */
+        std::vector<std::unique_ptr<Model>> m_ownedModels;
+
+        /** @brief Path to the .ini file defining this scenario's entities. */
+        std::string m_configPath;
     };
 }

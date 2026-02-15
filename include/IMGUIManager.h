@@ -14,6 +14,7 @@
 #include "../include/ClimateManager.h"
 #include "PointLight.h"
 #include "ServiceLocator.h"
+#include "../include/Scenario.h"
 
 /**
  * @class IMGUIManager
@@ -69,4 +70,7 @@ public:
 private:
     // --- Internal State & GPU Resources ---
     VkDescriptorPool imguiPool;  /**< Dedicated descriptor pool for ImGui textures. */
+
+	// --- Internal Helper Methods ---
+    void DrawMainMenuBar(InputManager* const input) const;
 };

@@ -1,4 +1,6 @@
 #include "../include/IMGUIManager.h"
+#include "../include/GenericScenario.h"
+#include "../include/Experience.h"
 
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>
@@ -98,13 +100,22 @@ void IMGUIManager::update(InputManager* const input, const StatsManager* const s
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    static_cast<void>(ImGui::Begin("Engine Diagnostics & Simulation Control"));
+    // --- 1. Top-Level Main Menu Bar (Agnostic Orchestration) ---
+    DrawMainMenuBar(input);
 
-    if (input != nullptr) {
-        // --- 1. Scenario Information ---
-        // Placeholder for the "Pin" regarding Scenario Selection
-        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Active Scenario: Snow Globe");
-        ImGui::Separator();
+    // --- 2. Central Diagnostics Window ---
+    // We keep your existing logic here, but wrap it in a window.
+    if (ImGui::Begin("Engine Diagnostics", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+
+        // Show Telemetry
+        if (ImGui::CollapsingHeader("Performance")) {
+            ImGui::Text("FPS: %.1f", static_cast<double>(ImGui::GetIO().Framerate));
+            if (stats != nullptr) {
+                ImGui::PlotLines("History", stats->getHistoryData(),
+                    static_cast<int>(stats->getCount()),
+                    static_cast<int>(stats->getOffset()), nullptr, 0.0f, 165.0f, ImVec2(0, 50));
+            }
+        }
 
         // --- 2. Camera Settings (Step 3 Implementation) ---
         if (ImGui::CollapsingHeader("Camera Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -224,6 +235,61 @@ void IMGUIManager::update(InputManager* const input, const StatsManager* const s
     ImGui::End();
     ImGui::Render();
 }
+
+/**
+ * @brief Implementation of the top-level Menu Bar.
+ */
+void IMGUIManager::DrawMainMenuBar(InputManager* const input) const {
+    auto* experience = ServiceLocator::GetExperience();
+
+    // Fulfills Requirement: ImGui Main Menu Bar
+    if (ImGui::BeginMainMenuBar()) {
+
+        // --- SCENARIO SELECTOR ---
+        if (ImGui::BeginMenu("Scenario")) {
+            // Fulfills Requirement: Load/Unload easily
+            if (ImGui::MenuItem("Snow Globe Scenario")) {
+                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/snow_globe.ini"));
+            }
+            if (ImGui::MenuItem("Physics Lab Scenario")) {
+                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/physics_lab.ini"));
+            }
+            ImGui::EndMenu();
+        }
+
+        // --- CAMERA CONTROLS ---
+        // Fulfills Requirement: Orthographic/Perspective Toggle
+        if (ImGui::BeginMenu("Camera")) {
+            Camera* activeCam = input->getActiveCamera();
+
+            bool isOrtho = (activeCam->getProjectionMode() == Camera::ProjectionMode::ORTHOGRAPHIC);
+            if (ImGui::MenuItem("Toggle Orthographic", nullptr, &isOrtho)) {
+                activeCam->setProjectionMode(isOrtho ?
+                    Camera::ProjectionMode::ORTHOGRAPHIC :
+                    Camera::ProjectionMode::PERSPECTIVE);
+            }
+
+            ImGui::Separator();
+            // Fulfills Requirement: View from Axis-Aligned positions
+            if (ImGui::MenuItem("Top View (Y-Axis)")) {
+                activeCam->setPosition({ 0, 10, 0 }); activeCam->setPitch(-89.9f); activeCam->setYaw(-90.0f);
+            }
+            if (ImGui::MenuItem("Side View (X-Axis)")) {
+                activeCam->setPosition({ 10, 0, 0 }); activeCam->setPitch(0.0f); activeCam->setYaw(180.0f);
+            }
+            ImGui::EndMenu();
+        }
+
+        // --- SCENARIO-SPECIFIC UI HOOK ---
+        // Fulfills Requirement: Scenarios add UI controls unique to them
+        if (experience->GetCurrentScenario()) {
+            experience->GetCurrentScenario()->OnGUI();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+}
+
 /**
  * @brief Records ImGui render commands into the current frame's command buffer.
  */

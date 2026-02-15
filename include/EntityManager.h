@@ -54,6 +54,7 @@ namespace GE::ECS {
 		// System registration + update
 		ERROR_CODE RegisterSystem(IECSystem *system);
 		ERROR_CODE UnregisterSystem(const IECSystem *system);
+		ERROR_CODE UnregisterSystemByID(ISystemTypeID systemID);
 		template <class T>
 		ComponentArray<T> &GetCompArr();
 

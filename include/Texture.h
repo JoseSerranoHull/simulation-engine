@@ -4,7 +4,7 @@
 #include "../include/libs.h"
 #include "../include/VulkanUtils.h"
 #include "../include/VulkanContext.h"
-#include "ServiceLocator.h"
+#include "../include/ServiceLocator.h"
 #include <stb_image.h>
 #include <cmath>
 #include <algorithm>

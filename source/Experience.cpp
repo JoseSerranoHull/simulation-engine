@@ -1,4 +1,7 @@
 #include "../include/Experience.h"
+#include "../include/GenericScenario.h"
+#include "../include/PhysicsComponents.h"
+#include "../include/TransformSystem.h"
 
 /**
  * @namespace SceneKeys
@@ -20,52 +23,50 @@ namespace SceneKeys {
  * @brief Constructor: Orchestrates the initialization of all engine sub-systems.
  */
 Experience::Experience(const uint32_t width, const uint32_t height, char const* const title)
-    : WINDOW_WIDTH(width),
-    WINDOW_HEIGHT(height),
-    framebufferResized(false),
-    currentFrame(EngineConstants::INDEX_ZERO)
+    : WINDOW_WIDTH(width), WINDOW_HEIGHT(height), framebufferResized(false), currentFrame(0)
 {
-    // Step 1: Foundation
+    ServiceLocator::Provide(this);
+
+    // --- Step 1: Foundation & Hardware ---
     initWindow(title);
     context = std::make_unique<VulkanContext>();
     ServiceLocator::Provide(context.get());
     vulkanEngine = std::make_unique<VulkanEngine>(window);
 
-    // Initialize ECS EntityManager
+    // --- Step 2: ECS & Infrastructure ---
     entityManager = std::make_unique<GE::ECS::EntityManager>();
-    entityManager->Initialize(1000, 32);
-
-    // Register Component Types
-    entityManager->RegisterComponent<GE::Scene::Components::Transform>();
-    entityManager->RegisterComponent<GE::Scene::Components::Tag>();
-    entityManager->RegisterComponent<GE::Components::MeshRenderer>();
-    entityManager->RegisterComponent<GE::Components::LightComponent>();
-    entityManager->RegisterComponent<GE::Components::PhysicsComponent>();
-
+    entityManager->Initialize(2000, 64);
+    // ... (Register Components as you have them) ...
     ServiceLocator::Provide(entityManager.get());
+    entityManager->RegisterSystem(new GE::Systems::TransformSystem());
 
-    // Step 2: Infrastructure & Factory Setup
     resources = std::make_unique<VulkanResourceManager>();
     ServiceLocator::Provide(resources.get());
-
     systemFactory = std::make_unique<SystemFactory>();
     ServiceLocator::Provide(systemFactory.get());
 
+    // --- Step 3: CORE RENDERING SETUP (FIXED ORDER) ---
+    // The PostProcessor MUST exist before initVulkan() builds the pipelines
+    postProcessor = std::make_unique<PostProcessor>(
+        vulkanEngine->getSwapChainExtent().width,
+        vulkanEngine->getSwapChainExtent().height,
+        vulkanEngine->getSwapChainFormat(),
+        vulkanEngine->getFinalRenderPass(),
+        vulkanEngine->getMsaaSamples()
+    );
+    postProcessor->resize(vulkanEngine->getSwapChainExtent());
+
+    // --- Step 4: Asset & Logic Managers ---
     timeManager = std::make_unique<TimeManager>();
     statsManager = std::make_unique<StatsManager>();
-
     assetManager = std::make_unique<AssetManager>();
     ServiceLocator::Provide(assetManager.get());
 
-    // Step 3: Hardware Linkage
     resources->init(vulkanEngine.get(), MAX_FRAMES_IN_FLIGHT);
     assetManager->setDescriptorPool(resources->getDescriptorPool());
 
-    // Step 4: Logic Layers
-    imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
     renderer = std::make_unique<Renderer>();
     scene = std::make_unique<GE::Scene::Scene>();
-
     ServiceLocator::Provide(scene.get());
 
     inputManager = std::make_unique<InputManager>(window, timeManager.get());
@@ -74,73 +75,13 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     uiManager = std::make_unique<IMGUIManager>();
     climateManager = std::make_unique<ClimateManager>();
 
-    // ============================================================
-    // Step 6: SYSTEM REGISTRATION (OCP Refactor)
-    // ============================================================
-
-    // 6.1 Post-Processing Recipe
-    systemFactory->registerSystem("PostProcessor", [&]() -> std::unique_ptr<ISystem> {
-        return std::make_unique<PostProcessor>(
-            vulkanEngine->getSwapChainExtent().width,
-            vulkanEngine->getSwapChainExtent().height,
-            vulkanEngine->getSwapChainFormat(),
-            vulkanEngine->getFinalRenderPass(),
-            vulkanEngine->getMsaaSamples()
-        );
-    });
-
-    // 6.2 Light Recipe
-    systemFactory->registerSystem("MainLight", [&]() -> std::unique_ptr<ISystem> {
-        return std::make_unique<PointLight>(
-            glm::vec3(0.0f, 4.0f, 0.0f),       // OrbitRadius = 4.0
-            glm::vec3(1.0f, 0.95f, 0.85f),    // Color = 1.0 0.95 0.85
-            2.5f                               // Intensity = 2.5
-        );
-        });
-
-    // 6.3 Particle System Recipe Template
-    auto registerParticle = [&](const std::string& name, const std::string& comp, const std::string& vert, const std::string& frag, glm::vec3 pos, uint32_t count) {
-        systemFactory->registerSystem(name, [&, comp, vert, frag, pos, count]() -> std::unique_ptr<ISystem> {
-            return std::make_unique<ParticleSystem>(
-                postProcessor->getTransparentRenderPass(),
-                context->globalSetLayout,
-                comp, vert, frag, pos, count, vulkanEngine->getMsaaSamples()
-            );
-        });
-    };
-
-    // ============================================================
-    // Step 7: SYSTEM CREATION
-    // ============================================================
-
-    // Create PostProcessor first (needed for particle render passes)
-    auto genericPP = systemFactory->create("PostProcessor");
-    postProcessor.reset(static_cast<PostProcessor*>(genericPP.release()));
-    postProcessor->resize(vulkanEngine->getSwapChainExtent());
-
-    // Create Light
-    auto genericLight = systemFactory->create("MainLight");
-    mainLight.reset(static_cast<PointLight*>(genericLight.release()));
-
-    // Register and Create Particles
-    registerParticle("Dust", "./shaders/dust_comp.spv", "./shaders/dust_vert.spv", "./shaders/dust_frag.spv", { 0.0f, 1.2f, 0.0f }, 1000U);
-    registerParticle("Fire", "./shaders/fire_comp.spv", "./shaders/fire_vert.spv", "./shaders/fire_frag.spv", { -0.8f, -0.15f, -0.5f }, 500U);
-    registerParticle("Smoke", "./shaders/smoke_comp.spv", "./shaders/smoke_vert.spv", "./shaders/smoke_frag.spv", { -0.8f, -0.15f, -0.5f }, 500U);
-    registerParticle("Rain", "./shaders/rain_comp.spv", "./shaders/rain_vert.spv", "./shaders/rain_frag.spv", { 0.0f, 1.8f, 0.0f }, 5000U);
-    registerParticle("Snow", "./shaders/snow_comp.spv", "./shaders/snow_vert.spv", "./shaders/snow_frag.spv", { 0.0f, 1.8f, 0.0f }, 3000U);
-
-    dustParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Dust").release()));
-    fireParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Fire").release()));
-    smokeParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Smoke").release()));
-    rainParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Rain").release()));
-    snowParticleSystem.reset(static_cast<ParticleSystem*>(systemFactory->create("Snow").release()));
-
-    // Step 8: Finalization
-    syncWeatherToggles();
+    // --- Step 5: Finalization ---
+    // Now this call will succeed because postProcessor is not null
     initVulkan();
     uiManager->init(window, vulkanEngine.get());
-    initSkybox();
-    loadAssets();
+
+    // Load initial scenario
+    changeScenario(std::make_unique<GE::GenericScenario>("./config/snow_globe.ini"));
 }
 
 /**
@@ -429,9 +370,10 @@ void Experience::initSkybox() {
  */
 void Experience::drawFrame() {
     VulkanContext* context = ServiceLocator::GetContext();
-    auto* em = entityManager.get(); // Cache for ECS access
+    auto* em = entityManager.get();
 
-    // Step 1: CPU-GPU Throttling - Wait for the previous frame's GPU execution to finish
+    // --- Step 1: CPU-GPU Throttling ---
+    // Wait for the previous frame's GPU execution to finish
     SyncManager* const sync = resources->getSyncManager();
     const VkFence currentFence = sync->getInFlightFence(currentFrame);
     static_cast<void>(vkWaitForFences(context->device, 1U, &currentFence, VK_TRUE, UINT64_MAX));
@@ -439,13 +381,23 @@ void Experience::drawFrame() {
     const float dt = timeManager->getDelta();
     const float totalTime = timeManager->getTotal();
 
-    // Step 2: High-Level Logic Updates - Update input and scene state
+    // --- Step 2: Agnostic Logic Updates ---
+    // Update input state and telemetry
     inputManager->update(dt);
-    if (scene != nullptr) {
-        scene->update(dt); // Now uses ECS internal lookups
+
+    // Fulfills Requirement: Simulation Start/Pause/Timestep
+    if (activeScenario && !activeScenario->IsPaused()) {
+        // Apply timescale to fulfill the "specify fixed timestep" requirement
+        float scaledDelta = dt * activeScenario->GetTimeScale();
+
+        // Triggers all registered ECS Systems (Transform, Physics, etc.)
+        em->Update(scaledDelta);
+
+        // Scenario-specific script logic (e.g., custom gameplay code)
+        activeScenario->OnUpdate(scaledDelta, totalTime);
     }
 
-    // Step 3: Presentation Handshake - Acquire an image from the Swapchain
+    // --- Step 3: Swapchain Acquisition ---
     uint32_t imageIndex{ 0U };
     const VkResult acquireResult = vkAcquireNextImageKHR(
         context->device,
@@ -476,7 +428,7 @@ void Experience::drawFrame() {
     const VkFence frameFence = sync->getInFlightFence(currentFrame);
     static_cast<void>(vkResetFences(context->device, 1U, &frameFence));
 
-    // Step 4: Command Buffer Recording
+    // --- Step 4: Command Buffer Recording ---
     updateUniformBuffer(imageIndex);
 
     const VkCommandBuffer cb = resources->getSyncManager()->getCommandBuffer(currentFrame);
@@ -485,40 +437,23 @@ void Experience::drawFrame() {
     const VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     static_cast<void>(vkBeginCommandBuffer(cb, &beginInfo));
 
-    // NEW: ECS lookup for Particle Emitters (e.g., finding the fire origin on Cactus1)
-    glm::vec3 fireOrigin(-0.8f, -0.15f, -0.5f);
-    if (scene && scene->hasEntity("Cactus1")) {
-        auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(scene->getEntityID("Cactus1"));
-        if (trans) fireOrigin = trans->m_position;
-    }
-
-    // Update Particle Systems
-    if (dustParticleSystem) dustParticleSystem->update(cb, timeManager->getDelta(), inputManager->getDustEnabled(), timeManager->getTotal(), currentUBO.lightColor);
-    if (fireParticleSystem) fireParticleSystem->update(cb, timeManager->getDelta(), inputManager->getFireEnabled(), timeManager->getTotal(), currentUBO.lightColor, fireOrigin);
-    if (smokeParticleSystem) smokeParticleSystem->update(cb, timeManager->getDelta(), inputManager->getSmokeEnabled(), timeManager->getTotal(), currentUBO.lightColor, fireOrigin);
-    if (rainParticleSystem) rainParticleSystem->update(cb, timeManager->getDelta(), inputManager->getRainEnabled(), timeManager->getTotal(), currentUBO.lightColor);
-    if (snowParticleSystem) snowParticleSystem->update(cb, timeManager->getDelta(), inputManager->getSnowEnabled(), timeManager->getTotal(), currentUBO.lightColor);
-
-    // Record Draw Calls via Refactored Renderer
+    // Record Draw Calls via Agnostic Pipeline Registry
     std::vector<Pipeline*> rawPipelines;
     for (const auto& p : pipelines) rawPipelines.push_back(p.get());
 
-    // Delegate Logic to Scenario (Fulfills Simulation Control & Timestep)
-    if (activeScenario && !activeScenario->IsPaused()) {
-        // Multiply dt by timeScale to fulfill "change timestep" requirement
-        activeScenario->OnUpdate(dt * activeScenario->GetTimeScale(), totalTime);
-    }
-
+    // Particles are now managed by ECS Systems; we pass nullptrs to the old hardcoded slots
     renderer->recordFrame(
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
-        dustParticleSystem.get(), fireParticleSystem.get(), smokeParticleSystem.get(),
-        rainParticleSystem.get(), snowParticleSystem.get(), postProcessor.get(),
-        resources->getDescriptorSet(imageIndex), resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
-        rawPipelines, inputManager->getDustEnabled(), inputManager->getFireEnabled(), inputManager->getSmokeEnabled(),
-        inputManager->getRainEnabled(), inputManager->getSnowEnabled()
+        nullptr, nullptr, nullptr, nullptr, nullptr, // Agnostic particle pass
+        postProcessor.get(), resources->getDescriptorSet(imageIndex),
+        resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
+        rawPipelines,
+        inputManager->getDustEnabled(), inputManager->getFireEnabled(),
+        inputManager->getSmokeEnabled(), inputManager->getRainEnabled(),
+        inputManager->getSnowEnabled()
     );
 
-    // Step 5: Final Display Pass - Bloom, UI, and Color Correction
+    // --- Step 5: Final Display Pass (UI & Post-Processing) ---
     VkRenderPassBeginInfo finalPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     finalPassInfo.renderPass = vulkanEngine->getFinalRenderPass();
     finalPassInfo.framebuffer = vulkanEngine->getFramebuffer(imageIndex);
@@ -535,13 +470,14 @@ void Experience::drawFrame() {
         postProcessor->draw(cb, inputManager->getBloomEnabled());
     }
 
+    // UI Manager draws the Main Menu Bar and the Scenario-Specific UI
     uiManager->update(inputManager.get(), statsManager.get(), mainLight.get(), timeManager.get(), climateManager.get());
     uiManager->draw(cb);
 
     vkCmdEndRenderPass(cb);
     static_cast<void>(vkEndCommandBuffer(cb));
 
-    // Step 6: Submission - Send recorded commands to the Graphics Queue
+    // --- Step 6: Submission & Presentation ---
     VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
@@ -559,11 +495,9 @@ void Experience::drawFrame() {
         throw std::runtime_error("Experience: Queue submit failed!");
     }
 
-    // Step 7: Presentation - Submit the final image to the OS for display
     VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
     presentInfo.waitSemaphoreCount = 1U;
-    VkSemaphore renderWaitSem = sync->getRenderFinishedSemaphore(imageIndex);
-    presentInfo.pWaitSemaphores = &renderWaitSem;
+    presentInfo.pWaitSemaphores = &signalSem;
     presentInfo.swapchainCount = 1U;
     VkSwapchainKHR swapchains[] = { vulkanEngine->getSwapChain() };
     presentInfo.pSwapchains = swapchains;
@@ -748,5 +682,14 @@ void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
             vkDestroyBuffer(context->device, sb[i], nullptr);
             vkFreeMemory(context->device, sm[i], nullptr);
         }
+    }
+}
+
+/** @brief Manually advances the simulation by exactly one fixed increment. */
+void Experience::stepSimulation(float fixedStep) {
+    if (activeScenario && activeScenario->IsPaused()) {
+        entityManager->Update(fixedStep);
+        activeScenario->OnUpdate(fixedStep, timeManager->getTotal());
+        GE_LOG_INFO("Experience: Stepped simulation forward by " + std::to_string(fixedStep));
     }
 }

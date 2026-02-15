@@ -54,5 +54,8 @@ namespace GE::Scene {
         void handleMeshRenderer(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, AssetManager* am, VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm, std::vector<std::unique_ptr<Model>>& outOwnedModels);
         void handleTag(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, GE::Scene::Scene* scene);
         void handleLightComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleSphereCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handlePlaneCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
     };
 }

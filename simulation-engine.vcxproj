@@ -149,6 +149,7 @@
     <ClCompile Include="source\EntityFactory.cpp" />
     <ClCompile Include="source\EntityManager.cpp" />
     <ClCompile Include="source\Experience.cpp" />
+    <ClCompile Include="source\GenericScenario.cpp" />
     <ClCompile Include="source\GeometryUtils.cpp" />
     <ClCompile Include="source\Image.cpp" />
     <ClCompile Include="source\IMGUIManager.cpp" />
@@ -159,6 +160,7 @@
     <ClCompile Include="source\Mesh.cpp" />
     <ClCompile Include="source\Model.cpp" />
     <ClCompile Include="source\ParticleSystem.cpp" />
+    <ClCompile Include="source\PhysicsSystem.cpp" />
     <ClCompile Include="source\PointLight.cpp" />
     <ClCompile Include="source\PostProcessor.cpp" />
     <ClCompile Include="source\Renderer.cpp" />
@@ -172,16 +174,19 @@
     <ClCompile Include="source\SwapChain.cpp" />
     <ClCompile Include="source\SyncManager.cpp" />
     <ClCompile Include="source\SystemFactory.cpp" />
+    <ClCompile Include="source\TransformSystem.cpp" />
     <ClCompile Include="source\VulkanEngine.cpp" />
     <ClCompile Include="source\VulkanResourceManager.cpp" />
     <ClCompile Include="source\VulkanUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="config\physics_lab.ini" />
     <None Include="config\snow_globe.ini" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md" />
     <None Include="markdown\Licenses.md" />
     <None Include="markdown\MasterPlan.md" />
+    <None Include="markdown\SimulationLab2.md" />
     <None Include="README.md" />
     <None Include="shaders\base.frag" />
     <None Include="shaders\dust.comp" />
@@ -225,6 +230,7 @@
     <ClInclude Include="include\AssetManager.h" />
     <ClInclude Include="include\Camera.h" />
     <ClInclude Include="include\ClimateManager.h" />
+    <ClInclude Include="include\Collider.h" />
     <ClInclude Include="include\Common.h" />
     <ClInclude Include="include\ComponentArray.h" />
     <ClInclude Include="include\Components.h" />
@@ -235,6 +241,7 @@
     <ClInclude Include="include\EntityFactory.h" />
     <ClInclude Include="include\EntityManager.h" />
     <ClInclude Include="include\Experience.h" />
+    <ClInclude Include="include\GenericScenario.h" />
     <ClInclude Include="include\GeometryUtils.h" />
     <ClInclude Include="include\IComponentArray.h" />
     <ClInclude Include="include\IECSystem.h" />
@@ -244,6 +251,7 @@
     <ClInclude Include="include\ISystem.h" />
     <ClInclude Include="include\libs.h" />
     <ClInclude Include="include\Light.h" />
+    <ClInclude Include="include\Line.h" />
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\Material.h" />
     <ClInclude Include="include\MemoryUtilities.h" />
@@ -252,9 +260,15 @@
     <ClInclude Include="include\OBJLoader.h" />
     <ClInclude Include="include\Particle.h" />
     <ClInclude Include="include\ParticleSystem.h" />
+    <ClInclude Include="include\Physics.h" />
+    <ClInclude Include="include\Physics2D.h" />
+    <ClInclude Include="include\PhysicsComponents.h" />
+    <ClInclude Include="include\PhysicsSystem.h" />
     <ClInclude Include="include\Pipeline.h" />
+    <ClInclude Include="include\Plane.h" />
     <ClInclude Include="include\PointLight.h" />
     <ClInclude Include="include\PostProcessor.h" />
+    <ClInclude Include="include\Ray.h" />
     <ClInclude Include="include\Renderer.h" />
     <ClInclude Include="include\RenderPass.h" />
     <ClInclude Include="include\Scenario.h" />
@@ -265,6 +279,7 @@
     <ClInclude Include="include\SimpleAllocator.h" />
     <ClInclude Include="include\Skybox.h" />
     <ClInclude Include="include\SnowGlobeScenario.h" />
+    <ClInclude Include="include\Sphere.h" />
     <ClInclude Include="include\StatsManager.h" />
     <ClInclude Include="include\SwapChain.h" />
     <ClInclude Include="include\SyncManager.h" />
@@ -273,6 +288,7 @@
     <ClInclude Include="include\Texture.h" />
     <ClInclude Include="include\TimeManager.h" />
     <ClInclude Include="include\Transform.h" />
+    <ClInclude Include="include\TransformSystem.h" />
     <ClInclude Include="include\Vertex.h" />
     <ClInclude Include="include\VulkanContext.h" />
     <ClInclude Include="include\VulkanEngine.h" />

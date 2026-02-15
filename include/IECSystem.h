@@ -68,4 +68,7 @@ namespace GE::ECS {
 		static std::atomic<uint32_t> lastID{0};
 		return lastID.fetch_add(1, std::memory_order_relaxed);
 	}
+
+	// Provide a definition for the virtual destructor to satisfy the linker.
+	inline IECSystem::~IECSystem() = default;
 }

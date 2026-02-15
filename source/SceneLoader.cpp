@@ -1,5 +1,6 @@
 #include "../include/SceneLoader.h"
 #include "../include/GeometryUtils.h"
+#include "../include/PhysicsComponents.h"
 
 /* parasoft-begin-suppress ALL */
 #include <fstream>
@@ -33,8 +34,10 @@ namespace GE::Scene {
             else if (currentSection == "Transform") handleTransform(sectionProps, em);
             else if (currentSection == "MeshRenderer") handleMeshRenderer(sectionProps, em, am, setupCmd, stagingBufs, stagingMems, outOwnedModels);
             else if (currentSection == "Tag") handleTag(sectionProps, em, scene);
-            // NEW: Fulfills Requirement for ECS-based lights
             else if (currentSection == "LightComponent") handleLightComponent(sectionProps, em);
+            else if (currentSection == "RigidBody") handleRigidBody(sectionProps, em);
+            else if (currentSection == "SphereCollider") handleSphereCollider(sectionProps, em);
+            else if (currentSection == "PlaneCollider") handlePlaneCollider(sectionProps, em);
 
             sectionProps.clear();
             };
@@ -130,9 +133,21 @@ namespace GE::Scene {
 
     void SceneLoader::handleTransform(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
         GE::Scene::Components::Transform trans;
+
+        // Standard properties
         if (props.count("Position")) trans.m_position = parseVec3(props.at("Position"));
         if (props.count("Rotation")) trans.m_rotation = parseVec3(props.at("Rotation"));
         if (props.count("Scale"))    trans.m_scale = parseVec3(props.at("Scale"));
+
+        // NEW: Agnostic Hierarchy Linking
+        if (props.count("Parent")) {
+            std::string parentName = props.at("Parent");
+            // We use the Scene registry to find the EntityID by name
+            auto* scene = ServiceLocator::GetScene();
+            if (scene->hasEntity(parentName)) {
+                trans.m_parentEntityID = scene->getEntityID(parentName);
+            }
+        }
 
         trans.m_state = GE::Scene::Components::Transform::TransformState::Dirty;
         em->AddComponent(m_currentEntity, trans);
@@ -261,6 +276,31 @@ namespace GE::Scene {
         if (props.count("IsStatic")) { light.isStatic = (props.at("IsStatic") == "true"); }
 
         em->AddComponent(m_currentEntity, light);
+    }
+
+    void SceneLoader::handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::RigidBody rb;
+        if (props.count("Mass")) rb.mass = parseFloat(props.at("Mass"));
+        if (props.count("Static")) rb.isStatic = (props.at("Static") == "true");
+        if (props.count("Velocity")) rb.velocity = parseVec3(props.at("Velocity"));
+        if (props.count("UseGravity")) rb.useGravity = (props.at("UseGravity") == "true");
+        if (props.count("Restitution")) rb.restitution = parseFloat(props.at("Restitution"));
+
+        em->AddComponent(m_currentEntity, rb);
+    }
+
+    void SceneLoader::handleSphereCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::SphereCollider sc;
+        if (props.count("Radius")) sc.radius = parseFloat(props.at("Radius"));
+        em->AddComponent(m_currentEntity, sc);
+    }
+
+    void SceneLoader::handlePlaneCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::PlaneCollider pc;
+        // Normal defaults to up (0,1,0) if not specified
+        if (props.count("Normal")) pc.normal = parseVec3(props.at("Normal"));
+        if (props.count("Offset")) pc.offset = parseFloat(props.at("Offset"));
+        em->AddComponent(m_currentEntity, pc);
     }
 
     // --- Parsing Helpers ---

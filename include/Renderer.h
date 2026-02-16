@@ -4,89 +4,54 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <memory>
-#include <array>
-#include <map>
-#include <string>
 /* parasoft-end-suppress ALL */
 
 // Engine Includes
 #include "../include/Mesh.h"
 #include "../include/Model.h"
 #include "../include/Skybox.h"
-#include "ParticleSystem.h"
 #include "PostProcessor.h"
 #include "Pipeline.h"
 #include "../include/VulkanContext.h"
+#include "../include/EntityManager.h"
 
 /**
  * @class Renderer
- * @brief Orchestrates the recording of command buffers for the multi-pass rendering pipeline.
- * Manages the sequence of Shadow Mapping, Opaque Forward Rendering, Scene Copying (Refraction),
- * Transparency, and GPU Particle Dispatches.
+ * @brief Agnostic Frame Orchestrator.
+ * * Manages the multi-pass rendering sequence by querying the ECS for
+ * MeshRenderers, Lights, and future ParticleComponents.
  */
 class Renderer final {
 public:
     // --- Functional Constants ---
     static constexpr uint32_t PIPELINE_IDX_SHADOW = 6U;
-    static constexpr uint32_t VIEWPORT_COUNT_ONE = 1U;
-    static constexpr uint32_t SCISSOR_COUNT_ONE = 1U;
     static constexpr float    DEPTH_CLEAR_VAL = 1.0f;
 
-    /** @brief Constructor: Links the renderer to the global Vulkan context. */
+    /** @brief Constructor: Standard initialization. */
     explicit Renderer() {}
-
-    /** @brief Destructor: Standard default as this class does not own heavy GPU handles. */
     ~Renderer() = default;
 
-    // RAII safety: Prevent copying of the global frame orchestrator to maintain state integrity.
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
 
     /**
-     * @brief Orchestrates the full frame recording sequence.
-     * Transitions from depth pre-passes to the final post-processed output.
+     * @brief Orchestrates the full frame recording sequence using the ECS.
+     * Fulfills Requirement: Agnostic rendering of any scenario entities.
      */
     void recordFrame(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
         const Skybox* const skybox,
-        const ParticleSystem* const dustSystem,
-        const ParticleSystem* const fireSystem,
-        const ParticleSystem* const smokeSystem,
-        const ParticleSystem* const rainSystem,
-        const ParticleSystem* const snowSystem,
+        GE::ECS::EntityManager* const em, // The source of all draw data
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalDescriptorSet,
         const VkRenderPass shadowPass,
         const VkFramebuffer shadowFramebuffer,
-        const std::vector<Pipeline*>& pipelines,
-        const bool enableDust,
-        const bool enableFire,
-        const bool enableSmoke,
-        const bool enableRain,
-        const bool enableSnow
+        const std::vector<Pipeline*>& pipelines
     ) const;
 
 private:
-	// --- Private Pass-Specific Recorders ---
-
-    /** @brief Records Compute dispatches and Graphics draw calls for all particle systems.
-     * Updated to const ParticleSystem* to satisfy MISRA2004.16_7.
-     */
-    void recordParticlePass(
-        const VkCommandBuffer cb,
-        const ParticleSystem* const dust,
-        const ParticleSystem* const fire,
-        const ParticleSystem* const smoke,
-        const ParticleSystem* const rain,
-        const ParticleSystem* const snow,
-        const bool dustEnabled,
-        const bool fireEnabled,
-        const bool smokeEnabled,
-        const bool rainEnabled,
-        const bool snowEnabled,
-        const VkDescriptorSet globalSet
-    ) const;
+    // --- Private Pass-Specific Recorders ---
 
     /** @brief Records the depth-only pass for shadow map generation. */
     void recordShadowPass(
@@ -94,7 +59,8 @@ private:
         const VkRenderPass renderPass,
         const VkFramebuffer framebuffer,
         const Pipeline* const shadowPipeline,
-        const VkDescriptorSet globalSet
+        const VkDescriptorSet globalSet,
+        GE::ECS::EntityManager* const em
     ) const;
 
     /** @brief Records the main forward rendering pass for opaque geometry. */
@@ -104,25 +70,24 @@ private:
         const Skybox* const skybox,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
-        const std::vector<Pipeline*>& pipelines
+        const std::vector<Pipeline*>& pipelines,
+        GE::ECS::EntityManager* const em
     ) const;
 
-    /** @brief Records the alpha-blended pass for glass and environmental effects. */
+    /** @brief Records alpha-blended geometry and dispatches particles. */
     void recordTransparentPass(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
-        const ParticleSystem* const dust,
-        const ParticleSystem* const fire,
-        const ParticleSystem* const smoke,
-        const ParticleSystem* const rain,
-        const ParticleSystem* const snow,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
         const std::vector<Pipeline*>& pipelines,
-        const bool dustEnabled,
-        const bool fireEnabled,
-        const bool smokeEnabled,
-        const bool rainEnabled,
-        const bool snowEnabled
+        GE::ECS::EntityManager* const em
+    ) const;
+
+    /** @brief Generic Particle Dispatcher: Renamed as per your naming choice. */
+    void recordParticles(
+        const VkCommandBuffer cb,
+        const VkDescriptorSet globalSet,
+        GE::ECS::EntityManager* const em
     ) const;
 };

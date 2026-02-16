@@ -3,17 +3,11 @@
 /* parasoft-begin-suppress ALL */
 #include "libs.h"
 #include <vector>
-#include <optional>
 #include <memory>
-#include <map>
 #include <string>
-#include <fstream>
-#include <iostream>
-#include <stdexcept>
-#include <cstring>
 /* parasoft-end-suppress ALL */
 
-// Module Includes
+// Core Module Includes
 #include "../include/VulkanContext.h"
 #include "../include/VulkanEngine.h" 
 #include "TimeManager.h"
@@ -27,27 +21,25 @@
 #include "../include/SceneLoader.h"
 #include "../include/Scenario.h"
 
-// Scene & System Includes
+// Scene & Infrastructure Includes
 #include "Scene.h"
 #include "Model.h"
-#include "PointLight.h"
 #include "PostProcessor.h"
 #include "Skybox.h"
 #include "../include/Cubemap.h"
 #include "../include/Common.h"
-#include "GeometryUtils.h"
 #include "SyncManager.h"
 #include "IMGUIManager.h"
 #include "../include/ClimateManager.h"
 #include "SystemFactory.h"
 #include "../include/VulkanResourceManager.h"
-#include "SceneLoader.h"
 
 /**
  * @class Experience
- * @brief The Master Orchestrator for the Sandy-Snow Globe engine.
- * * Orchestrates the relationship between input, simulation, and hardware-accelerated
- * rendering. It serves as the primary owner for all major engine sub-systems.
+ * @brief master orchestrator for the Agnostic Game Engine.
+ * * Orchestrates the relationship between hardware initialization, ECS execution,
+ * and scenario lifecycle. This class no longer contains scenario-specific data
+ * like particle systems or lights; those are now managed as entities within the ECS.
  */
 class Experience final {
 public:
@@ -58,13 +50,13 @@ public:
 
     // --- Lifecycle Management ---
 
-    /** @brief Initializes all core systems and windowing. */
+    /** @brief Initializes core systems (Vulkan, ECS, Managers) and windows. */
     Experience(const uint32_t width, const uint32_t height, char const* const title);
 
-    /** @brief Triggers a full teardown of the engine and GPU resources. */
+    /** @brief Triggers a full teardown of the engine and hardware handles. */
     ~Experience();
 
-    // RAII: Prevent duplication to ensure unique ownership of hardware handles.
+    // RAII: Unique ownership of hardware handles.
     Experience(const Experience&) = delete;
     Experience& operator=(const Experience&) = delete;
 
@@ -74,25 +66,27 @@ public:
     void run();
 
     // --- Static Callback Bridge ---
-    // These link OS/Window events directly to the engine's internal managers.
     static void framebufferResizeCallback(GLFWwindow* pWindow, int width, int height);
     static void keyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int mods);
     static void mouseCallback(GLFWwindow* pWindow, double xpos, double ypos);
 
-    /** @brief Requirement: Ability to change scenarios at runtime. */
+    // --- Agnostic State API ---
+
+    /** @brief Requirement: Ability to change scenarios at runtime by loading new data files. */
     void changeScenario(std::unique_ptr<GE::Scenario> newScenario);
 
-	/** @brief Accessor for the active scenario instance. */
+    /** @brief Manual simulation step helper for debugging collisions while paused. */
+    void stepSimulation(float fixedStep);
+
+    /** @brief Accessor for the active scenario instance for UI hooks. */
     GE::Scenario* GetCurrentScenario() const { return activeScenario.get(); }
 
-    /** @brief Accessors for the Get Vulkan Engine. */
+    /** @brief Accessor for the Vulkan Engine hardware layer. */
     VulkanEngine* GetVulkanEngine() const { return vulkanEngine.get(); }
 
-	/** @brief Provides pipeline access to bind materials. */
+    /** @brief Accessor for the loaded graphics pipelines. */
     const std::vector<std::unique_ptr<Pipeline>>& GetPipelines() const { return pipelines; }
 
-	/** @brief Makes the simulation make a step when paused. */
-    void stepSimulation(float fixedStep);
 private:
     // --- Windowing & Core Infrastructure ---
     GLFWwindow* window;
@@ -100,7 +94,7 @@ private:
     const uint32_t WINDOW_HEIGHT;
     bool framebufferResized;
 
-    // --- ECS Core ---
+    // --- ECS Core (The Engine's Body) ---
     std::unique_ptr<GE::ECS::EntityManager> entityManager;
 
     // Core Hardware Contexts
@@ -109,8 +103,8 @@ private:
     std::unique_ptr<VulkanResourceManager> resources;
     std::unique_ptr<SystemFactory> systemFactory;
 
-    // --- High-Level Logic Managers ---
-    std::unique_ptr<GE::Scenario> activeScenario;
+    // --- Logic & Orchestration ---
+    std::unique_ptr<GE::Scenario> activeScenario; // The "Soul" of the current level
     std::unique_ptr<TimeManager> timeManager;
     std::unique_ptr<InputManager> inputManager;
     std::unique_ptr<StatsManager> statsManager;
@@ -121,9 +115,8 @@ private:
     std::unique_ptr<IMGUIManager> uiManager;
     std::unique_ptr<AssetManager> assetManager;
 
-    // --- Scene Geometry & Pipeline Registries ---
+    // --- Shared Registries (Cleared on Scenario Change) ---
     std::vector<Mesh*> meshes;
-    std::vector<Mesh*> transparentMeshes;
     std::vector<std::unique_ptr<Model>> ownedModels;
     std::vector<std::unique_ptr<ShaderModule>> shaderModules;
     std::vector<std::unique_ptr<Pipeline>> pipelines;
@@ -134,36 +127,20 @@ private:
     std::unique_ptr<PostProcessor> postProcessor;
     std::unique_ptr<Skybox> skybox;
     std::unique_ptr<Cubemap> skyboxTexture;
-    std::unique_ptr<PointLight> mainLight;
-
-    // Atmospheric Particle Systems
-    std::unique_ptr<ParticleSystem> dustParticleSystem;
-    std::unique_ptr<ParticleSystem> fireParticleSystem;
-    std::unique_ptr<ParticleSystem> smokeParticleSystem;
-    std::unique_ptr<ParticleSystem> rainParticleSystem;
-    std::unique_ptr<ParticleSystem> snowParticleSystem;
 
     // --- Configuration & Command Synchronization ---
     std::vector<VkFence> imagesInFlight;
     uint32_t currentFrame;
 
     // --- Internal Initialization Helpers ---
-
     void initWindow(char const* const title);
     void initVulkan();
     void createGraphicsPipelines();
-    void loadAssets();
+    // void loadAssets(); Due to now being agnostic, the assets are loaded in the SceneLoader
     void initSkybox();
 
     // --- Frame Logic & Maintenance ---
-
     void drawFrame();
     void updateUniformBuffer(const uint32_t currentImage);
     void cleanup();
-
-    /** @brief Resets the climate and UI to default starting values. */
-    void performFullReset() const;
-
-    /** @brief Synchronizes the ClimateManager state with InputManager UI toggles. */
-    void syncWeatherToggles() const;
 };

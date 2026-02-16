@@ -59,3 +59,39 @@ You should include a simulation menu that allows the following functionality.
 # EXTRAS ANSWERS
 Would you like me to provide the finalized C++ code for handleRigidBody, handleSphereCollider, and handlePlaneCollider?
 Check Experience couase it needs to load the scenarios there or something.
+
+Particle Systems: Delete dustParticleSystem, fireParticleSystem, etc., from Experience.h.
+
+Weather Logic: Delete syncWeatherToggles() and performFullReset(). These are specific to the Climate simulation.
+
+Specific Light Member: Delete std::unique_ptr<PointLight> mainLight;. We now query this via the ECS.
+
+SceneKeys Namespace: Delete the SceneKeys namespace at the top of Experience.cpp. Hardcoded string lookups are the enemy of an agnostic engine
+
+The Plan: Particle-to-ECS Migration
+To achieve this, we need to transition from "Object-Oriented" ownership to "Data-Oriented" rendering. Here is the step-by-step plan:
+
+1. Define the ParticleComponent
+We create a component that stores the GPU state (buffers, pipelines) for a particle effect.
+
+Change: Add ParticleComponent to PhysicsComponents.h or a new ParticleComponents.h.
+
+Data: This component will hold the VkBuffer for the particles and the specific compute/graphics pipelines.
+
+2. Rework the Renderer
+Instead of taking 5 specific pointers (Fire, Dust, etc.), the Renderer will now perform a "System Query."
+
+Change: Modify Renderer::recordFrame to accept a reference to the EntityManager.
+
+Logic: It iterates through all entities with a ParticleComponent and records their draw calls.
+
+3. Agnostic Particle Updating
+The ParticleSystem logic (compute shader dispatch) should move into an ECS System (e.g., ParticleUpdateSystem).
+
+Change: Create ParticleUpdateSystem inheriting from IECSystem.
+
+Logic: Every frame, this system finds all particle entities and dispatches the compute shaders to update their positions on the GPU.
+
+Would you like me to show you the code for the new ParticleComponent and how the Renderer queries it? This is the final step to making your rendering pipeline 100% agnostic.
+
+With the Renderer and Experience both revamped and agnostic, you are officially ready to run the Sanity Test. Would you like me to walk you through the ParticleComponent definition next so we can fill in that recordParticles logic?

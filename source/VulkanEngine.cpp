@@ -277,6 +277,18 @@ void VulkanEngine::initAllocator() {
     context->allocator.init(context->device, context->physicalDevice, EngineConstants::VRAM_POOL_SIZE);
 }
 
+void VulkanEngine::createCommandPool() {
+    VulkanContext* context = ServiceLocator::GetContext();
+
+    VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueIndices.graphicsFamily.value();
+
+    if (vkCreateCommandPool(context->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        throw std::runtime_error("VulkanEngine: Failed to create graphics command pool.");
+    }
+}
+
 // ========================================================================
 // SECTION 4: SWAPCHAIN & PRESENTATION INFRASTRUCTURE
 // ========================================================================

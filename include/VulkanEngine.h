@@ -72,6 +72,9 @@ public:
 
     // --- Hardware & Resource Accessors (Const-Safe) ---
 
+	/** @brief Returns the command pool instance handle. */
+    VkCommandPool getCommandPool() const { return commandPool; }
+
     /** @brief Returns the raw swapchain handle. */
     VkSwapchainKHR getSwapChain() const { return swapChainObj->getHandle(); }
 
@@ -104,6 +107,7 @@ private:
     VkFormat depthFormat;
     QueueFamilyIndices queueIndices;
     VkSampleCountFlagBits msaaSamples;
+    VkCommandPool commandPool{ VK_NULL_HANDLE };
 
     // --- RAII Managed Hardware Objects ---
     std::unique_ptr<SwapChain> swapChainObj;
@@ -118,6 +122,7 @@ private:
     void pickPhysicalDevice();
     void createLogicalDevice();
     void initAllocator();
+    void createCommandPool();
 
     // --- Swapchain Lifecycle Batch ---
     void createSwapChain(GLFWwindow* const window);

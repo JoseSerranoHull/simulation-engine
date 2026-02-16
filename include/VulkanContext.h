@@ -8,47 +8,58 @@
 
 /**
  * @struct VulkanContext
- * @brief Centralized container for Vulkan hardware handles.
- * Explicitly non-copyable to prevent hardware handle double-destruction (MRM.49).
+ * @brief Centralized container for Vulkan hardware handles and global settings.
+ * Fulfills the "GameObject" vision by providing a shared state for all ECS systems.
  */
 struct VulkanContext {
-    // 1. Core Instance & Debugging
+    // --- 1. Core Instance & Windowing ---
     VkInstance instance{ VK_NULL_HANDLE };
     VkDebugUtilsMessengerEXT debugMessenger{ VK_NULL_HANDLE };
     VkSurfaceKHR surface{ VK_NULL_HANDLE };
 
-    // 2. Physical & Logical Devices
+    // --- 2. Device Selection & Capabilities ---
     VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
     VkDevice device{ VK_NULL_HANDLE };
 
-    // 3. Command Queues
+    /** @brief Global MSAA setting used by Renderer, PostProcessor, and Skybox. */
+    VkSampleCountFlagBits msaaSamples{ VK_SAMPLE_COUNT_1_BIT };
+
+    // --- 3. Command Queues ---
     VkQueue graphicsQueue{ VK_NULL_HANDLE };
     VkQueue presentQueue{ VK_NULL_HANDLE };
     VkQueue transferQueue{ VK_NULL_HANDLE };
+    VkQueue computeQueue{ VK_NULL_HANDLE }; // Future-proofing for GPU Particles/Physics
 
-    // 4. Resource Pools
+    // --- 4. Resource Pools ---
+    /** @brief Primary pool for per-frame rendering commands. */
     VkCommandPool graphicsCommandPool{ VK_NULL_HANDLE };
+
+    /** @brief Dedicated pool for the SceneLoader to upload meshes/textures without blocking graphics. */
+    VkCommandPool transferCommandPool{ VK_NULL_HANDLE };
+
+    /** @brief Global pool for descriptor set allocations. */
     VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
 
-    // 5. Global Layouts
+    // --- 5. Shared Descriptor Layouts (Agnostic Blueprints) ---
+    /** @brief Layout for global data: View, Proj, Lights, Time. */
     VkDescriptorSetLayout globalSetLayout{ VK_NULL_HANDLE };
+
+    /** @brief Layout for material-specific data: Textures, PBR parameters. */
     VkDescriptorSetLayout materialSetLayout{ VK_NULL_HANDLE };
 
-    // 6. Sub-Allocation System
+    // --- 6. Memory Management ---
+    /** @brief Unified sub-allocation system for VRAM buffers and images. */
     SimpleAllocator allocator{};
 
-    // --- MRM.49 Compliance: Explicitly delete copy operations ---
-
-    /** @brief Default constructor for standard initialization. */
+    // --- RAII Safety (MRM.49 Compliance) ---
     VulkanContext() = default;
+    ~VulkanContext() = default;
 
-    /** @brief Copy constructor deleted to prevent shallow copies of hardware handles. */
+    // Prevent copies to avoid double-freeing hardware handles
     VulkanContext(const VulkanContext&) = delete;
-
-    /** @brief Copy assignment operator deleted to prevent handle aliasing. */
     VulkanContext& operator=(const VulkanContext&) = delete;
 
-    // Optional: If you want to support Move semantics (C++11/14/17)
-    VulkanContext(VulkanContext&&) = delete;
-    VulkanContext& operator=(VulkanContext&&) = delete;
+    // Move semantics (useful if we transfer ownership between Manager classes)
+    VulkanContext(VulkanContext&&) noexcept = default;
+    VulkanContext& operator=(VulkanContext&&) noexcept = default;
 };

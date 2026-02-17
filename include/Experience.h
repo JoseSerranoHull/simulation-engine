@@ -87,6 +87,15 @@ public:
     /** @brief Accessor for the loaded graphics pipelines. */
     const std::vector<std::unique_ptr<Pipeline>>& GetPipelines() const { return pipelines; }
 
+    /** @brief Provides access to the most recent global uniform data for compute systems. */
+    const UniformBufferObject& GetCurrentUBO() const { return currentUBO; }
+
+	/** @brief Accessor for the post-processing. */
+    PostProcessor* GetPostProcessor() const { return postProcessor.get(); }
+
+	/** @brief Accessor for the skybox. */
+    Skybox* GetSkybox() const { return skybox.get(); }
+
 private:
     // --- Windowing & Core Infrastructure ---
     GLFWwindow* window;

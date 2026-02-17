@@ -2,6 +2,7 @@
 #include "../include/ServiceLocator.h"
 #include "../include/EntityManager.h"
 #include "../include/Components.h"
+#include "../include/ParticleComponent.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
@@ -10,6 +11,11 @@
 // ========================================================================
 // SECTION 1: MASTER ORCHESTRATION
 // ========================================================================
+
+namespace GE::Components
+{
+	struct ParticleComponent;
+}
 
 /**
  * @brief Orchestrates the multi-pass command recording sequence for a single frame.
@@ -246,17 +252,14 @@ void Renderer::recordParticles(
     const VkDescriptorSet globalSet,
     GE::ECS::EntityManager* const em
 ) const {
-    // Note: Once the ParticleComponent migration is complete, we iterate here:
-    /*
     auto& particleComps = em->GetCompArr<GE::Components::ParticleComponent>();
+
     for (uint32_t i = 0; i < particleComps.GetCount(); ++i) {
         auto& pc = particleComps.Data()[i];
-        // Only draw if the entity is active
-        pc.system->draw(cb, globalSet);
-    }
-    */
 
-    // For the initial sanity test, if you haven't moved the systems into components yet,
-    // you can manually find them in the Scene hierarchy or keep this empty until 
-    // the migration is finalized.
+        // Only draw if the entity is active and enabled
+        if (pc.enabled && pc.system) {
+            pc.system->draw(cb, globalSet);
+        }
+    }
 }

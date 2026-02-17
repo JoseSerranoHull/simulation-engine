@@ -259,6 +259,8 @@
     <ClInclude Include="include\Model.h" />
     <ClInclude Include="include\OBJLoader.h" />
     <ClInclude Include="include\Particle.h" />
+    <ClInclude Include="include\ParticleComponent.h" />
+    <ClInclude Include="include\ParticleEmitterSystem.h" />
     <ClInclude Include="include\ParticleSystem.h" />
     <ClInclude Include="include\Physics.h" />
     <ClInclude Include="include\Physics2D.h" />
@@ -278,6 +280,7 @@
     <ClInclude Include="include\ShaderModule.h" />
     <ClInclude Include="include\SimpleAllocator.h" />
     <ClInclude Include="include\Skybox.h" />
+    <ClInclude Include="include\SkyboxComponent.h" />
     <ClInclude Include="include\SnowGlobeScenario.h" />
     <ClInclude Include="include\Sphere.h" />
     <ClInclude Include="include\StatsManager.h" />

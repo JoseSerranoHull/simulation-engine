@@ -36,6 +36,7 @@ namespace GE::Scene {
     private:
         // --- Resource Registries (Alises used in .ini) ---
         std::map<std::string, std::shared_ptr<Texture>> m_textures;
+        std::map<std::string, std::string> m_texturePaths;
         std::map<std::string, std::shared_ptr<Material>> m_materials;
 
         // Tracking the current entity being built
@@ -57,5 +58,7 @@ namespace GE::Scene {
         void handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleSphereCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handlePlaneCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleSkyboxComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
     };
 }

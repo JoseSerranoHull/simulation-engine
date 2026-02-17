@@ -502,5 +502,14 @@
     <ClInclude Include="include\Line.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ParticleComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ParticleEmitterSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SkyboxComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

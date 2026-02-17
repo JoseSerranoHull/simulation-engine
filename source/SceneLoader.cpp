@@ -1,13 +1,19 @@
 #include "../include/SceneLoader.h"
 #include "../include/GeometryUtils.h"
 #include "../include/PhysicsComponents.h"
+#include "../include/SystemFactory.h"
+#include "../include/Experience.h"
 
 /* parasoft-begin-suppress ALL */
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include "../include/ParticleComponent.h"
+#include "../include/SkyboxComponent.h"
 /* parasoft-end-suppress ALL */
+
+class ParticleSystem;
 
 namespace GE::Scene {
 
@@ -38,6 +44,8 @@ namespace GE::Scene {
             else if (currentSection == "RigidBody") handleRigidBody(sectionProps, em);
             else if (currentSection == "SphereCollider") handleSphereCollider(sectionProps, em);
             else if (currentSection == "PlaneCollider") handlePlaneCollider(sectionProps, em);
+            else if (currentSection == "ParticleComponent") handleParticleComponent(sectionProps, em);
+            else if (currentSection == "SkyboxComponent") handleSkyboxComponent(sectionProps, em);
 
             sectionProps.clear();
             };
@@ -61,12 +69,21 @@ namespace GE::Scene {
                 continue;
             }
 
-            size_t eq = line.find('=');
+        	size_t eq = line.find('=');
             if (eq != std::string::npos) {
                 std::string key = line.substr(0, eq);
                 std::string val = line.substr(eq + 1);
-                key.erase(key.find_last_not_of(" ") + 1);
-                val.erase(0, val.find_first_not_of(" "));
+
+                // 1. Trim both sides of the key
+                key.erase(0, key.find_first_not_of(" \t\r\n"));
+                size_t lastKey = key.find_last_not_of(" \t\r\n");
+                if (lastKey != std::string::npos) key.erase(lastKey + 1);
+
+                // 2. Trim both sides of the value (CRITICAL)
+                val.erase(0, val.find_first_not_of(" \t\r\n"));
+                size_t lastVal = val.find_last_not_of(" \t\r\n");
+                if (lastVal != std::string::npos) val.erase(lastVal + 1);
+
                 sectionProps[key] = val;
             }
         }
@@ -75,7 +92,13 @@ namespace GE::Scene {
 
     void SceneLoader::handleTexture(const std::string& id, const std::map<std::string, std::string>& props, AssetManager* am) {
         if (props.count("Path")) {
-            m_textures[id] = am->loadTexture(props.at("Path"));
+            std::string path = props.at("Path");
+
+            // 1. Store the raw path for the Skybox registry
+            m_texturePaths[id] = path;
+
+            // 2. Load the actual GPU texture object for standard materials
+            m_textures[id] = am->loadTexture(path);
         }
     }
 
@@ -301,6 +324,86 @@ namespace GE::Scene {
         if (props.count("Normal")) pc.normal = parseVec3(props.at("Normal"));
         if (props.count("Offset")) pc.offset = parseFloat(props.at("Offset"));
         em->AddComponent(m_currentEntity, pc);
+    }
+
+    void SceneLoader::handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        auto* ctx = ServiceLocator::GetContext();
+        auto* exp = ServiceLocator::GetExperience();
+
+        // 1. Validate Mandatory Agnostic Data
+        // We require all three shader paths to build a functional system
+        if (!props.count("ComputeShader") || !props.count("VertexShader") || !props.count("FragmentShader")) {
+            GE_LOG_ERROR("SceneLoader: ParticleComponent missing mandatory shader paths. Skipping entity.");
+            return;
+        }
+
+        // 2. Fetch dependencies required by the ParticleSystem constructor
+        VkRenderPass transPass = exp->GetPostProcessor()->getTransparentRenderPass();
+        VkDescriptorSetLayout globalLayout = ctx->globalSetLayout;
+        VkSampleCountFlagBits msaa = ctx->msaaSamples;
+
+        // 3. Extract configuration from .ini
+        std::string comp = props.at("ComputeShader");
+        std::string vert = props.at("VertexShader");
+        std::string frag = props.at("FragmentShader");
+
+        // Optional parameters with safe defaults
+        uint32_t maxP = props.count("MaxParticles") ? std::stoul(props.at("MaxParticles")) : 1000U;
+        glm::vec3 spawn = props.count("SpawnPos") ? parseVec3(props.at("SpawnPos")) : glm::vec3(0.0f);
+
+        // 4. AGNOSTIC BUILDER CALL
+        // The constructor handles the heavy lifting of GPU pipeline creation
+        auto system = std::make_unique<ParticleSystem>(
+            transPass,
+            globalLayout,
+            comp,
+            vert,
+            frag,
+            spawn,
+            maxP,
+            msaa
+        );
+
+        // 5. Wrap in ECS Component
+        GE::Components::ParticleComponent pc;
+        pc.system = std::move(system);
+        pc.enabled = (props.count("Enabled") && props.at("Enabled") == "true");
+
+        // localOffset is used by ParticleEmitterSystem to position particles relative to parent
+        pc.localOffset = props.count("Offset") ? parseVec3(props.at("Offset")) : glm::vec3(0.0f);
+
+        em->AddComponent(m_currentEntity, pc);
+
+        // Metadata logging using the 'Type' key if present
+        std::string logType = props.count("Type") ? props.at("Type") : "Generic";
+        GE_LOG_INFO("SceneLoader: Successfully built " + logType + " particle system.");
+    }
+
+    void SceneLoader::handleSkyboxComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::SkyboxComponent sc;
+        auto* exp = ServiceLocator::GetExperience();
+
+        const std::vector<std::string> keys = { "PX", "NX", "PY", "NY", "PZ", "NZ" };
+        std::vector<std::string> facePaths;
+
+        for (const auto& key : keys) {
+            if (props.count(key)) {
+                std::string texID = props.at(key);
+
+                // Now this check will succeed!
+                if (m_texturePaths.count(texID)) {
+                    facePaths.push_back(m_texturePaths.at(texID));
+                }
+            }
+        }
+
+        // Trigger the GPU update using the gathered filenames
+        if (facePaths.size() == 6U && exp->GetSkybox() != nullptr) {
+            exp->GetSkybox()->loadTextures(facePaths);
+        }
+
+        sc.enabled = (props.count("Enabled") && props.at("Enabled") == "true");
+        em->AddComponent(m_currentEntity, sc);
     }
 
     // --- Parsing Helpers ---

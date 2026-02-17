@@ -13,6 +13,8 @@ class InputManager;
 class SystemFactory;
 struct VulkanContext;
 class VulkanResourceManager;
+class TimeManager;
+class ParticleEmitterSystem;
 
 // NEW: Forward declaration for Scene
 namespace GE::Scene { class Scene; }
@@ -28,6 +30,8 @@ public:
     static void Provide(SystemFactory* factory) { m_factory = factory; }
     static void Provide(Experience* experience) { m_experience = experience; }
     static void Provide(GE::Scene::Scene* scene) { m_scene = scene; }
+    static void Provide(TimeManager* timeManager) { m_timeManager = timeManager; }
+	static void Provide(ParticleEmitterSystem* particleEmitterSystem) { m_particleEmitterSystem = particleEmitterSystem; }
 
     // --- Retrievers ---
     static VulkanContext* GetContext() {
@@ -35,7 +39,7 @@ public:
         return m_context;
     }
 
-    static VulkanResourceManager* GetResources() {
+    static VulkanResourceManager* GetResourceManager() {
         if (!m_resources) throw std::runtime_error("ServiceLocator: VulkanResourceManager not provided!");
         return m_resources;
     }
@@ -55,7 +59,7 @@ public:
         return m_assetManager;
     }
 
-    static SystemFactory* GetFactory() {
+    static SystemFactory* GetSystemFactory() {
         // Factory is optional in some contexts, but we'll keep it consistent
         return m_factory;
     }
@@ -70,6 +74,16 @@ public:
         return m_experience;
     }
 
+    static TimeManager* GetTimeManager() {
+        if (!m_timeManager) throw std::runtime_error("ServiceLocator: TimeManager not provided!");
+        return m_timeManager;
+	}
+
+    static ParticleEmitterSystem* GetParticleEmitterSystem() {
+        if (!m_particleEmitterSystem) throw std::runtime_error("ServiceLocator: ParticleEmitterSystem not provided!");
+        return m_particleEmitterSystem;
+	}
+
 private:
     static inline VulkanContext* m_context = nullptr;
     static inline VulkanResourceManager* m_resources = nullptr;
@@ -79,4 +93,6 @@ private:
     static inline AssetManager* m_assetManager = nullptr;
     static inline Experience* m_experience = nullptr;
     static inline GE::Scene::Scene* m_scene = nullptr;
+	static inline TimeManager* m_timeManager = nullptr;
+	static inline ParticleEmitterSystem* m_particleEmitterSystem = nullptr;
 };

@@ -2,18 +2,14 @@
 #include "../include/GenericScenario.h"
 #include "../include/PhysicsComponents.h"
 #include "../include/TransformSystem.h"
-
-// Note: ParticleUpdateSystem would be included here once implemented
-// #include "../include/ParticleUpdateSystem.h" 
+#include "../include/ParticleEmitterSystem.h"
+#include "../include/SkyboxComponent.h"
+#include "../include/ParticleComponent.h"
 
 // ========================================================================
 // SECTION 1: CONSTRUCTOR & DESTRUCTOR
 // ========================================================================
 
-/**
- * @brief Constructor: Orchestrates the initialization of the agnostic engine.
- * Establishing a strict initialization order is critical for Vulkan stability.
- */
 Experience::Experience(const uint32_t width, const uint32_t height, char const* const title)
     : WINDOW_WIDTH(width), WINDOW_HEIGHT(height), framebufferResized(false), currentFrame(0)
 {
@@ -23,12 +19,8 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     initWindow(title);
     context = std::make_unique<VulkanContext>();
     ServiceLocator::Provide(context.get());
-
-    // Initialize core hardware (Instance, Device, Queues, Pools)
     vulkanEngine = std::make_unique<VulkanEngine>(window);
 
-    // CRITICAL: Propagate handles from Hardware to the Central Context
-    // Fixes the "Access Violation" in PostProcessor/SceneLoader by providing a valid Command Pool
     context->graphicsCommandPool = vulkanEngine->getCommandPool();
     context->msaaSamples = vulkanEngine->getMsaaSamples();
 
@@ -36,71 +28,58 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     entityManager = std::make_unique<GE::ECS::EntityManager>();
     entityManager->Initialize(2000, 64);
 
-    // Complete Component Registration
-    // These must be registered BEFORE loading any scenario .ini
     entityManager->RegisterComponent<GE::Scene::Components::Transform>();
     entityManager->RegisterComponent<GE::Scene::Components::Tag>();
     entityManager->RegisterComponent<GE::Components::MeshRenderer>();
     entityManager->RegisterComponent<GE::Components::LightComponent>();
+    entityManager->RegisterComponent<GE::Components::ParticleComponent>();
+    entityManager->RegisterComponent<GE::Components::SkyboxComponent>();
 
-    // 3D Physics components
     entityManager->RegisterComponent<GE::Components::RigidBody>();
     entityManager->RegisterComponent<GE::Components::SphereCollider>();
     entityManager->RegisterComponent<GE::Components::PlaneCollider>();
 
-    // 2D Physics components (Future-proofing)
     entityManager->RegisterComponent<GE::Components::RigidBody2D>();
     entityManager->RegisterComponent<GE::Components::CircleCollider2D>();
     entityManager->RegisterComponent<GE::Components::BoxCollider2D>();
 
-    // Particle-to-ECS Migration: Particles are now generic components
-    // entityManager->RegisterComponent<GE::Components::ParticleComponent>();
-
     ServiceLocator::Provide(entityManager.get());
 
-    // --- Step 3: Global Systems (Universal logic) ---
-    // Transform hierarchy resolution is required for all scenarios
+    // --- Step 3: Global Systems ---
     entityManager->RegisterSystem(new GE::Systems::TransformSystem());
-
-    // Future: Add ParticleUpdateSystem here to handle all particle types generically
-    // entityManager->RegisterSystem(new GE::Systems::ParticleUpdateSystem());
+    entityManager->RegisterSystem(new GE::Systems::ParticleEmitterSystem());
 
     // --- Step 4: Engine Infrastructure ---
     resources = std::make_unique<VulkanResourceManager>();
     ServiceLocator::Provide(resources.get());
+
+    // AGNOSTIC FIX: SystemFactory is kept for logic, but Particle Recipes are REMOVED.
+    // The SceneLoader now builds ParticleSystems directly from .ini shader paths.
     systemFactory = std::make_unique<SystemFactory>();
     ServiceLocator::Provide(systemFactory.get());
 
     timeManager = std::make_unique<TimeManager>();
+    ServiceLocator::Provide(timeManager.get());
     statsManager = std::make_unique<StatsManager>();
     assetManager = std::make_unique<AssetManager>();
     ServiceLocator::Provide(assetManager.get());
 
-    // Initialize synchronization tracking for the swapchain images
-    // Fixes the "Vector subscript out of range" crash in drawFrame
     imagesInFlight.resize(vulkanEngine->getSwapChainImageCount(), VK_NULL_HANDLE);
-
     resources->init(vulkanEngine.get(), MAX_FRAMES_IN_FLIGHT);
     assetManager->setDescriptorPool(resources->getDescriptorPool());
 
     // --- Step 5: High-Level Orchestrators ---
-    // PostProcessor must exist before initVulkan() creates graphics pipelines
     postProcessor = std::make_unique<PostProcessor>(
-        vulkanEngine->getSwapChainExtent().width,
-        vulkanEngine->getSwapChainExtent().height,
-        vulkanEngine->getSwapChainFormat(),
-        vulkanEngine->getFinalRenderPass(),
-        vulkanEngine->getMsaaSamples()
+        vulkanEngine->getSwapChainExtent().width, vulkanEngine->getSwapChainExtent().height,
+        vulkanEngine->getSwapChainFormat(), vulkanEngine->getFinalRenderPass(), vulkanEngine->getMsaaSamples()
     );
     postProcessor->resize(vulkanEngine->getSwapChainExtent());
 
     renderer = std::make_unique<Renderer>();
     scene = std::make_unique<GE::Scene::Scene>();
     ServiceLocator::Provide(scene.get());
-
     inputManager = std::make_unique<InputManager>(window, timeManager.get());
     ServiceLocator::Provide(inputManager.get());
-
     uiManager = std::make_unique<IMGUIManager>();
     climateManager = std::make_unique<ClimateManager>();
 
@@ -108,7 +87,9 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     initVulkan();
     uiManager->init(window, vulkanEngine.get());
 
-    // Initial scenario load (Data-driven and agnostic)
+    // Create the empty skybox shell (waiting for .ini textures)
+    initSkybox();
+
     changeScenario(std::make_unique<GE::GenericScenario>("./config/snow_globe.ini"));
 }
 
@@ -178,17 +159,15 @@ void Experience::drawFrame() {
     const float dt = timeManager->getDelta();
     const float totalTime = timeManager->getTotal();
 
-    // --- Step 2: Agnostic Simulation Updates ---
+    // --- Step 2: Input & Scenario Script Updates (No GPU Commands) ---
     inputManager->update(dt);
 
-    // Fulfills Lab Requirement: Simulation Start/Pause/Timestep
+    // Scaling delta for scenario timescale logic
+    const float scaledDelta = (activeScenario && !activeScenario->IsPaused()) ?
+        dt * activeScenario->GetTimeScale() : 0.0f;
+
     if (activeScenario && !activeScenario->IsPaused()) {
-        const float scaledDelta = dt * activeScenario->GetTimeScale();
-
-        // This heartbeat triggers ALL registered systems (Physics, Transforms, Particles)
-        em->Update(scaledDelta);
-
-        // Scenario-specific custom script logic
+        // Run scenario-specific logic scripts first
         activeScenario->OnUpdate(scaledDelta, totalTime);
     }
 
@@ -199,7 +178,6 @@ void Experience::drawFrame() {
         sync->getImageAvailableSemaphore(currentFrame), VK_NULL_HANDLE, &imageIndex
     );
 
-    // Handle Window Resizing
     if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
         vulkanEngine->recreateSwapChain(window);
         postProcessor->resize(vulkanEngine->getSwapChainExtent());
@@ -216,29 +194,35 @@ void Experience::drawFrame() {
     const VkFence frameFence = sync->getInFlightFence(currentFrame);
     static_cast<void>(vkResetFences(ctx->device, 1U, &frameFence));
 
-    // --- Step 4: Command Buffer Recording ---
+    // --- Step 4: Command Buffer Recording (GPU WORK BEGINS) ---
     updateUniformBuffer(imageIndex);
 
     const VkCommandBuffer cb = sync->getCommandBuffer(currentFrame);
     static_cast<void>(vkResetCommandBuffer(cb, 0U));
 
     const VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    static_cast<void>(vkBeginCommandBuffer(cb, &beginInfo));
+    static_cast<void>(vkBeginCommandBuffer(cb, &beginInfo)); // <--- BUFFER IS NOW OPEN
+
+    // CRITICAL FIX: Trigger ECS Systems that record GPU commands (Particles) 
+    // only while the buffer is in the 'Recording' state.
+    if (activeScenario && !activeScenario->IsPaused()) {
+        // This triggers ParticleEmitterSystem::OnUpdate which now has a valid 'cb'.
+        em->Update(scaledDelta);
+    }
 
     // Prepare raw pipelines for renderer
     std::vector<Pipeline*> rawPipelines;
     for (const auto& p : pipelines) rawPipelines.push_back(p.get());
 
-    // Record Draw Calls: Particles are now Agnostic (Renderer queries ECS)
+    // Record Draw Calls: Renderer queries ECS for meshes/particles
     renderer->recordFrame(
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
-        em, // NEW: Pass EntityManager so the renderer can find lights and particles
-        postProcessor.get(), resources->getDescriptorSet(imageIndex),
+        em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
         resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
         rawPipelines
     );
 
-    // --- Step 5: UI & Final Pass ---
+    // --- Step 5: UI & Final Render Pass ---
     VkRenderPassBeginInfo finalPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     finalPassInfo.renderPass = vulkanEngine->getFinalRenderPass();
     finalPassInfo.framebuffer = vulkanEngine->getFramebuffer(imageIndex);
@@ -256,12 +240,11 @@ void Experience::drawFrame() {
         postProcessor->draw(cb, inputManager->getBloomEnabled());
     }
 
-    // UI Manager draws the Main Menu Bar and delegates to activeScenario->OnGUI()
     uiManager->update(inputManager.get(), statsManager.get(), nullptr, timeManager.get(), climateManager.get());
     uiManager->draw(cb);
 
     vkCmdEndRenderPass(cb);
-    static_cast<void>(vkEndCommandBuffer(cb));
+    static_cast<void>(vkEndCommandBuffer(cb)); // <--- BUFFER IS NOW CLOSED
 
     // --- Step 6: Submission & Presentation ---
     VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -547,12 +530,9 @@ void Experience::createGraphicsPipelines() {
  * @brief Initializes the environmental skybox.
  */
 void Experience::initSkybox() {
-    const std::vector<std::string> skyboxFaces = {
-        "./textures/cubemaps/cubemap_0(+X).jpg", "./textures/cubemaps/cubemap_1(-X).jpg",
-        "./textures/cubemaps/cubemap_2(+Y).jpg", "./textures/cubemaps/cubemap_3(-Y).jpg",
-        "./textures/cubemaps/cubemap_4(+Z).jpg", "./textures/cubemaps/cubemap_5(-Z).jpg"
-    };
-
-    skyboxTexture = std::make_unique<Cubemap>(skyboxFaces);
-    skybox = std::make_unique<Skybox>(postProcessor->getOffscreenRenderPass(), skyboxTexture.get(), context->msaaSamples);
+    skybox = std::make_unique<Skybox>(
+        postProcessor->getOffscreenRenderPass(),
+        nullptr, // No texture yet
+        context->msaaSamples
+    );
 }

@@ -45,9 +45,14 @@ public:
      */
     void draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const;
 
+    /** * @brief Updates the environmental cubemap using 6 face paths.
+     * Rebuilds the GPU image and updates descriptors.
+     */
+    void loadTextures(const std::vector<std::string>& facePaths);
+
 private:
     // --- Dependencies ---
-    Cubemap* cubemapTexture{ nullptr };
+    std::unique_ptr<Cubemap> cubemapTexture{ nullptr };
 
     // --- GPU Resources ---
     mutable VkBuffer vertexBuffer{ VK_NULL_HANDLE };

@@ -95,3 +95,5 @@ Logic: Every frame, this system finds all particle entities and dispatches the c
 Would you like me to show you the code for the new ParticleComponent and how the Renderer queries it? This is the final step to making your rendering pipeline 100% agnostic.
 
 With the Renderer and Experience both revamped and agnostic, you are officially ready to run the Sanity Test. Would you like me to walk you through the ParticleComponent definition next so we can fill in that recordParticles logic?
+
+SKYBOX BEING A COMPONENT TOO!!!

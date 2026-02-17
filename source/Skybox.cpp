@@ -4,14 +4,21 @@
 #include <stdexcept>
 #include <array>
 #include <cstring>
+#include "../include/Logger.h"
 /* parasoft-end-suppress ALL */
 
 /**
  * @brief Constructor: Initializes skybox geometry, descriptors, and the graphics pipeline.
  */
 Skybox::Skybox(const VkRenderPass renderPass, Cubemap* const inTexture, const VkSampleCountFlagBits inMsaa)
-    : cubemapTexture(inTexture), msaaSamples(inMsaa)
+    : msaaSamples(inMsaa)
 {
+    // If a texture was passed (old style), we wrap it. 
+    // Otherwise, we wait for the SceneLoader to call loadTextures().
+    if (inTexture != nullptr) {
+        cubemapTexture.reset(inTexture);
+    }
+
     createVertexBuffer();
     createDescriptorResources();
     createPipeline(renderPass);
@@ -99,7 +106,7 @@ void Skybox::createVertexBuffer() const {
 void Skybox::createDescriptorResources() const {
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // Step 1: Create the Descriptor Set Layout for the fragment sampler
+    // Step 1: Create the Descriptor Set Layout (Must happen regardless of texture)
     VkDescriptorSetLayoutBinding samplerLayoutBinding{
         EngineConstants::INDEX_ZERO, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         EngineConstants::COUNT_ONE, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr
@@ -110,7 +117,7 @@ void Skybox::createDescriptorResources() const {
     layoutInfo.pBindings = &samplerLayoutBinding;
     static_cast<void>(vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &descriptorSetLayout));
 
-    // Step 2: Initialize a dedicated Descriptor Pool
+    // Step 2: Initialize a dedicated Descriptor Pool (Must happen regardless of texture)
     VkDescriptorPoolSize poolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineConstants::COUNT_ONE };
     VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
     poolInfo.poolSizeCount = EngineConstants::COUNT_ONE;
@@ -118,26 +125,34 @@ void Skybox::createDescriptorResources() const {
     poolInfo.maxSets = EngineConstants::COUNT_ONE;
     static_cast<void>(vkCreateDescriptorPool(context->device, &poolInfo, nullptr, &descriptorPool));
 
-    // Step 3: Allocate and update the Descriptor Set with cubemap handles
+    // Step 3: Allocate the Descriptor Set
     VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     allocInfo.descriptorPool = descriptorPool;
     allocInfo.descriptorSetCount = EngineConstants::COUNT_ONE;
     allocInfo.pSetLayouts = &descriptorSetLayout;
     static_cast<void>(vkAllocateDescriptorSets(context->device, &allocInfo, &descriptorSet));
 
-    VkDescriptorImageInfo imageInfo{
-        cubemapTexture->getSampler(), cubemapTexture->getImageView(),
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    };
+    // --- GUARD START ---
+    // We only perform the 'Update' if we actually have a texture pointer.
+    // If cubemapTexture is nullptr (initial state), we skip this.
+    // loadTextures() will call vkUpdateDescriptorSets later when the .ini is read.
+    if (cubemapTexture != nullptr) {
+        VkDescriptorImageInfo imageInfo{
+            cubemapTexture->getSampler(),
+            cubemapTexture->getImageView(),
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
 
-    VkWriteDescriptorSet descriptorWrite{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-    descriptorWrite.dstSet = descriptorSet;
-    descriptorWrite.dstBinding = EngineConstants::INDEX_ZERO;
-    descriptorWrite.descriptorCount = EngineConstants::COUNT_ONE;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite.pImageInfo = &imageInfo;
+        VkWriteDescriptorSet descriptorWrite{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        descriptorWrite.dstSet = descriptorSet;
+        descriptorWrite.dstBinding = EngineConstants::INDEX_ZERO;
+        descriptorWrite.descriptorCount = EngineConstants::COUNT_ONE;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrite.pImageInfo = &imageInfo;
 
-    vkUpdateDescriptorSets(context->device, EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
+        vkUpdateDescriptorSets(context->device, EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
+    }
+    // --- GUARD END ---
 }
 
 /**
@@ -218,4 +233,38 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
         &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
         throw std::runtime_error("Skybox: Failed to create graphics pipeline!");
     }
+}
+
+/**
+ * @brief Updates the GPU cubemap and refreshes the sampler descriptors.
+ */
+void Skybox::loadTextures(const std::vector<std::string>& facePaths) {
+    if (facePaths.size() != 6U) {
+        throw std::runtime_error("Skybox: loadTextures requires exactly 6 face paths!");
+    }
+
+    VulkanContext* context = ServiceLocator::GetContext();
+
+    // Step 1: Create the new Cubemap object (This handles the GPU image/view creation)
+    // We replace the old unique_ptr, which automatically triggers the old Cubemap's destructor
+    cubemapTexture = std::make_unique<Cubemap>(facePaths);
+
+    // Step 2: Refresh the Descriptor Set
+    // We must tell the GPU to use the handles from the newly loaded texture
+    VkDescriptorImageInfo imageInfo{
+        cubemapTexture->getSampler(),
+        cubemapTexture->getImageView(),
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+
+    VkWriteDescriptorSet descriptorWrite{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+    descriptorWrite.dstSet = descriptorSet;
+    descriptorWrite.dstBinding = EngineConstants::INDEX_ZERO;
+    descriptorWrite.descriptorCount = EngineConstants::COUNT_ONE;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(context->device, EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
+
+    GE_LOG_INFO("Skybox: Successfully updated cubemap textures from Registry.");
 }

@@ -65,6 +65,11 @@ public:
         currentFrame = (currentFrame + 1U) % MAX_FRAMES_IN_FLIGHT;
     }
 
+    /** @brief Returns the command buffer for the frame currently being processed. */
+    VkCommandBuffer getCurrentCommandBuffer() const {
+        return commandBuffers.at(currentFrame);
+    }
+
     uint32_t getCurrentFrame() const { return currentFrame; }
 
 private:

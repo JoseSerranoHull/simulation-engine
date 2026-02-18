@@ -21,7 +21,7 @@ namespace GE::Systems {
         ~TransformSystem() override = default;
 
         /** @brief Standard ECS update loop. */
-        void OnUpdate(float dt) override;
+        void OnUpdate(float dt, VkCommandBuffer cb) override;
 
         /** @brief Basic cleanup for the system. */
         ERROR_CODE Shutdown() override {

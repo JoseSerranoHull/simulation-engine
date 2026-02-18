@@ -296,7 +296,10 @@
     <None Include="markdown\SimulationLab2.md">
       <Filter>Mardown Files</Filter>
     </None>
-    <None Include="config\physics_lab.ini">
+    <None Include="config\simulation_lab2.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab3.ini">
       <Filter>Config Files</Filter>
     </None>
   </ItemGroup>
@@ -509,6 +512,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\SkyboxComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Capsule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Cylinder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

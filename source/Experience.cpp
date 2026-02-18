@@ -207,7 +207,7 @@ void Experience::drawFrame() {
     // only while the buffer is in the 'Recording' state.
     if (activeScenario && !activeScenario->IsPaused()) {
         // This triggers ParticleEmitterSystem::OnUpdate which now has a valid 'cb'.
-        em->Update(scaledDelta);
+        em->Update(scaledDelta, cb);
     }
 
     // Prepare raw pipelines for renderer
@@ -376,8 +376,8 @@ void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
  */
 void Experience::stepSimulation(float fixedStep) {
     if (activeScenario && activeScenario->IsPaused()) {
-        // Force one heartbeat of the ECS and script logic
-        entityManager->Update(fixedStep);
+        // Fix: Pass VK_NULL_HANDLE because there is no active frame buffer during a manual step
+        entityManager->Update(fixedStep, VK_NULL_HANDLE);
         activeScenario->OnUpdate(fixedStep, timeManager->getTotal());
 
         GE_LOG_INFO("Experience: Manual simulation step performed.");
@@ -389,33 +389,43 @@ void Experience::stepSimulation(float fixedStep) {
 // ========================================================================
 
 void Experience::cleanup() {
+    // 1. Synchronize GPU
     if (context && context->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(context->device);
     }
 
+    // 2. Destroy High-Level Logic
     if (activeScenario) {
         activeScenario->OnUnload();
     }
     activeScenario.reset();
 
+    // NEW: Explicitly destroy the Skybox while the Context/Device is still alive!
+    skybox.reset();
+
+    // 3. Destroy ECS and Components
+    // This triggers ParticleSystem destructors
+    entityManager.reset();
+
+    // 4. Release orchestrators
     uiManager.reset();
     renderer.reset();
     assetManager.reset();
     postProcessor.reset();
     scene.reset();
 
-    // registries
+    // 5. Registries
     ownedModels.clear();
     pipelines.clear();
     shaderModules.clear();
     meshes.clear();
 
-    entityManager.reset();
-
+    // 6. Managers
     statsManager.reset();
     timeManager.reset();
     climateManager.reset();
 
+    // 7. Resources
     resources.reset();
     vulkanEngine.reset();
 
@@ -423,6 +433,8 @@ void Experience::cleanup() {
         glfwDestroyWindow(window);
     }
     glfwTerminate();
+
+    // 8. Foundation dies LAST
     context.reset();
 
     GE_LOG_INFO("Experience: Agnostic cleanup complete.");

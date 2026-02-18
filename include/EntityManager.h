@@ -25,7 +25,7 @@ namespace GE::ECS {
 
 		// Initialize with maximum number of entities and component types
 		ERROR_CODE Initialize(uint32_t maxEntities, uint32_t maxComponentTypes);
-		void Update(float dt);
+		void Update(float dt, VkCommandBuffer cb);
 		ERROR_CODE Shutdown();
 
 		// Entity lifecycle

@@ -16,8 +16,7 @@ public:
     // Direction from point1 to point2 (not normalized)
     glm::vec3 Direction() const { return m_point2 - m_point1; }
 
-    // Returns a unit-length direction vector.
-    // If the line is degenerate (points coincide) returns a zero vector.
+    /** @brief Returns a unit-length direction vector. Handles degenerate lines. */
     glm::vec3 Normalize() const {
         glm::vec3 dir = Direction();
         float len2 = glm::length2(dir);
@@ -31,11 +30,11 @@ public:
         m_point2 = p2;
     }
 
+    /** @brief Computes the shortest distance from an arbitrary point to this infinite line. */
     float DistanceToPoint(const glm::vec3& point) const {
         glm::vec3 dir = Direction();
         float len2 = glm::length2(dir);
         const float eps = 1e-12f;
-        // Degenerate line: return distance to the single point
         if (len2 <= eps) return glm::length(point - m_point1);
 
         glm::vec3 unitDir = glm::normalize(dir);

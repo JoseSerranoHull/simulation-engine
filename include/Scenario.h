@@ -38,6 +38,8 @@ namespace GE {
         float GetTimeScale() const { return m_timeScale; }
         void  SetTimeScale(float s) { m_timeScale = s; }
 
+        /** @brief Returns the path to the .ini file used to build this scenario. */
+        const std::string& GetConfigPath() const { return m_configPath; }
         /** @brief Sets the data source path for this scenario instance. */
         void SetConfigPath(const std::string& path) { m_configPath = path; }
 

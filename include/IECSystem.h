@@ -27,9 +27,8 @@ namespace GE::ECS {
 
 	struct IECSystem {
 		virtual ~IECSystem();
-		virtual void OnUpdate(float dt) = 0;
+		virtual void OnUpdate(float dt, VkCommandBuffer cb) = 0;
 		virtual ERROR_CODE Shutdown() = 0;
-
 		ISystemTypeID GetID() const;
 		ESystemStage GetStage() const;
 		template <typename TSystem>

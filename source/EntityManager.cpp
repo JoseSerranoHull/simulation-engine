@@ -32,12 +32,13 @@ namespace GE::ECS
     }
 
 	// Dispatch updates to all registered systems in stage order
-    void EntityManager::Update(const float dt)
+    void EntityManager::Update(const float dt, VkCommandBuffer cb) // Update signature
     {
-        for (const auto &stageVec : m_systems) {
-            for (auto *sys : stageVec) {
+        for (const auto& stageVec : m_systems) {
+            for (auto* sys : stageVec) {
                 if (sys != nullptr) {
-                    sys->OnUpdate(dt);
+                    // Pass the buffer to the system
+                    sys->OnUpdate(dt, cb);
                 }
             }
         }

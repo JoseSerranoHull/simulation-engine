@@ -21,28 +21,24 @@ namespace GE::Systems {
         }
 
         /** @brief Heartbeat logic: Updates all active particle components. */
-        void OnUpdate(float dt) override {
+        void OnUpdate(float dt, VkCommandBuffer cb) override { // Signature changed
             auto* em = ServiceLocator::GetEntityManager();
-            auto* res = ServiceLocator::GetResourceManager();
             auto* exp = ServiceLocator::GetExperience();
 
-            // Get the active command buffer for the current frame
-            VkCommandBuffer cb = res->getSyncManager()->getCurrentCommandBuffer();
+            // REMOVED: No longer asking SyncManager for a buffer
             auto& particles = em->GetCompArr<Components::ParticleComponent>();
 
             for (uint32_t i = 0; i < particles.GetCount(); ++i) {
                 auto& pc = particles.Data()[i];
-
                 if (!pc.enabled || !pc.system) continue;
 
-                // Sync particle origin to Entity Position
                 GE::ECS::EntityID id = particles.Index()[i];
                 auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
                 glm::vec3 worldPos = transform ? (transform->m_position + pc.localOffset) : pc.localOffset;
 
-                // Execute Compute Shader logic
+                // Execute Compute Shader logic using the passed 'cb'
                 pc.system->update(
-                    cb,
+                    cb, // Use the parameter
                     dt,
                     pc.enabled,
                     ServiceLocator::GetTimeManager()->getTotal(),

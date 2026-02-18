@@ -180,7 +180,8 @@
     <ClCompile Include="source\VulkanUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="config\physics_lab.ini" />
+    <None Include="config\simulation_lab2.ini" />
+    <None Include="config\simulation_lab3.ini" />
     <None Include="config\snow_globe.ini" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md" />
@@ -229,6 +230,7 @@
   <ItemGroup>
     <ClInclude Include="include\AssetManager.h" />
     <ClInclude Include="include\Camera.h" />
+    <ClInclude Include="include\Capsule.h" />
     <ClInclude Include="include\ClimateManager.h" />
     <ClInclude Include="include\Collider.h" />
     <ClInclude Include="include\Common.h" />
@@ -237,6 +239,7 @@
     <ClInclude Include="include\ComponentType.h" />
     <ClInclude Include="include\ConfigLoader.h" />
     <ClInclude Include="include\Cubemap.h" />
+    <ClInclude Include="include\Cylinder.h" />
     <ClInclude Include="include\Entity.h" />
     <ClInclude Include="include\EntityFactory.h" />
     <ClInclude Include="include\EntityManager.h" />

@@ -36,31 +36,48 @@ namespace GE {
         // This remains empty to stay agnostic.
     }
 
-    void GenericScenario::OnGUI() {
+    void GE::GenericScenario::OnGUI() {
         // Fulfills Requirement: Simulation menu in the Main Menu Bar
         if (ImGui::BeginMenu("Simulation")) {
 
-            // 1. Start / Pause Toggle
-            std::string playLabel = m_isPaused ? "Resume Simulation" : "Pause Simulation";
-            if (ImGui::MenuItem(playLabel.c_str())) {
-                m_isPaused = !m_isPaused;
+            // --- 1. Restart Logic (NEW) ---
+            // Allows for instantaneous reset of Lab 3 test cases
+            if (ImGui::MenuItem("Restart Simulation", "F5")) {
+                auto* exp = ServiceLocator::GetExperience();
+                // We use the stored config path to reload the same .ini file
+                exp->changeScenario(std::make_unique<GE::GenericScenario>(m_configPath));
+
+                GE_LOG_INFO("GenericScenario: Restarting simulation from " + m_configPath);
             }
 
             ImGui::Separator();
 
-            // 2. Fixed Timestep (Time Scale)
-            // Allows specifying how fast time moves in the simulation
+            // --- 2. Start / Pause Toggle ---
+            // Fulfills Lab 3 Q2 Requirement: Simulation Start/Stop
+            std::string playLabel = m_isPaused ? "Resume Simulation" : "Pause Simulation";
+            if (ImGui::MenuItem(playLabel.c_str(), "P")) {
+                m_isPaused = !m_isPaused; //
+            }
+
+            ImGui::Separator();
+
+            // --- 3. Fixed Timestep (Time Scale) ---
+            // Fulfills Lab 3 Q2 Requirement: Adjust the size of the timestep
             ImGui::Text("Time Scale");
-            ImGui::PushItemWidth(100);
-            ImGui::SliderFloat("##timescale", &m_timeScale, 0.0f, 5.0f, "%.2fx");
+            ImGui::PushItemWidth(120);
+            // This modifies the multiplier applied to dt in Experience::drawFrame
+            if (ImGui::SliderFloat("##timescale", &m_timeScale, 0.0f, 5.0f, "%.2fx")) {
+                // Value is clamped between 0 (paused) and 5x speed
+            }
             ImGui::PopItemWidth();
 
             ImGui::Separator();
 
-            // 3. Step One Timestep Forward
-            // Useful for debugging collisions while paused
+            // --- 4. Step One Timestep Forward ---
+            // Fulfills Lab Requirement: Debug simulation stepping
+            // Enabled only when the simulation is paused
             if (ImGui::MenuItem("Step One Frame", "Space", false, m_isPaused)) {
-                // We use a standard fixed delta for the step (e.g., 60fps)
+                // standard 60fps fixed delta for a single discrete step
                 const float fixedStep = 0.01667f;
                 ServiceLocator::GetExperience()->stepSimulation(fixedStep);
             }

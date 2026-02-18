@@ -247,12 +247,28 @@ void IMGUIManager::DrawMainMenuBar(InputManager* const input) const {
 
         // --- SCENARIO SELECTOR ---
         if (ImGui::BeginMenu("Scenario")) {
+
+            if (experience->GetCurrentScenario() != nullptr) {
+                if (ImGui::MenuItem("Reset Current Scenario", "F5")) {
+                    std::string currentPath = experience->GetCurrentScenario()->GetConfigPath();
+
+                    // We reload the scenario by creating a fresh instance with the same path
+                    experience->changeScenario(std::make_unique<GE::GenericScenario>(currentPath));
+
+                    GE_LOG_INFO("UI: Resetting scenario from " + currentPath);
+                }
+                ImGui::Separator();
+            }
+
             // Fulfills Requirement: Load/Unload easily
             if (ImGui::MenuItem("Snow Globe Scenario")) {
                 experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/snow_globe.ini"));
             }
-            if (ImGui::MenuItem("Physics Lab Scenario")) {
-                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/physics_lab.ini"));
+            if (ImGui::MenuItem("Simulation Lab 2 Scenario")) {
+                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/simulation_lab2.ini"));
+            }
+            if (ImGui::MenuItem("Simulation Lab 3 Scenario")) {
+                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/simulation_lab3.ini"));
             }
             ImGui::EndMenu();
         }

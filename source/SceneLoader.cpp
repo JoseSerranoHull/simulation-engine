@@ -102,54 +102,43 @@ namespace GE::Scene {
         }
     }
 
-    void SceneLoader::handleMaterial(const std::string& id, const std::map<std::string, std::string>& props, AssetManager* am, const std::vector<std::unique_ptr<Pipeline>>& pipelines) {
+    void GE::Scene::SceneLoader::handleMaterial(const std::string& id, const std::map<std::string, std::string>& props, AssetManager* am, const std::vector<std::unique_ptr<Pipeline>>& pipelines) {
 
-        // Fulfills Requirement: Procedural "checkerboard" textures in model space
-        bool isProcedural = (props.count("Type") && props.at("Type") == "procedural_checker");
-
-        if (isProcedural) {
-            // Optimization: We use standard placeholders for the PBR slots, but the 
-            // Pipeline index (typically 1 for specialized shaders) will handle the math.
-            int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 1;
-
-            auto mat = am->createMaterial(
-                m_textures["White"], m_textures["Placeholder"], m_textures["White"],
-                m_textures["Black"], m_textures["Matte"],
-                pipelines[pipeIdx].get()
-            );
-            m_materials[id] = mat;
-        }
-        else {
-            auto getSafeTex = [&](const std::string& key, const std::string& fallbackID) {
-                if (props.count(key) && m_textures.count(props.at(key))) {
-                    return m_textures[props.at(key)];
-                }
-                return m_textures.count(fallbackID) ? m_textures[fallbackID] : nullptr;
-                };
-
-            int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 0;
-
-            auto mat = am->createMaterial(
-                getSafeTex("Albedo", "White"),
-                getSafeTex("Normal", "Placeholder"),
-                getSafeTex("AO", "White"),
-                getSafeTex("Metallic", "Black"),
-                getSafeTex("Roughness", "Matte"),
-                pipelines[pipeIdx].get()
-            );
-
-            bool shadows = (props.count("CastShadows") ? (props.at("CastShadows") == "true") : true);
-            mat->SetCastsShadows(shadows);
-
-            if (props.count("Pass")) {
-                std::string passVal = props.at("Pass");
-                if (passVal == "Transparent") mat->SetPassType(RenderPassType::Transparent);
-                else if (passVal == "ShadowOnly") mat->SetPassType(RenderPassType::ShadowOnly);
-                else mat->SetPassType(RenderPassType::Opaque);
+        // Helper to fetch texture from registry or fallback
+        auto getSafeTex = [&](const std::string& key, const std::string& fallbackID) {
+            if (props.count(key) && m_textures.count(props.at(key))) {
+                return m_textures[props.at(key)];
             }
-            m_materials[id] = mat;
+            return m_textures.count(fallbackID) ? m_textures[fallbackID] : nullptr;
+            };
+
+        // Determine which pipeline index to use (0 = Opaque, 1 = Checkerboard)
+        int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 0;
+
+        // UNIFIED CREATION: Procedural materials no longer ignore custom textures
+        auto mat = am->createMaterial(
+            getSafeTex("Albedo", "White"),
+            getSafeTex("Normal", "Placeholder"),
+            getSafeTex("AO", "White"),
+            getSafeTex("Metallic", "Black"),
+            getSafeTex("Roughness", "Matte"),
+            pipelines[pipeIdx].get()
+        );
+
+        // Common properties
+        bool shadows = (props.count("CastShadows") ? (props.at("CastShadows") == "true") : true);
+        mat->SetCastsShadows(shadows);
+
+        if (props.count("Pass")) {
+            std::string passVal = props.at("Pass");
+            if (passVal == "Transparent") mat->SetPassType(RenderPassType::Transparent);
+            else if (passVal == "ShadowOnly") mat->SetPassType(RenderPassType::ShadowOnly);
+            else mat->SetPassType(RenderPassType::Opaque);
         }
+
+        m_materials[id] = mat;
     }
+
     void SceneLoader::handleEntity(GE::ECS::EntityManager* em) {
         m_currentEntity = em->CreateEntity();
     }

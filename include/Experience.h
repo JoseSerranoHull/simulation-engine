@@ -96,6 +96,9 @@ public:
 	/** @brief Accessor for the skybox. */
     Skybox* GetSkybox() const { return skybox.get(); }
 
+    /** @brief Requests a scenario transition to be performed at the start of the next frame. */
+    void requestScenarioChange(const std::string& path) { m_pendingScenarioPath = path; }
+
 private:
     // --- Windowing & Core Infrastructure ---
     GLFWwindow* window;
@@ -140,6 +143,7 @@ private:
     // --- Configuration & Command Synchronization ---
     std::vector<VkFence> imagesInFlight;
     uint32_t currentFrame;
+    std::string m_pendingScenarioPath = ""; // Stores the path for the next frame
 
     // --- Internal Initialization Helpers ---
     void initWindow(char const* const title);

@@ -45,13 +45,14 @@ OBJLoader::MeshData GeometryUtils::generateSphere(const uint32_t segments, const
             const uint32_t first = (y * (segments + 1U)) + x;
             const uint32_t second = first + segments + 1U;
 
+            // Fix: Swapped second and first+1 to achieve CCW winding on the outside
             data.indices.push_back(first);
-            data.indices.push_back(second);
             data.indices.push_back(first + 1U);
+            data.indices.push_back(second);
 
             data.indices.push_back(second);
-            data.indices.push_back(second + 1U);
             data.indices.push_back(first + 1U);
+            data.indices.push_back(second + 1U);
         }
     }
     return data;
@@ -228,11 +229,17 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
 OBJLoader::MeshData GeometryUtils::generatePlane(float width, float depth) {
     OBJLoader::MeshData data;
     float w2 = width * 0.5f; float d2 = depth * 0.5f;
+
+    // Vertex positions (assuming Y-up world)
     data.vertices = {
-        {{-w2, 0.0f, -d2}, {0,1,0}, {0,0}}, {{ w2, 0.0f, -d2}, {0,1,0}, {1,0}},
-        {{ w2, 0.0f,  d2}, {0,1,0}, {1,1}}, {{-w2, 0.0f,  d2}, {0,1,0}, {0,1}}
+        {{-w2, 0.0f, -d2}, {0,1,0}, {0,0}}, // 0: Top-Left
+        {{ w2, 0.0f, -d2}, {0,1,0}, {1,0}}, // 1: Top-Right
+        {{ w2, 0.0f,  d2}, {0,1,0}, {1,1}}, // 2: Bottom-Right
+        {{-w2, 0.0f,  d2}, {0,1,0}, {0,1}}  // 3: Bottom-Left
     };
-    data.indices = { 0, 1, 2, 2, 3, 0 };
+
+    // Fix: Changed winding to Counter-Clockwise (0 -> 3 -> 2 and 0 -> 2 -> 1)
+    data.indices = { 0, 3, 2, 2, 1, 0 };
     return data;
 }
 

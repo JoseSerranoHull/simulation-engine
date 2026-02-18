@@ -165,7 +165,7 @@ void Renderer::recordOpaquePass(
     vkCmdSetScissor(cb, 0U, 1U, &sc);
 
     // 1. Draw Environment (Background)
-    if (skybox != nullptr) {
+    if (skybox != nullptr && skybox->isLoaded()) { // NEW: Only draw if loaded
         skybox->draw(cb, globalSet);
     }
 

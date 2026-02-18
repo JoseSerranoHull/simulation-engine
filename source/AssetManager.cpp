@@ -94,6 +94,10 @@ std::unique_ptr<Model> AssetManager::loadModel(
 /**
  * @brief Creates a PBR Material and updates its associated Descriptor Set.
  */
+ /**
+  * @brief Creates a PBR Material and updates its associated Descriptor Set.
+  * Refactored with Null-Checks to prevent memory access violations.
+  */
 std::shared_ptr<Material> AssetManager::createMaterial(
     std::shared_ptr<Texture> albedo,
     std::shared_ptr<Texture> normal,
@@ -104,12 +108,12 @@ std::shared_ptr<Material> AssetManager::createMaterial(
 ) const {
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // Step 1: Validation of hardware prerequisite (Descriptor Pool).
+    // Step 1: Validation of hardware prerequisite
     if (descriptorPool == VK_NULL_HANDLE) {
         throw std::runtime_error("AssetManager: createMaterial called before setDescriptorPool!");
     }
 
-    // Step 2: Allocation of the Descriptor Set (Set 1) for the material.
+    // Step 2: Allocation of the Descriptor Set
     VkDescriptorSet materialDescriptorSet{ VK_NULL_HANDLE };
     VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     allocInfo.descriptorPool = descriptorPool;
@@ -120,7 +124,7 @@ std::shared_ptr<Material> AssetManager::createMaterial(
         throw std::runtime_error("AssetManager: Failed to allocate material descriptor set!");
     }
 
-    // Step 3: Batch Update of the 5 PBR textures in the Descriptor Set.
+    // Step 3: Batch Update of the 5 PBR textures
     const std::array<std::shared_ptr<Texture>, PBR_TEXTURE_COUNT> textures = {
         albedo, normal, ao, metallic, roughness
     };
@@ -129,6 +133,14 @@ std::shared_ptr<Material> AssetManager::createMaterial(
     std::array<VkDescriptorImageInfo, PBR_TEXTURE_COUNT> imageInfos{};
 
     for (uint32_t i = 0U; i < PBR_TEXTURE_COUNT; ++i) {
+        // --- CRITICAL SAFETY FIX ---
+        // If the pointer is null, the engine would crash. Now we throw a descriptive error.
+        if (textures[i] == nullptr) {
+            std::string slotNames[] = { "Albedo", "Normal", "AO", "Metallic", "Roughness" };
+            throw std::runtime_error("AssetManager: Cannot create material. Texture slot [" +
+                slotNames[i] + "] is NULL. Check your .ini registry!");
+        }
+
         imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfos[i].imageView = textures[i]->getImageView();
         imageInfos[i].sampler = textures[i]->getSampler();
@@ -142,7 +154,8 @@ std::shared_ptr<Material> AssetManager::createMaterial(
         descriptorWrites[i].pImageInfo = &imageInfos[i];
     }
 
-    vkUpdateDescriptorSets(context->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0U, nullptr);
+    vkUpdateDescriptorSets(context->device, static_cast<uint32_t>(descriptorWrites.size()),
+        descriptorWrites.data(), 0U, nullptr);
 
     // Step 4: Encapsulate in RAII Material object.
     return std::make_shared<Material>(materialDescriptorSet, pipeline);

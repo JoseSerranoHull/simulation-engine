@@ -50,7 +50,11 @@ public:
      */
     void loadTextures(const std::vector<std::string>& facePaths);
 
+    bool isLoaded() const { return m_texturesLoaded; }
+
 private:
+    bool m_texturesLoaded = false; // Track if GPU handles are valid
+
     // --- Dependencies ---
     std::unique_ptr<Cubemap> cubemapTexture{ nullptr };
 

@@ -266,5 +266,7 @@ void Skybox::loadTextures(const std::vector<std::string>& facePaths) {
 
     vkUpdateDescriptorSets(context->device, EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
 
+    m_texturesLoaded = true; // Set this after vkUpdateDescriptorSets
+
     GE_LOG_INFO("Skybox: Successfully updated cubemap textures from Registry.");
 }

@@ -262,13 +262,13 @@ void IMGUIManager::DrawMainMenuBar(InputManager* const input) const {
 
             // Fulfills Requirement: Load/Unload easily
             if (ImGui::MenuItem("Snow Globe Scenario")) {
-                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/snow_globe.ini"));
+                experience->requestScenarioChange("./config/snow_globe.ini");
             }
             if (ImGui::MenuItem("Simulation Lab 2 Scenario")) {
-                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/simulation_lab2.ini"));
+                experience->requestScenarioChange("./config/simulation_lab2.ini");
             }
             if (ImGui::MenuItem("Simulation Lab 3 Scenario")) {
-                experience->changeScenario(std::make_unique<GE::GenericScenario>("./config/simulation_lab3.ini"));
+                experience->requestScenarioChange("./config/simulation_lab3.ini");
             }
             ImGui::EndMenu();
         }

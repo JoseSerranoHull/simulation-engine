@@ -149,6 +149,21 @@ void Experience::run() {
  */
 void Experience::drawFrame() {
     VulkanContext* const ctx = ServiceLocator::GetContext();
+
+    if (!m_pendingScenarioPath.empty()) {
+        vkDeviceWaitIdle(ctx->device);
+
+        // Use a local copy to avoid issues during the change
+        std::string path = m_pendingScenarioPath;
+        m_pendingScenarioPath = "";
+
+        changeScenario(std::make_unique<GE::GenericScenario>(path));
+
+        // CRITICAL: We MUST return here to ensure we don't proceed to draw 
+        // with empty registries or stale command buffers!
+        return;
+    }
+
     auto* const em = entityManager.get();
 
     // --- Step 1: CPU-GPU Throttling ---
@@ -346,7 +361,13 @@ void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
     if (activeScenario) {
         activeScenario->OnUnload();
 
-        // Requirement: Clear registries to prevent ID conflicts
+        // --- NEW: Reset Skybox state on scenario change ---
+        if (skybox != nullptr) {
+            // If your Skybox class doesn't have a 'clear' method, 
+            // you can simply reset the unique_ptr and re-init an empty shell.
+            initSkybox();
+        }
+
         scene->clearEntities();
         if (entityManager) {
             entityManager->ClearAllEntities();

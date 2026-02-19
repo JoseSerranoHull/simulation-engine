@@ -60,7 +60,11 @@ public:
     /**
     * @brief Records drawing commands for the particles into the graphics stream.
     */
-    void draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const;
+    void draw(
+        const VkCommandBuffer commandBuffer,
+        const VkDescriptorSet globalDescriptorSet,
+        const glm::mat4& quadrantVP // NEW: Pass the View-Projection matrix
+    ) const;
 
     /**
      * @brief Retrieves dynamic light data from the simulated particles for UBO injection.

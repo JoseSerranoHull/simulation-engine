@@ -110,23 +110,46 @@ void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float del
         EngineConstants::COUNT_ONE, &bufferBarrier, 0U, nullptr);
 }
 
-/**
- * @brief Records drawing commands for the particles.
- */
-void ParticleSystem::draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const {
+ /**
+  * @brief Records drawing commands for the particles.
+  * Fulfills Lab 2: Visualization of simulation from 4 views.
+  */
+void ParticleSystem::draw(
+    const VkCommandBuffer commandBuffer,
+    const VkDescriptorSet globalDescriptorSet,
+    const glm::mat4& quadrantVP
+) const {
     if (graphicsPipeline == VK_NULL_HANDLE) { return; }
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-    const VkBuffer vertexBuffers[EngineConstants::COUNT_ONE] = { storageBuffer };
-    const VkDeviceSize offsets[EngineConstants::COUNT_ONE] = { static_cast<VkDeviceSize>(EngineConstants::OFFSET_ZERO) };
-    vkCmdBindVertexBuffers(commandBuffer, EngineConstants::INDEX_ZERO, EngineConstants::COUNT_ONE, vertexBuffers, offsets);
-
-    const VkDescriptorSet sets[DESCRIPTOR_COUNT_ONE] = { globalDescriptorSet };
+    const VkDescriptorSet sets[1] = { globalDescriptorSet };
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout,
-        SET_INDEX_GLOBAL, DESCRIPTOR_COUNT_ONE, sets, EngineConstants::OFFSET_ZERO, nullptr);
+        0, 1, sets, 0, nullptr);
 
-    vkCmdDraw(commandBuffer, particleCount, EngineConstants::COUNT_ONE, EngineConstants::OFFSET_ZERO, EngineConstants::OFFSET_ZERO);
+    // --- FIX: Push the full 128-byte footprint ---
+    struct ParticlePushConstants {
+        glm::mat4 vp;      // 64 bytes
+        glm::mat4 padding; // 64 bytes (matches 'unused' in shaders)
+    } constants;
+
+    constants.vp = quadrantVP;
+    constants.padding = glm::mat4(1.0f); // Identity padding
+
+    vkCmdPushConstants(
+        commandBuffer,
+        graphicsPipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(ParticlePushConstants), // 128 bytes
+        &constants
+    );
+
+    const VkBuffer vertexBuffers[1] = { storageBuffer };
+    const VkDeviceSize offsets[1] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdDraw(commandBuffer, particleCount, 1, 0, 0);
 }
 
 /**
@@ -296,11 +319,23 @@ void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const
     const VkPipelineShaderStageCreateInfo shaderStages[2] = { vertShader.getStageInfo(), fragShader.getStageInfo() };
 
     // Step 2: Define Layout with global and material descriptor sets
-    VulkanContext* context = ServiceLocator::GetContext();
+    VulkanContext * context = ServiceLocator::GetContext();
+
+    // --- NEW: Define Push Constant Range for Multiview Matrix ---
+    const VkPushConstantRange pushConstantRange{
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0U,
+        static_cast<uint32_t>(sizeof(glm::mat4) * 2) // CHANGE: Match the 128-byte shader block
+    };
+
     const std::array<VkDescriptorSetLayout, 2> layouts = { globalSetLayout, context->materialSetLayout };
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
     pipelineLayoutInfo.pSetLayouts = layouts.data();
+
+    // --- FIX: Register the push constant range in the layout ---
+    pipelineLayoutInfo.pushConstantRangeCount = 1U;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(context->device, &pipelineLayoutInfo, nullptr, &graphicsPipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("ParticleSystem: Failed to create graphics pipeline layout!");

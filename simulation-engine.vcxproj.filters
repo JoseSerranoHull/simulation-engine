@@ -22,7 +22,7 @@
     <Filter Include="Shader Files">
       <UniqueIdentifier>{cc9a7c29-0572-4866-85e1-c9d42120ec9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Mardown Files">
+    <Filter Include="Markdown Files">
       <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -278,29 +278,35 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Licenses.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="README.md" />
     <None Include="markdown\MasterPlan.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="config\snow_globe.ini">
       <Filter>Config Files</Filter>
     </None>
     <None Include="markdown\SimulationLab2.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="config\simulation_lab2.ini">
       <Filter>Config Files</Filter>
     </None>
     <None Include="config\simulation_lab3.ini">
       <Filter>Config Files</Filter>
+    </None>
+    <None Include="shaders\checker.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\checker.vert">
+      <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

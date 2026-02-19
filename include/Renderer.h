@@ -18,42 +18,33 @@
 /**
  * @class Renderer
  * @brief Agnostic Frame Orchestrator.
- * * Manages the multi-pass rendering sequence by querying the ECS for
- * MeshRenderers, Lights, and future ParticleComponents.
  */
 class Renderer final {
 public:
-    // --- Functional Constants ---
     static constexpr uint32_t PIPELINE_IDX_SHADOW = 6U;
     static constexpr float    DEPTH_CLEAR_VAL = 1.0f;
 
-    /** @brief Constructor: Standard initialization. */
     explicit Renderer() {}
     ~Renderer() = default;
 
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
 
-    /**
-     * @brief Orchestrates the full frame recording sequence using the ECS.
-     * Fulfills Requirement: Agnostic rendering of any scenario entities.
-     */
+    /** @brief Orchestrates the multi-pass recording, now supporting Multiview split-screen. */
     void recordFrame(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
         const Skybox* const skybox,
-        GE::ECS::EntityManager* const em, // The source of all draw data
+        GE::ECS::EntityManager* const em,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalDescriptorSet,
         const VkRenderPass shadowPass,
         const VkFramebuffer shadowFramebuffer,
-        const std::vector<Pipeline*>& pipelines
+        const std::vector<Pipeline*>& pipelines,
+        bool multiview // NEW: Toggle parameter
     ) const;
 
 private:
-    // --- Private Pass-Specific Recorders ---
-
-    /** @brief Records the depth-only pass for shadow map generation. */
     void recordShadowPass(
         const VkCommandBuffer cb,
         const VkRenderPass renderPass,
@@ -63,7 +54,7 @@ private:
         GE::ECS::EntityManager* const em
     ) const;
 
-    /** @brief Records the main forward rendering pass for opaque geometry. */
+    /** @brief Main forward pass updated to handle 4-way viewport splitting. */
     void recordOpaquePass(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
@@ -71,23 +62,25 @@ private:
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
         const std::vector<Pipeline*>& pipelines,
-        GE::ECS::EntityManager* const em
+        GE::ECS::EntityManager* const em,
+        bool multiview // NEW
     ) const;
 
-    /** @brief Records alpha-blended geometry and dispatches particles. */
+    /** @brief Transparency pass updated to match multiview quadrants. */
     void recordTransparentPass(
         const VkCommandBuffer cb,
         const VkExtent2D& extent,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
         const std::vector<Pipeline*>& pipelines,
-        GE::ECS::EntityManager* const em
+        GE::ECS::EntityManager* const em,
+        bool multiview // NEW
     ) const;
 
-    /** @brief Generic Particle Dispatcher: Renamed as per your naming choice. */
     void recordParticles(
         const VkCommandBuffer cb,
         const VkDescriptorSet globalSet,
-        GE::ECS::EntityManager* const em
+        GE::ECS::EntityManager* const em,
+        const glm::mat4& quadrantVP // NEW
     ) const;
 };

@@ -60,5 +60,6 @@ namespace GE::Scene {
         void handlePlaneCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleSkyboxComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleBackgroundComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
     };
 }

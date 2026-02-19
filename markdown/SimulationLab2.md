@@ -206,3 +206,96 @@ Would you like me to provide the code for a new **`PhysicsSystem`** that:
 I can also show you how to add the **TimeStep** slider to your `IMGUIManager` so you can adjust the `dt` while the ball is falling. **Would you like to start with the `PhysicsSystem` code?**
 
 With these changes, you can now iterate on your Lab 3 gravity tests instantly. Would you like to add a "Step Simulation" button to the UI as well, so you can watch the collision resolution frame-by-frame?
+
+The "flat" look and the missing objects in your lab scenario are directly caused by how we updated the vertex shaders to support **Multiview**.
+
+In your shaders (like `phong.vert` and `checker.vert`), we changed `fragPos` and `fragNormal` to use **Model Space** (`inPosition` and `inNormal`) to ensure consistency across views. However, your fragment shaders (lighting math) expect these values to be in **World Space**. Without the world-space transformation, the lighting and normals don't change as you rotate the camera, making everything look like a flat 2D plane projected onto the screen.
+
+Additionally, you can't see the Lab 2 objects because the `Renderer` loop isn't passing the pre-calculated **MVP** matrix into the updated `Mesh::draw` function yet.
+
+---
+
+### 1. Fix the "Flat" Look: Restore World-Space Shaders
+
+You need to revert the `fragPos` and `fragNormal` calculations in your vertex shaders to use the **Model Matrix**. Since we are now passing a combined **MVP** in the push constants, we need to add the **Model Matrix** back to the `PushConstants` block so the shader can calculate the correct world positions.
+
+**Updated `PushConstants` and `main` (Apply to `phong.vert`, `checker.vert`, `shader.vert`, and `gouraud.vert`):**
+
+```glsl
+layout(push_constant) uniform PushConstants {
+    mat4 mvp;   // Used for gl_Position (View-Projection * Model)
+    mat4 model; // Used for World-Space lighting math
+} push;
+
+void main() {
+    vec4 worldPos = push.model * vec4(inPosition, 1.0);
+    gl_Position = push.mvp * vec4(inPosition, 1.0); // Uses the quadrant-specific matrix
+
+    fragPos = worldPos.xyz; // Back to world-space for correct 3D depth
+    fragNormal = mat3(transpose(inverse(push.model))) * inNormal; // Correct normals
+    fragTexCoord = inTexCoord;
+    // ... rest of shader
+}
+
+```
+
+---
+
+### 2. Fix Missing Objects: Update `recordOpaquePass`
+
+The reason you can't see the spheres in Lab 2 is that your `Renderer` loop is likely still just calling `sub.mesh->draw(cb, globalSet, pipeline)`, but your new `Mesh::draw` signature requires the **MVP** matrix as the final argument.
+
+**Update `Renderer::recordOpaquePass` to pass the MVP matrix:**
+
+```cpp
+void Renderer::recordOpaquePass(...) {
+    // ... loop through 4 quadrants ...
+    glm::mat4 quadrantVP = calculateQuadrantVP(i); // Top, Side, etc.
+
+    for (auto& mr : meshRenderers) {
+        glm::mat4 model = mr.transform->m_worldMatrix;
+        glm::mat4 mvp = quadrantVP * model; // Combine for the vertex shader
+
+        for (const auto& sub : mr.subMeshes) {
+            // Pass BOTH matrices: the combined MVP and the raw Model matrix
+            // Note: Update your Mesh::draw signature to accept both if needed, 
+            // or use a struct for the push constant.
+            sub.mesh->draw(cb, globalSet, sub.material->getPipeline(), mvp, model); 
+        }
+    }
+}
+
+```
+
+---
+
+### 3. Update `Mesh::draw` Signature
+
+To accommodate the fix in Step 1, update your `Mesh::draw` to push both matrices at once.
+
+```cpp
+// In Mesh.cpp
+struct MeshPushConstants {
+    glm::mat4 mvp;
+    glm::mat4 model;
+};
+
+void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* p, 
+                const glm::mat4& mvp, const glm::mat4& model) const {
+    // ... bind pipeline and sets ...
+
+    MeshPushConstants push{ mvp, model };
+    vkCmdPushConstants(cb, activePipeline->getPipelineLayout(), 
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &push);
+
+    // ... draw commands ...
+}
+
+```
+
+### Summary of the Fixes
+
+* **3D Representation**: Restoring `push.model` to calculate `fragPos` ensures that as the camera moves, the lighting and perspective are calculated relative to the world, restoring the 3D look.
+* **Visibility**: Explicitly calculating `mvp = quadrantVP * model` in the `Renderer` and passing it to `Mesh::draw` ensures the objects are projected into the correct screen coordinates.
+
+**Would you like me to provide the updated `PushConstant` struct for your C++ `Pipeline.h` to ensure the 128-byte alignment (two `mat4`s) matches the shaders?**

@@ -2,28 +2,23 @@
 
 /**
  * @file gouraud.vert
- * @brief Vertex shader implementing the Gouraud lighting model.
- *
- * This shader performs per-vertex lighting calculations (Ambient, Diffuse, Specular)
- * and passes the resulting color to the fragment stage. This reduces fragment 
- * overhead by interpolating light intensity across the face.
+ * @brief Vertex shader implementing Gouraud lighting with 128-byte Push Constants.
  */
 
-// --- Inputs (Vertex Attributes) ---
+// --- Inputs ---
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNormal;
 
 // --- Outputs ---
-// Output COLOR directly to fragment shader
 layout(location = 0) out vec3 vColor;
 layout(location = 1) out vec2 vTexCoord;
 
 // --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // 16-byte aligned
+    vec4 color;    // 16-byte aligned
 };
 
 // --- Set 0: Global Data ---
@@ -34,46 +29,50 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightPos;
     vec3 viewPos;
     vec3 lightColor;
-    int useGouraud;
+    int  useGouraud;
     float time;
-    SparkLight sparks[4]; // Must match C++ exactly
+    
+    // Aligned with updated Common.h
+    SparkLight sparks[10]; 
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
 
 // --- Push Constants ---
+// Fulfills Step 2: 128-byte block containing both matrices
 layout(push_constant) uniform PushConstants {
-    mat4 model;
+    mat4 mvp;   // View-Projection * Model (Quadrant specific)
+    mat4 model; // Raw World Matrix for 3D depth fix
 } push;
 
 void main() {
-    // 1. GEOMETRY CALCULATIONS
-    // Transform position and normal into world-space.
-    vec4 worldPos = push.model * vec4(inPosition, 1.0);
-    vec3 fragPos = vec3(worldPos);
-    vec3 norm = normalize(mat3(transpose(inverse(push.model))) * inNormal);
+    // 1. CLIP SPACE TRANSFORMATION
+    // Projects vertex into the specific split-screen quadrant
+    gl_Position = push.mvp * vec4(inPosition, 1.0);
 
-    // 2. LIGHTING CALCULATIONS (Per-Vertex)
-    
+    // 2. WORLD SPACE RECONSTRUCTION
+    // FIX: Restore 3D depth by calculating lighting in world space
+    vec4 worldPos = push.model * vec4(inPosition, 1.0);
+    vec3 worldNormal = normalize(mat3(transpose(inverse(push.model))) * inNormal);
+
+    // 3. GOURAUD LIGHTING CALCULATIONS (Per-Vertex)
     // Ambient component
     float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * ubo.lightColor;
 
     // Diffuse component
-    vec3 lightDir = normalize(ubo.lightPos - fragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 lightDir = normalize(ubo.lightPos - worldPos.xyz);
+    float diff = max(dot(worldNormal, lightDir), 0.0);
     vec3 diffuse = diff * ubo.lightColor;
 
     // Specular component
     float specularStrength = 0.5;
-    vec3 viewDir = normalize(ubo.viewPos - fragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
+    vec3 viewDir = normalize(ubo.viewPos - worldPos.xyz);
+    vec3 reflectDir = reflect(-lightDir, worldNormal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     vec3 specular = specularStrength * spec * ubo.lightColor;
 
-    // 3. FINAL OUTPUT DATA
-    // Combine lighting components and pass attributes.
+    // 4. FINAL OUTPUT DATA
     vColor = ambient + diffuse + specular;
     vTexCoord = inTexCoord;
-
-    // 4. CLIP SPACE TRANSFORMATION
-    gl_Position = ubo.proj * ubo.view * worldPos;
 }

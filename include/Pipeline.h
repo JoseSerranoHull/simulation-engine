@@ -33,6 +33,7 @@ public:
 
     static constexpr float    DEFAULT_LINE_WIDTH = 1.0f;
     static constexpr uint32_t PUSH_CONSTANT_OFFSET = 0U;
+    static constexpr uint32_t PUSH_CONSTANT_SIZE = static_cast<uint32_t>(sizeof(glm::mat4) * 2);
 
 private:
     VkPipeline        pipeline{ VK_NULL_HANDLE };
@@ -127,14 +128,14 @@ public:
         colorBlending.pAttachments = &colorBlendAttachment;
 
         // 8. Pipeline Layout (Global UBO + Material Set + Push Constants)
+        // 8. Pipeline Layout (Updated for 128-byte range)
         const VkPushConstantRange pushConstantRange{
             VK_SHADER_STAGE_VERTEX_BIT,
             PUSH_CONSTANT_OFFSET,
-            static_cast<uint32_t>(sizeof(glm::mat4))
+            PUSH_CONSTANT_SIZE
         };
 
         VulkanContext* context = ServiceLocator::GetContext();
-
         const std::array<VkDescriptorSetLayout, LAYOUT_SET_COUNT> layouts = {
             context->globalSetLayout,
             materialLayout

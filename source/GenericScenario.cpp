@@ -37,49 +37,61 @@ namespace GE {
     }
 
     void GE::GenericScenario::OnGUI() {
-        // Fulfills Requirement: Simulation menu in the Main Menu Bar
+        auto* exp = ServiceLocator::GetExperience();
+
+        // --- 1. Material Menu (Already implemented) ---
+        if (ImGui::BeginMenu("Material")) {
+            glm::vec4& colA = exp->GetCheckerColorA();
+            glm::vec4& colB = exp->GetCheckerColorB();
+
+            if (ImGui::ColorEdit3("Checker Light", &colA[0])) {}
+            if (ImGui::ColorEdit3("Checker Dark", &colB[0])) {}
+
+            ImGui::Separator();
+            if (ImGui::Button("Reset Defaults")) {
+                colA = glm::vec4(0.8f, 0.1f, 0.1f, 1.0f);
+                colB = glm::vec4(0.8f, 0.8f, 0.0f, 1.0f);
+            }
+            ImGui::EndMenu();
+        }
+
+        // --- 2. Simulation Menu (Updated for Lab 2 Q3) ---
         if (ImGui::BeginMenu("Simulation")) {
 
-            // --- 1. Restart Logic (NEW) ---
-            // Allows for instantaneous reset of Lab 3 test cases
+            // Restart logic remains the same
             if (ImGui::MenuItem("Restart Simulation", "F5")) {
-                auto* exp = ServiceLocator::GetExperience();
-                // We use the stored config path to reload the same .ini file
                 exp->changeScenario(std::make_unique<GE::GenericScenario>(m_configPath));
-
-                GE_LOG_INFO("GenericScenario: Restarting simulation from " + m_configPath);
             }
 
             ImGui::Separator();
 
-            // --- 2. Start / Pause Toggle ---
-            // Fulfills Lab 3 Q2 Requirement: Simulation Start/Stop
+            // Start / Pause Toggle
             std::string playLabel = m_isPaused ? "Resume Simulation" : "Pause Simulation";
             if (ImGui::MenuItem(playLabel.c_str(), "P")) {
-                m_isPaused = !m_isPaused; //
+                m_isPaused = !m_isPaused;
             }
 
             ImGui::Separator();
 
-            // --- 3. Fixed Timestep (Time Scale) ---
-            // Fulfills Lab 3 Q2 Requirement: Adjust the size of the timestep
-            ImGui::Text("Time Scale");
+            // Fixed Timestep Configuration
+            ImGui::Text("Manual Step Timestep (s)");
             ImGui::PushItemWidth(120);
-            // This modifies the multiplier applied to dt in Experience::drawFrame
-            if (ImGui::SliderFloat("##timescale", &m_timeScale, 0.0f, 5.0f, "%.2fx")) {
-                // Value is clamped between 0 (paused) and 5x speed
-            }
+            // Allows setting specific values like 0.01 or 0.005 for precision testing
+            ImGui::InputFloat("##fixedStep", &m_fixedTimestep, 0.001f, 0.01f, "%.4f");
+            ImGui::PopItemWidth();
+
+            // Time Scale (Multiplier for live simulation)
+            ImGui::Text("Live Time Scale");
+            ImGui::PushItemWidth(120);
+            ImGui::SliderFloat("##timescale", &m_timeScale, 0.0f, 5.0f, "%.2fx");
             ImGui::PopItemWidth();
 
             ImGui::Separator();
 
-            // --- 4. Step One Timestep Forward ---
-            // Fulfills Lab Requirement: Debug simulation stepping
-            // Enabled only when the simulation is paused
+            // Step One Timestep Forward
+            // Now uses the m_fixedTimestep value defined above
             if (ImGui::MenuItem("Step One Frame", "Space", false, m_isPaused)) {
-                // standard 60fps fixed delta for a single discrete step
-                const float fixedStep = 0.01667f;
-                ServiceLocator::GetExperience()->stepSimulation(fixedStep);
+                exp->stepSimulation(m_fixedTimestep);
             }
 
             ImGui::EndMenu();

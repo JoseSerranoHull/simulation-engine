@@ -49,4 +49,12 @@ namespace GE::Components {
         float mass = 1.0f;
         // Collision shape type can be added here later
     };
+
+    /**
+     * @struct BackgroundComponent
+     * @brief ECS Component for defining the scene's background color.
+	 */
+    struct BackgroundComponent {
+        glm::vec3 color = glm::vec3(0.0f); // Default black
+    };
 }

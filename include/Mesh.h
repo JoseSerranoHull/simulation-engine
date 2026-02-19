@@ -12,6 +12,11 @@
 
 class Pipeline;
 
+struct MeshPushConstants {
+    glm::mat4 mvp;   // 64 bytes
+    glm::mat4 model; // 64 bytes
+};
+
 /**
  * @class Mesh
  * @brief Encapsulates a single piece of GPU geometry and its associated material.
@@ -62,12 +67,8 @@ public:
     /**
      * @brief Records draw commands for this specific mesh.
      */
-    void draw(
-        VkCommandBuffer commandBuffer,
-        VkDescriptorSet globalSet,
-        const Pipeline* pipelineOverride = nullptr,
-        const glm::mat4& worldMatrix = glm::mat4(1.0f) // Pre-calculated matrix from ECS
-    ) const;
+    void draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* pipelineOverride,
+        const glm::mat4& mvp, const glm::mat4& model) const;
 
     // --- Logic Queries ---
 

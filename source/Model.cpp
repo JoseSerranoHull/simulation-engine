@@ -67,11 +67,18 @@ void Model::updateMatrix() {
 /**
  * @brief Orchestrates the draw call for all child meshes.
  */
-void Model::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* const pipelineOverride) {
+void Model::draw(
+    VkCommandBuffer cb,
+    VkDescriptorSet globalSet,
+    const Pipeline* const pipelineOverride,
+    const glm::mat4& mvp,
+    const glm::mat4& model
+) {
     for (const auto& mesh : meshes) {
         if (mesh != nullptr) {
-            // Note: Mesh::draw handles specific material binding and descriptor logic
-            mesh->draw(cb, globalSet, pipelineOverride);
+            // Fulfills Requirement: Pass calculated MVP and World matrices 
+            // down to the Mesh for 128-byte push constant recording.
+            mesh->draw(cb, globalSet, pipelineOverride, mvp, model);
         }
     }
 }

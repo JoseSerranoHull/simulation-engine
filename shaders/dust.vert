@@ -2,27 +2,24 @@
 
 /**
  * @file dust.vert
- * @brief Vertex shader for the Dust Vortex particle system.
- * * Transforms simulated particle positions into clip space and calculates
- * perspective-accurate point sizes. This shader reads directly from the 
- * Storage Buffer populated by the compute stage.
+ * @brief Particle shader updated for 128-byte Push Constant alignment.
  */
 
-// --- Inputs (Directly from the Storage Buffer / Vertex Input) ---
-// Note: Location 1 (inVelocity) is kept to maintain layout parity with the Particle struct
-layout(location = 0) in vec4 inPosition; // xyz = World Position, w = Simulated Base Size
-layout(location = 1) in vec4 inVelocity; // xyz = Velocity, w = Particle Age (Unused here)
-layout(location = 2) in vec4 inColor;    // Color calculated in compute shader
+// --- Inputs (From Storage Buffer) ---
+layout(location = 0) in vec4 inPosition; // xyz = World Position, w = Base Size
+layout(location = 1) in vec4 inVelocity; 
+layout(location = 2) in vec4 inColor;    
 
 // --- Outputs ---
 layout(location = 0) out vec4 fragColor;
 
-// --- Uniform Data (Global Engine State) ---
+// --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // 16-byte alignment
+    vec4 color;    
 };
 
+// --- Uniform Data ---
 layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
@@ -32,28 +29,39 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightColor;
     int  useGouraud;
     float time;
-    SparkLight sparks[4]; // Matches C++ EngineConstants::MAX_SPARKS
+    
+    SparkLight sparks[10]; 
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
 
-void main() {
-    // 1. WORLD TO VIEW SPACE TRANSFORMATION
-    vec4 viewPos = ubo.view * vec4(inPosition.xyz, 1.0);
-    
-    // 2. VIEW TO CLIP SPACE TRANSFORMATION
-    gl_Position = ubo.proj * viewPos;
+// --- Push Constants ---
+/** * Fulfills Step 2: 128-byte alignment.
+ * For particles, the 'model' matrix is identity because positions are already world-space.
+ * We use the first 64 bytes for the quadrant's View-Projection.
+ */
+layout(push_constant) uniform Push {
+    mat4 vp;    // View-Projection (Quadrant specific)
+    mat4 unused;// Padding to maintain 128-byte Mesh alignment
+} push;
 
-    // 3. PERSPECTIVE POINT ATTENUATION
-    // Calculate distance from the camera in view-space
-    float dist = length(viewPos.xyz);
+void main() {
+    // 1. POSITION TRANSFORMATION
+    // Particles are already in world space from compute simulation.
+    vec4 worldPos = vec4(inPosition.xyz, 1.0);
+    gl_Position = push.vp * worldPos;
+
+    // 2. PERSPECTIVE POINT ATTENUATION
+    // Calculate distance relative to the active camera for 3D depth
+    float dist = distance(inPosition.xyz, ubo.viewPos);
+    dist = max(dist, 0.1); // Guard against division by zero
 
     /**
      * @brief Point Size Calculation
-     * Perspective Scaling: Size = BaseSize * (1.0 / distance)
-     * HABOOB MULTIPLIER (10.0): Adjusted to maintain the "dusty" density within the globe.
-     * Higher multipliers result in larger "fluffy" billboards, while lower values look like fine sand.
+     * Multiplier (15.0) ensures dust looks like fine grit rather than large flakes.
      */
-    gl_PointSize = inPosition.w * (1.0 / dist) * 10.0;
+    gl_PointSize = inPosition.w * (15.0 / dist);
 
-    // Pass the compute-generated color (including alpha fade) to the fragment stage
+    // 3. COLOR PASSTHROUGH
     fragColor = inColor; 
 }

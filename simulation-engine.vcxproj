@@ -190,6 +190,8 @@
     <None Include="markdown\SimulationLab2.md" />
     <None Include="README.md" />
     <None Include="shaders\base.frag" />
+    <None Include="shaders\checker.frag" />
+    <None Include="shaders\checker.vert" />
     <None Include="shaders\dust.comp" />
     <None Include="shaders\dust.frag" />
     <None Include="shaders\dust.vert" />

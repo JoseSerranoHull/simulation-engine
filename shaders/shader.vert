@@ -2,29 +2,25 @@
 
 /**
  * @file shader.vert
- * @brief Basic vertex shader for environmental assets.
- *
- * This shader transforms vertex positions into clip space and world space.
- * It also prepares texture coordinates and world-space normals for use 
- * in the fragment stage.
+ * @brief Basic vertex shader updated for 128-byte Push Constants (MVP + Model).
  */
 
-// --- Inputs (Vertex Attributes) ---
+// --- Inputs ---
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNormal;
 
 // --- Outputs ---
-layout(location = 0) out vec3 fragPos;          // World Position
-layout(location = 1) out vec2 fragTexCoord;     // UV coordinates
-layout(location = 2) out vec3 fragNormal;       // World Normals
-layout(location = 3) out vec3 fragGouraudColor; // Fallback color pass
+layout(location = 0) out vec3 fragPos;
+layout(location = 1) out vec2 fragTexCoord;
+layout(location = 2) out vec3 fragNormal;
+layout(location = 3) out vec3 fragGouraudColor;
 
 // --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // 16-byte aligned
+    vec4 color;    // Matches C++ structure
 };
 
 // --- Uniform Data (Global Engine State) ---
@@ -37,30 +33,37 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightColor;
     int useGouraud;
     float time;
-    SparkLight sparks[4]; // Must match C++ exactly
+    
+    // Updated to match Common.h exactly
+    SparkLight sparks[10]; 
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
 
 // --- Push Constants ---
+/** * Fulfills Step 2: 128-byte block containing both matrices.
+ * This layout is now agnostic and used by all mesh shaders.
+ */
 layout(push_constant) uniform PushConstants { 
-    mat4 model; 
+    mat4 mvp;   // View-Projection * Model (Quadrant specific)
+    mat4 model; // Raw World Matrix for 3D depth fix
 } push;
 
 void main() {
-    // 1. GEOMETRY TRANSFORMATION
-    // Transform position to world-space and clip-space.
-    vec4 worldPos = push.model * vec4(inPosition, 1.0);
-    gl_Position = ubo.proj * ubo.view * worldPos;
+    // 1. CLIP-SPACE POSITIONING
+    // Projects the vertex into the specific viewport quadrant
+    gl_Position = push.mvp * vec4(inPosition, 1.0);
     
-    // 2. DATA PASSTHROUGH
-    // Prepare attributes for interpolation in the fragment stage.
-    fragPos = vec3(worldPos);
+    // 2. WORLD-SPACE RECONSTRUCTION
+    // FIX: Restore 3D volume by transforming to world coordinates
+    vec4 worldPos = push.model * vec4(inPosition, 1.0);
+    fragPos = worldPos.xyz;
+    
+    // Transform normal to world space for dynamic lighting
+    fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
+    
     fragTexCoord = inTexCoord;
 
-    // 3. NORMAL RECONSTRUCTION
-    // Compute world-space normal using the normal matrix (transpose inverse model).
-    fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
-
-    // 4. FALLBACK INITIALIZATION
-    // Assign dummy value for Gouraud compatibility.
+    // 3. FALLBACK INITIALIZATION
     fragGouraudColor = vec3(1.0); 
 }

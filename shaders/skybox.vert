@@ -2,14 +2,10 @@
 
 /**
  * @file skybox.vert
- * @brief Vertex shader for the environmental skybox.
- *
- * This shader transforms the skybox geometry so that it remains centered 
- * on the camera, simulating infinite distance. It utilizes the "XYWW" trick 
- * to ensure the skybox is always rendered at the maximum depth (z=1.0).
+ * @brief Skybox vertex shader updated for 128-byte Push Constants and Multiview.
  */
 
-// --- Inputs (Vertex Attributes) ---
+// --- Inputs ---
 layout(location = 0) in vec3 inPosition;
 
 // --- Outputs ---
@@ -17,8 +13,8 @@ layout(location = 0) out vec3 outTexCoord;
 
 // --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // 16-byte aligned
+    vec4 color;    
 };
 
 // --- Set 0: Global Data ---
@@ -31,24 +27,35 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightColor;
     int  useGouraud;
     float time;
-    SparkLight sparks[4]; // Must match C++ exactly
+    
+    SparkLight sparks[10]; 
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
+
+// --- Push Constants ---
+/** * Fulfills Step 2: 128-byte alignment.
+ * In the Opaque pass, the Renderer provides the quadrant VP matrix here.
+ * For Skybox, we only use the VP matrix (mvp slot) and treat it as the ViewNoTrans * Proj.
+ */
+layout(push_constant) uniform PushConstants {
+    mat4 mvp;   // View-Projection (Quadrant specific)
+    mat4 model; // Unused for skybox (Skybox has no world transform)
+} push;
 
 void main() {
     // 1. TEXTURE COORDINATE PASSTHROUGH
-    // The cube's local vertex position acts as the 3D sampling vector.
     outTexCoord = inPosition;
     
-    // 2. VIEW MATRIX MODIFICATION
-    // Remove translation by casting to mat3 and back to mat4.
-    // This makes the skybox appear "infinitely far away" as it follows the camera.
-    mat4 viewNoTrans = mat4(mat3(ubo.view)); 
+    // 2. PROJECTIVE TRANSFORMATION
+    /**
+     * Note: In Renderer::recordOpaquePass, the skybox is only drawn in quadrant 0 (Main).
+     * We use the push.mvp which already contains the correct View * Proj.
+     * To keep it centered, ensure the 'view' used to build 'mvp' has translation removed.
+     */
+    vec4 pos = push.mvp * vec4(inPosition, 1.0);
     
-    // 3. PROJECTIVE TRANSFORMATION
-    vec4 pos = ubo.proj * viewNoTrans * vec4(inPosition, 1.0);
-    
-    // 4. DEPTH OPTIMIZATION (XYWW Trick)
-    // Sets z = w, ensuring that after the perspective divide, z = 1.0.
-    // This forces the skybox to the back of the depth buffer.
+    // 3. DEPTH OPTIMIZATION (XYWW Trick)
+    // Ensures the skybox is always at the maximum depth (z=1.0).
     gl_Position = pos.xyww;
 }

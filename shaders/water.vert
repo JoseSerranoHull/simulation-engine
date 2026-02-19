@@ -2,14 +2,10 @@
 
 /**
  * @file water.vert
- * @brief Vertex shader for animated water surfaces.
- *
- * Implements procedural wave displacement using a sine wave function based 
- * on world-space coordinates and global time. It prepares world-space 
- * positions and normals for refraction and reflection in the fragment stage.
+ * @brief Vertex shader for animated water with 128-byte Push Constants (MVP + Model).
  */
 
-// --- Inputs (Vertex Attributes) ---
+// --- Inputs ---
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
@@ -23,8 +19,8 @@ layout(location = 3) out vec3 fragGouraudColor;
 
 // --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // 16-byte aligned
+    vec4 color;    
 };
 
 // --- Uniform Data (Global Engine State) ---
@@ -37,35 +33,43 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightColor;
     int useGouraud;
     float time;
-    SparkLight sparks[4]; // Must match C++ exactly
+    
+    SparkLight sparks[10]; 
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
 
 // --- Push Constants ---
+/** * Fulfills Step 2: 128-byte block containing both matrices.
+ * mvp: Projection * View * Model (Quadrant specific)
+ * model: Raw World Matrix for lighting and wave consistency
+ */
 layout(push_constant) uniform PushConstants { 
+    mat4 mvp;   
     mat4 model; 
 } push;
 
 void main() {
     // 1. WAVE ANIMATION LOGIC
-    // Apply a simple vertical displacement (Sine wave) to simulate surface ripples.
+    // Displacement stays in model space for local ripple consistency
     vec3 pos = inPosition;
     float wave = sin(pos.x * 10.0 + ubo.time * 2.0) * 0.02;
     pos.y += wave;
 
-    // 2. GEOMETRY TRANSFORMATION
-    // Transform the displaced vertex into world-space and clip-space.
-    vec4 worldPos = push.model * vec4(pos, 1.0);
-    gl_Position = ubo.proj * ubo.view * worldPos;
+    // 2. CLIP-SPACE POSITIONING
+    // Projects the displaced vertex into the specific viewport quadrant
+    gl_Position = push.mvp * vec4(pos, 1.0);
 
-    // 3. DATA PASSTHROUGH
-    // Prepare attributes for interpolation in the fragment stage.
-    fragPos = vec3(worldPos);
+    // 3. WORLD-SPACE RECONSTRUCTION
+    // FIX: Restore 3D depth by transforming position and normals into world space
+    vec4 worldPos = push.model * vec4(pos, 1.0);
+    fragPos = worldPos.xyz;
+    
+    // Normal Matrix transformation for accurate reflections
+    fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
+    
     fragTexCoord = inTexCoord;
 
-    // 4. NORMAL RECONSTRUCTION
-    // Note: This calculates the normal based on the original mesh orientation.
-    fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
-
-    // 5. FALLBACK INITIALIZATION
+    // 4. FALLBACK INITIALIZATION
     fragGouraudColor = vec3(1.0);
 }

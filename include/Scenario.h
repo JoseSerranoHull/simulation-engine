@@ -32,6 +32,9 @@ namespace GE {
         /** @brief NEW: Hook for scenario-specific ImGui menus. */
         virtual void OnGUI() {}
 
+        float GetFixedTimestep() const { return m_fixedTimestep; }
+        void  SetFixedTimestep(float ts) { m_fixedTimestep = ts; }
+
         // Lab Requirements: Simulation Controls
         bool  IsPaused()   const { return m_isPaused; }
         void  SetPaused(bool p) { m_isPaused = p; }
@@ -46,6 +49,7 @@ namespace GE {
     protected:
         bool  m_isPaused = false;
         float m_timeScale = 1.0f;
+        float m_fixedTimestep = 0.01667f; // NEW: Default to ~60 FPS
 
         /** @brief Registry of models unique to this scenario for cleanup. */
         std::vector<std::unique_ptr<Model>> m_ownedModels;

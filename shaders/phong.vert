@@ -2,14 +2,10 @@
 
 /**
  * @file phong.vert
- * @brief Primary vertex shader for scene objects.
- *
- * Transforms vertex positions into clip space and world space. It calculates 
- * surface normals and prepares light-space coordinates for shadow mapping. 
- * Additionally, it provides a per-vertex lighting fallback for Gouraud shading.
+ * @brief Primary vertex shader updated for 128-byte Push Constants (MVP + Model).
  */
 
-// --- Inputs (Vertex Attributes) ---
+// --- Inputs ---
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
@@ -24,8 +20,8 @@ layout(location = 4) out vec4 fragPosLightSpace;
 
 // --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // Strict 16-byte alignment
+    vec4 color;    
 };
 
 // --- Uniform Interfaces ---
@@ -36,34 +32,41 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightPos;
     vec3 viewPos;
     vec3 lightColor;
-    int useGouraud;
+    int  useGouraud;
     float time;
-    SparkLight sparks[4]; // Must match C++ exactly
+    
+    SparkLight sparks[10]; // Synchronized with Common.h
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
 
 // --- Push Constants ---
+// Fulfills Step 2: 128-byte block containing both matrices
 layout(push_constant) uniform PushConstants { 
-    mat4 model; 
+    mat4 mvp;   // View-Projection * Model (Quadrant specific)
+    mat4 model; // Raw World Matrix (Lighting consistency)
 } push;
 
 void main() {
-    // 1. GEOMETRY TRANSFORMATION
-    // Transform position to world-space and clip-space.
-    vec4 worldPos = push.model * vec4(inPosition, 1.0);
-    gl_Position = ubo.proj * ubo.view * worldPos;
+    // 1. CLIP-SPACE POSITIONING
+    // Projects the vertex into the specific viewport quadrant
+    gl_Position = push.mvp * vec4(inPosition, 1.0);
 
-    // 2. DATA PASSTHROUGH
-    // Prepare world-space attributes for the fragment stage.
-    fragPos = vec3(worldPos);
-    fragTexCoord = inTexCoord;
+    // 2. WORLD-SPACE RECONSTRUCTION
+    // FIX: Restore 3D depth by transforming position and normals into world space
+    vec4 worldPos = push.model * vec4(inPosition, 1.0);
+    fragPos = worldPos.xyz; 
+    
+    // Transform normal to world space using the Normal Matrix for correct 3D shading
     fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
     
+    fragTexCoord = inTexCoord;
+    
     // 3. SHADOW COORDINATE CALCULATION
-    // Transform position into light-perspective for shadow sampling.
+    // Transforms the world position into the light's perspective for shadow sampling
     fragPosLightSpace = ubo.lightSpaceMatrix * worldPos;
 
     // 4. GOURAUD LIGHTING FALLBACK
-    // Calculate per-vertex diffuse lighting if Gouraud mode is enabled.
     if (ubo.useGouraud == 1) {
         vec3 L = normalize(ubo.lightPos - fragPos);
         float diff = max(dot(normalize(fragNormal), L), 0.2);

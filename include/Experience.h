@@ -96,8 +96,13 @@ public:
 	/** @brief Accessor for the skybox. */
     Skybox* GetSkybox() const { return skybox.get(); }
 
+    glm::vec4& GetCheckerColorA() { return m_checkerColorA; }
+    glm::vec4& GetCheckerColorB() { return m_checkerColorB; }
+
     /** @brief Requests a scenario transition to be performed at the start of the next frame. */
     void requestScenarioChange(const std::string& path) { m_pendingScenarioPath = path; }
+
+    bool& GetMultiviewEnabled() { return m_multiviewEnabled; }
 
 private:
     // --- Windowing & Core Infrastructure ---
@@ -105,6 +110,7 @@ private:
     const uint32_t WINDOW_WIDTH;
     const uint32_t WINDOW_HEIGHT;
     bool framebufferResized;
+    bool m_multiviewEnabled = false;
 
     // --- ECS Core (The Engine's Body) ---
     std::unique_ptr<GE::ECS::EntityManager> entityManager;
@@ -139,6 +145,10 @@ private:
     std::unique_ptr<PostProcessor> postProcessor;
     std::unique_ptr<Skybox> skybox;
     std::unique_ptr<Cubemap> skyboxTexture;
+
+	// --- Debugging & Visualization Aids ---
+    glm::vec4 m_checkerColorA = glm::vec4(0.8f, 0.1f, 0.1f, 1.0f); // Default Red
+    glm::vec4 m_checkerColorB = glm::vec4(0.8f, 0.8f, 0.0f, 1.0f); // Default Yellow
 
     // --- Configuration & Command Synchronization ---
     std::vector<VkFence> imagesInFlight;

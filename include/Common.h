@@ -154,4 +154,8 @@ struct UniformBufferObject {
 
     // 4. Dynamic Light Data Array
     alignas(16) SparkLight sparks[EngineConstants::MAX_SPARK_LIGHTS]{};
+
+	// 5. Checkerboard Pattern Colors (for debugging)
+	glm::vec4 checkColorA; // Light color
+	glm::vec4 checkColorB; // Dark color
 };

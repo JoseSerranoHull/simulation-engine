@@ -293,6 +293,13 @@ void IMGUIManager::DrawMainMenuBar(InputManager* const input) const {
             if (ImGui::MenuItem("Side View (X-Axis)")) {
                 activeCam->setPosition({ 10, 0, 0 }); activeCam->setPitch(0.0f); activeCam->setYaw(180.0f);
             }
+
+            ImGui::Separator();
+            // Fulfills Formative Requirement: Multiple views
+            bool& multi = experience->GetMultiviewEnabled();
+            if (ImGui::MenuItem("4-Way Multiview Split", "M", &multi)) {
+                // State updated
+            }
             ImGui::EndMenu();
         }
 

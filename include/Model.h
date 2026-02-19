@@ -67,7 +67,13 @@ public:
     /**
      * @brief Iterates through all child meshes and records their draw commands.
      */
-    void draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* const pipelineOverride = nullptr);
+    void draw(
+        VkCommandBuffer cb,
+        VkDescriptorSet globalSet,
+        const Pipeline* const pipelineOverride,
+        const glm::mat4& mvp,   // NEW
+        const glm::mat4& model  // NEW
+    );
 
     /** @brief Returns shadow state (bool is small enough for pass-by-value) */
     bool castsShadows() const { return canProduceShadows; }

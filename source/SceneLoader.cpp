@@ -46,6 +46,7 @@ namespace GE::Scene {
             else if (currentSection == "PlaneCollider") handlePlaneCollider(sectionProps, em);
             else if (currentSection == "ParticleComponent") handleParticleComponent(sectionProps, em);
             else if (currentSection == "SkyboxComponent") handleSkyboxComponent(sectionProps, em);
+            else if (currentSection == "BackgroundComponent") handleBackgroundComponent(sectionProps, em);
 
             sectionProps.clear();
             };
@@ -393,6 +394,12 @@ namespace GE::Scene {
 
         sc.enabled = (props.count("Enabled") && props.at("Enabled") == "true");
         em->AddComponent(m_currentEntity, sc);
+    }
+
+    void SceneLoader::handleBackgroundComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::BackgroundComponent bg;
+        if (props.count("Color")) { bg.color = parseVec3(props.at("Color")); }
+        em->AddComponent(m_currentEntity, bg);
     }
 
     // --- Parsing Helpers ---

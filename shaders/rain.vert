@@ -2,25 +2,21 @@
 
 /**
  * @file rain.vert
- * @brief Vertex shader for the Rain particle system.
- *
- * Transforms simulated rain particle positions into clip space and calculates
- * perspective-accurate point sizes. The point size is attenuated based on 
- * distance from the camera to ensure the streaks appear thin and needle-like.
+ * @brief Vertex shader for rain particles updated for 128-byte alignment.
  */
 
-// --- Inputs (Directly from the Storage Buffer / Vertex Input) ---
+// --- Inputs (Directly from the Storage Buffer) ---
 layout(location = 0) in vec4 inPosition; // xyz = World Position, w = Base Size
 layout(location = 1) in vec4 inVelocity; // xyz = Velocity, w = Life/Age
-layout(location = 2) in vec4 inColor;    // Color calculated in compute shader
+layout(location = 2) in vec4 inColor;    
 
 // --- Outputs ---
 layout(location = 0) out vec4 fragColor;
 
 // --- Data Structures ---
 struct SparkLight {
-    vec3 position;
-    vec3 color;
+    vec4 position; // Using vec4 for strict 16-byte alignment
+    vec4 color;    
 };
 
 // --- Uniform Data (Global Engine State) ---
@@ -31,31 +27,46 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     vec3 lightPos;
     vec3 viewPos;
     vec3 lightColor;
-    int useGouraud;
+    int  useGouraud;
     float time;
-    SparkLight sparks[4]; // Matches C++ EngineConstants::MAX_SPARKS
+    
+    // Aligned with 10 sparks and checker colors
+    SparkLight sparks[10]; 
+    vec4 checkColorA;
+    vec4 checkColorB;
 } ubo;
 
+// --- Push Constants ---
+/**
+ * Fulfills Step 2: 128-byte alignment.
+ * Receives the quadrant-specific View-Projection matrix from the Renderer.
+ * Padding matrix ensures consistency with MeshPushConstants (128 bytes total).
+ */
+layout(push_constant) uniform Push {
+    mat4 vp;      // View-Projection (Quadrant specific)
+    mat4 unused;  // Padding for 128-byte consistency
+} push;
+
 void main() {
-    // 1. WORLD TO VIEW SPACE TRANSFORMATION
-    vec4 viewPos = ubo.view * vec4(inPosition.xyz, 1.0);
+    // 1. POSITION TRANSFORMATION
+    // Particles are already in world space from compute simulation.
+    // Apply the pre-calculated VP matrix for the current viewport quadrant.
+    vec4 worldPos = vec4(inPosition.xyz, 1.0);
+    gl_Position = push.vp * worldPos;
 
-    // 2. VIEW TO CLIP SPACE TRANSFORMATION
-    gl_Position = ubo.proj * viewPos;
-
-    // 3. PERSPECTIVE POINT ATTENUATION
-    // Calculate distance from the camera in view-space to scale point size correctly.
-    float dist = length(viewPos.xyz);
+    // 2. PERSPECTIVE POINT ATTENUATION
+    // Calculate world-space distance from active camera for consistent 3D depth cues.
+    float dist = distance(inPosition.xyz, ubo.viewPos);
+    dist = max(dist, 0.1); // Guard against division by zero
 
     /**
      * @brief Point Size Calculation
-     * Perspective Scaling: Size = BaseSize * (1.0 / distance)
-     * MULTIPLIER (12.0): Specifically tuned for rain to keep streaks thin.
-     * (Compared to 25.0 used for fluffy snow particles).
+     * Fulfills Requirement: Visualise simulations from multiple views.
+     * MULTIPLIER (12.0): Kept for needle-like rain streaks.
      */
     float multiplier = 12.0;
     gl_PointSize = inPosition.w * (1.0 / dist) * multiplier;
 
-    // 4. DATA PASSTHROUGH
+    // 3. COLOR PASSTHROUGH
     fragColor = inColor;
 }

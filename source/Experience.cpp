@@ -34,6 +34,7 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     entityManager->RegisterComponent<GE::Components::LightComponent>();
     entityManager->RegisterComponent<GE::Components::ParticleComponent>();
     entityManager->RegisterComponent<GE::Components::SkyboxComponent>();
+    entityManager->RegisterComponent<GE::Components::BackgroundComponent>();
 
     entityManager->RegisterComponent<GE::Components::RigidBody>();
     entityManager->RegisterComponent<GE::Components::SphereCollider>();
@@ -234,7 +235,8 @@ void Experience::drawFrame() {
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
         em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
         resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
-        rawPipelines
+        rawPipelines,
+        m_multiviewEnabled
     );
 
     // --- Step 5: UI & Final Render Pass ---
@@ -242,6 +244,13 @@ void Experience::drawFrame() {
     finalPassInfo.renderPass = vulkanEngine->getFinalRenderPass();
     finalPassInfo.framebuffer = vulkanEngine->getFramebuffer(imageIndex);
     finalPassInfo.renderArea.extent = vulkanEngine->getSwapChainExtent();
+
+    // --- FETCH BACKGROUND COLOR FROM ECS ---
+    auto& bgArray = em->GetCompArr<GE::Components::BackgroundComponent>();
+    glm::vec3 clearCol(0.0f); // Fallback to black if no component exists
+    if (bgArray.GetCount() > 0) {
+        clearCol = bgArray.Data()[0].color;
+    }
 
     std::array<VkClearValue, 2U> clearValues{};
     clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
@@ -332,19 +341,37 @@ void Experience::updateUniformBuffer(const uint32_t currentImage) {
         // Find the first light defined in the current scenario
         const uint32_t lightEntityID = lightArray.Index()[0];
         const auto& lightComp = lightArray.Data()[0];
-        auto* const trans = em->GetTIComponent<GE::Scene::Components::Transform>(lightEntityID);
 
-        if (trans) {
-            ubo.lightPos = trans->m_position;
-            ubo.lightColor = lightComp.color * lightComp.intensity * inputManager->getColorMod();
+        // CRITICAL FIX: Verify the entity actually HAS a Transform component before requesting it.
+        // This prevents the EntityManager from triggering a GE_LOG_FATAL assertion.
+        if (em->HasComponent<GE::Scene::Components::Transform>(lightEntityID)) {
+            auto* const trans = em->GetTIComponent<GE::Scene::Components::Transform>(lightEntityID);
+
+            // If transform exists, use its world position
+            if (trans != nullptr) {
+                ubo.lightPos = trans->m_position;
+            }
         }
+        else {
+            // FALLBACK: If the .ini forgot the [Transform] section, use a default height
+            // so shadows and phong lighting still have a valid light source.
+            ubo.lightPos = glm::vec3(0.0f, 10.0f, 0.0f);
+            GE_LOG_WARN("Experience: Light Entity %u is missing a Transform component. Using fallback position.", lightEntityID);
+        }
+
+        // Apply color and intensity regardless of transform status
+        ubo.lightColor = lightComp.color * lightComp.intensity * inputManager->getColorMod();
     }
     else {
-        // Standard engine fallback if no light is present in the scenario
+        // Standard engine fallback if no light is present at all in the scenario
         ubo.lightPos = glm::vec3(0.0f, 10.0f, 0.0f);
         ubo.lightColor = glm::vec3(1.0f);
     }
 
+    ubo.checkColorA = m_checkerColorA;
+    ubo.checkColorB = m_checkerColorB;
+
+    // Fulfills Requirement: Memory alignment and data transfer to GPU
     static_cast<void>(std::memcpy(mappedData, &ubo, sizeof(UniformBufferObject)));
     this->currentUBO = ubo;
 }
@@ -361,16 +388,19 @@ void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
     if (activeScenario) {
         activeScenario->OnUnload();
 
-        // --- NEW: Reset Skybox state on scenario change ---
-        if (skybox != nullptr) {
-            // If your Skybox class doesn't have a 'clear' method, 
-            // you can simply reset the unique_ptr and re-init an empty shell.
-            initSkybox();
-        }
-
         scene->clearEntities();
         if (entityManager) {
             entityManager->ClearAllEntities();
+        }
+
+        // Re-create the global descriptor set layouts before rebuilding the Skybox.
+        // The previous scenario teardown (or a prior cleanup() path) may have left
+        // context->globalSetLayout as a destroyed handle. createLayouts() refreshes
+        // both globalSetLayout and materialSetLayout so createPipeline() receives
+        // valid handles and the AMD driver does not access a null pointer.
+        if (skybox != nullptr) {
+            resources->createLayouts();
+            initSkybox();
         }
     }
 
@@ -540,6 +570,8 @@ void Experience::createGraphicsPipelines() {
     shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
     shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/shadow_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/shadow_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checker_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
+    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checker_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
 
     // 2. Instantiate Pipelines in RAII container
     // Opaque
@@ -555,6 +587,15 @@ void Experience::createGraphicsPipelines() {
     // Shadow Map (1x Sample Count required)
     pipelines.push_back(std::make_unique<Pipeline>(resources->getShadowRenderPass(), ctx->materialSetLayout,
         shaderModules[8].get(), shaderModules[9].get(), true, true, true, VK_SAMPLE_COUNT_1_BIT));
+
+	// Checkerboard (for debugging)
+    pipelines.push_back(std::make_unique<Pipeline>(
+        offscreenPass,
+        ctx->materialSetLayout,
+        shaderModules[10].get(), // New Vert
+        shaderModules[11].get(), // New Frag
+        true, true, true, msaa
+    ));
 
     postProcessor->createPipeline(vulkanEngine->getFinalRenderPass());
 }

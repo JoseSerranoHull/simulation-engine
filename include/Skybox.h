@@ -43,7 +43,11 @@ public:
      * @brief Records the drawing commands for the skybox.
      * Must be called within an active RenderPass.
      */
-    void draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const;
+    void draw(
+        const VkCommandBuffer commandBuffer,
+        const VkDescriptorSet globalDescriptorSet,
+        const glm::mat4& quadrantVP // NEW: Pass the pre-calculated VP matrix
+    ) const;
 
     /** * @brief Updates the environmental cubemap using 6 face paths.
      * Rebuilds the GPU image and updates descriptors.

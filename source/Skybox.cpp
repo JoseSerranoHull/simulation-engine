@@ -42,27 +42,55 @@ Skybox::~Skybox() {
 /**
  * @brief Records the draw command for the skybox.
  */
-void Skybox::draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const {
+ /**
+  * @brief Records the draw command for the skybox, including the 128-byte push constant.
+  */
+void Skybox::draw(
+    const VkCommandBuffer commandBuffer,
+    const VkDescriptorSet globalDescriptorSet,
+    const glm::mat4& quadrantVP // NEW: Pass the pre-calculated VP matrix
+) const {
     if (pipeline == VK_NULL_HANDLE) {
         return;
     }
 
-    // Step 1: Bind the specialized skybox pipeline and vertex data
+    // 1. Bind Pipeline
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    const VkBuffer vertexBuffers[EngineConstants::COUNT_ONE] = { vertexBuffer };
-    const VkDeviceSize offsets[EngineConstants::COUNT_ONE] = { EngineConstants::SZ_ZERO };
-    vkCmdBindVertexBuffers(commandBuffer, EngineConstants::INDEX_ZERO, EngineConstants::COUNT_ONE, vertexBuffers, offsets);
+    // 2. NEW: Push 128-byte Constants (VP + Padding)
+    // We only need the VP (mvp) for skybox positioning. 
+    // The second 64 bytes is padding to satisfy the 128-byte shader layout.
+    struct SkyboxPushConstants {
+        glm::mat4 vp;      // 64 bytes
+        glm::mat4 padding; // 64 bytes
+    } constants;
 
-    // Step 2: Bind descriptors (Global UBO and Skybox Cubemap)
+    constants.vp = quadrantVP;
+    constants.padding = glm::mat4(1.0f); // Identity padding
+
+    vkCmdPushConstants(
+        commandBuffer,
+        pipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(SkyboxPushConstants), // 128 bytes
+        &constants
+    );
+
+    // 3. Bind Vertex Buffers
+    const VkBuffer vertexBuffers[1] = { vertexBuffer };
+    const VkDeviceSize offsets[1] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+    // 4. Bind Descriptors (Set 0: Global, Set 1: Cubemap)
     const uint32_t setCount = 2U;
     const VkDescriptorSet sets[setCount] = { globalDescriptorSet, descriptorSet };
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-        EngineConstants::INDEX_ZERO, setCount, sets, EngineConstants::OFFSET_ZERO, nullptr);
+        0, setCount, sets, 0, nullptr);
 
-    // Step 3: Dispatch the draw call for the cube geometry
+    // 5. Draw
     const uint32_t vertexCount = static_cast<uint32_t>(vertices.size() / VERT_FLOATS_PER_POS);
-    vkCmdDraw(commandBuffer, vertexCount, EngineConstants::COUNT_ONE, EngineConstants::OFFSET_ZERO, EngineConstants::OFFSET_ZERO);
+    vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
 }
 
 /**
@@ -115,7 +143,9 @@ void Skybox::createDescriptorResources() const {
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     layoutInfo.bindingCount = EngineConstants::COUNT_ONE;
     layoutInfo.pBindings = &samplerLayoutBinding;
-    static_cast<void>(vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &descriptorSetLayout));
+    if (vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Skybox: Failed to create descriptor set layout!");
+    }
 
     // Step 2: Initialize a dedicated Descriptor Pool (Must happen regardless of texture)
     VkDescriptorPoolSize poolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineConstants::COUNT_ONE };
@@ -123,14 +153,18 @@ void Skybox::createDescriptorResources() const {
     poolInfo.poolSizeCount = EngineConstants::COUNT_ONE;
     poolInfo.pPoolSizes = &poolSize;
     poolInfo.maxSets = EngineConstants::COUNT_ONE;
-    static_cast<void>(vkCreateDescriptorPool(context->device, &poolInfo, nullptr, &descriptorPool));
+    if (vkCreateDescriptorPool(context->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("Skybox: Failed to create descriptor pool!");
+    }
 
     // Step 3: Allocate the Descriptor Set
     VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     allocInfo.descriptorPool = descriptorPool;
     allocInfo.descriptorSetCount = EngineConstants::COUNT_ONE;
     allocInfo.pSetLayouts = &descriptorSetLayout;
-    static_cast<void>(vkAllocateDescriptorSets(context->device, &allocInfo, &descriptorSet));
+    if (vkAllocateDescriptorSets(context->device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
+        throw std::runtime_error("Skybox: Failed to allocate descriptor set!");
+    }
 
     // --- GUARD START ---
     // We only perform the 'Update' if we actually have a texture pointer.
@@ -169,7 +203,22 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
 
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // Step 2: Pipeline Layout Creation (Primary exception boundary)
+    // Guard Checks...
+    if (renderPass == VK_NULL_HANDLE) {
+        throw std::runtime_error("Skybox: renderPass is VK_NULL_HANDLE.");
+    }
+    if (context->globalSetLayout == VK_NULL_HANDLE || descriptorSetLayout == VK_NULL_HANDLE) {
+        throw std::runtime_error("Skybox: Descriptor layouts not initialized.");
+    }
+
+    // --- FIX: Define the 128-byte Push Constant Range ---
+    // This resolves the VUID-VkGraphicsPipelineCreateInfo-layout-07987 error.
+    const VkPushConstantRange pushConstantRange{
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0U,
+        static_cast<uint32_t>(sizeof(glm::mat4) * 2) // 128 bytes total
+    };
+
     const std::array<VkDescriptorSetLayout, 2U> layouts = {
         context->globalSetLayout,
         descriptorSetLayout
@@ -179,38 +228,36 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
     pipelineLayoutInfo.pSetLayouts = layouts.data();
 
+    // NEW: Add the push constant range to the layout info
+    pipelineLayoutInfo.pushConstantRangeCount = 1U;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
     if (vkCreatePipelineLayout(context->device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Skybox: Failed to create pipeline layout!");
     }
 
-    // Step 3: Define Fixed-Function States (Postponed for safety)
+    // Step 3: Define Fixed-Function States
     const uint32_t stride = static_cast<uint32_t>(VERT_FLOATS_PER_POS * sizeof(float));
-    VkVertexInputBindingDescription bindingDescription{ EngineConstants::INDEX_ZERO, stride, VK_VERTEX_INPUT_RATE_VERTEX };
-    VkVertexInputAttributeDescription attributeDescription{
-        EngineConstants::INDEX_ZERO, EngineConstants::INDEX_ZERO,
-        VK_FORMAT_R32G32B32_SFLOAT, EngineConstants::OFFSET_ZERO
-    };
+    VkVertexInputBindingDescription bindingDescription{ 0, stride, VK_VERTEX_INPUT_RATE_VERTEX };
+    VkVertexInputAttributeDescription attributeDescription{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vertexInputInfo.vertexBindingDescriptionCount = EngineConstants::COUNT_ONE;
+    vertexInputInfo.vertexBindingDescriptionCount = 1U;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = EngineConstants::COUNT_ONE;
+    vertexInputInfo.vertexAttributeDescriptionCount = 1U;
     vertexInputInfo.pVertexAttributeDescriptions = &attributeDescription;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineViewportStateCreateInfo viewportState{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-    viewportState.viewportCount = EngineConstants::COUNT_ONE;
-    viewportState.scissorCount = EngineConstants::COUNT_ONE;
+    viewportState.viewportCount = 1U;
+    viewportState.scissorCount = 1U;
 
-    // Use VulkanUtils for deduplicated boilerplate states
     const std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     const VkPipelineDynamicStateCreateInfo dynamicState = VulkanUtils::prepareDynamicState(dynamicStates);
     const VkPipelineRasterizationStateCreateInfo rasterizer = VulkanUtils::prepareRasterizer(VK_CULL_MODE_NONE);
     const VkPipelineMultisampleStateCreateInfo multisampling = VulkanUtils::prepareMultisampling(msaaSamples);
-
-    // Skybox specifically disables depth writes to remain in the background
     const VkPipelineDepthStencilStateCreateInfo depthStencil = VulkanUtils::prepareDepthStencil(VK_FALSE);
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
@@ -219,7 +266,7 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
     colorBlendAttachment.blendEnable = VK_FALSE;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    colorBlending.attachmentCount = EngineConstants::COUNT_ONE;
+    colorBlending.attachmentCount = 1U;
     colorBlending.pAttachments = &colorBlendAttachment;
 
     // Step 4: Finalize Pipeline Creation
@@ -229,8 +276,7 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
         pipelineLayout, renderPass
     );
 
-    if (vkCreateGraphicsPipelines(context->device, VK_NULL_HANDLE, EngineConstants::COUNT_ONE,
-        &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(context->device, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
         throw std::runtime_error("Skybox: Failed to create graphics pipeline!");
     }
 }

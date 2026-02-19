@@ -179,7 +179,25 @@ public:
 
     // --- Mode Controls ---
     void setProjectionMode(ProjectionMode mode) { m_mode = mode; }
+
     ProjectionMode getProjectionMode() const { return m_mode; }
+
+    // include/Camera.h - Add to public section
+	/** @brief Generates a static View-Projection matrix for specialized quadrants. */
+    static glm::mat4 getStaticVP(glm::vec3 pos, float pitch, float yaw, float aspect, float size = 7.5f) {
+        // 1. Generate View Matrix
+        glm::vec3 front;
+        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        front.y = sin(glm::radians(pitch));
+        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        glm::mat4 view = glm::lookAt(pos, pos + glm::normalize(front), glm::vec3(0, 1, 0));
+
+        // 2. Generate Orthographic Projection (Fixed size for Lab 2)
+        glm::mat4 proj = glm::ortho(-size * aspect, size * aspect, -size, size, 0.1f, 100.0f);
+        proj[1][1] *= -1.0f; // Vulkan correction
+
+        return proj * view;
+    }
 
 private:
     ProjectionMode m_mode = ProjectionMode::PERSPECTIVE;

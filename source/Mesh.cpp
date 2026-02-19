@@ -46,17 +46,16 @@ bool Mesh::hasTransparency() const {
  * Orchestrates pipeline binding, descriptor mapping (Global/Material),
  * and indexed draw execution.
  */
-void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* pipelineOverride, const glm::mat4& worldMatrix) const {
-    // 1. Resolve active pipeline using your existing logic
+void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* pipelineOverride,
+    const glm::mat4& mvp, const glm::mat4& model) const {
+
     const Pipeline* const activePipeline = (pipelineOverride != nullptr)
         ? pipelineOverride
         : ((material != nullptr) ? material->getPipeline() : nullptr);
 
     if ((activePipeline != nullptr) && (cb != VK_NULL_HANDLE)) {
-        // 2. Bind Pipeline State (using your actual API)
         activePipeline->bind(cb);
 
-        // 3. Bind Descriptor Sets (using an array to handle the shared_ptr/r-value correctly)
         const VkDescriptorSet sets[SET_COUNT] = {
             globalSet,
             (material != nullptr) ? material->getDescriptorSet() : VK_NULL_HANDLE
@@ -65,18 +64,15 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* p
         vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS,
             activePipeline->getPipelineLayout(), SET_GLOBAL, SET_COUNT, sets, 0U, nullptr);
 
-        // 4. Update World Matrix via Push Constants
-        // We now use the passed worldMatrix instead of the old internal modelMatrix
+        // --- FIX: Push both matrices at once ---
+        MeshPushConstants constants{ mvp, model };
         vkCmdPushConstants(cb, activePipeline->getPipelineLayout(),
-            VK_SHADER_STAGE_VERTEX_BIT, EngineConstants::OFFSET_ZERO,
-            static_cast<uint32_t>(sizeof(glm::mat4)), &worldMatrix);
+            VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
-        // 5. Bind Geometry Buffers
-        const VkDeviceSize offsets[BUFFER_COUNT_ONE] = { 0ULL };
-        vkCmdBindVertexBuffers(cb, BINDING_FIRST, BUFFER_COUNT_ONE, &buffer, offsets);
+        const VkDeviceSize offsets[1] = { 0ULL };
+        vkCmdBindVertexBuffers(cb, 0, 1, &buffer, offsets);
         vkCmdBindIndexBuffer(cb, buffer, indexOffset, VK_INDEX_TYPE_UINT32);
 
-        // 6. Draw call
-        vkCmdDrawIndexed(cb, indexCount, INSTANCE_COUNT_ONE, 0U, 0, 0U);
+        vkCmdDrawIndexed(cb, indexCount, 1, 0U, 0, 0U);
     }
 }

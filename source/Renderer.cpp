@@ -3,6 +3,8 @@
 #include "../include/EntityManager.h"
 #include "../include/Components.h"
 #include "../include/ParticleComponent.h"
+#include "../include/Camera.h"
+#include "../include/InputManager.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
@@ -30,43 +32,32 @@ void Renderer::recordFrame(
     const VkDescriptorSet globalDescriptorSet,
     const VkRenderPass shadowPass,
     const VkFramebuffer shadowFramebuffer,
-    const std::vector<Pipeline*>& pipelines
+    const std::vector<Pipeline*>& pipelines,
+    bool multiview // Passed from Experience.cpp
 ) const {
-    // Step 1: Shadow Mapping Pass (Depth-only)
-    // Pulls data from MeshRenderers with "CastsShadows" flag
     recordShadowPass(cb, shadowPass, shadowFramebuffer,
         pipelines.at(PIPELINE_IDX_SHADOW), globalDescriptorSet, em);
 
-    // Step 2: Main Opaque Pass (Scene geometry + Skybox)
-    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, pipelines, em);
+    // Pass the multiview toggle to the geometry passes
+    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, pipelines, em, multiview);
 
-    // Step 3: Resolve Synchronization Barrier
-    // Required before copying the scene for Refraction/Glass effects
+    // Barrier logic remains identical...
     const VkImageMemoryBarrier resolveBarrier{
-        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        nullptr,
-        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        VK_ACCESS_TRANSFER_READ_BIT,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr,
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
         postProcessor->getResolveImage(),
         { VK_IMAGE_ASPECT_COLOR_BIT, 0U, 1U, 0U, 1U }
     };
-
     vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT, 0U, 0U, nullptr, 0U, nullptr, 1U, &resolveBarrier);
 
-    // Step 4: Refraction Bridge
-    // Copies the Opaque result into a texture for glass shaders to sample
     if (postProcessor != nullptr) {
         postProcessor->copyScene(cb);
     }
 
-    // Step 5: Transparent Pass
-    // Records alpha-blended objects and generic Particle entities
-    recordTransparentPass(cb, extent, postProcessor, globalDescriptorSet, pipelines, em);
+    recordTransparentPass(cb, extent, postProcessor, globalDescriptorSet, pipelines, em, multiview);
 }
 
 // ========================================================================
@@ -86,6 +77,7 @@ void Renderer::recordShadowPass(
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
 
+    // 1. Setup Render Pass Info
     VkRenderPassBeginInfo shadowPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     shadowPassInfo.renderPass = renderPass;
     shadowPassInfo.framebuffer = framebuffer;
@@ -96,6 +88,7 @@ void Renderer::recordShadowPass(
     shadowPassInfo.clearValueCount = 1U;
     shadowPassInfo.pClearValues = &shadowClear;
 
+    // 2. Begin Pass and Set Fixed-Function State
     vkCmdBeginRenderPass(cb, &shadowPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     const float shadowRes = static_cast<float>(EngineConstants::SHADOW_MAP_RES);
@@ -105,7 +98,10 @@ void Renderer::recordShadowPass(
     const VkRect2D ss{ {0, 0}, {EngineConstants::SHADOW_MAP_RES, EngineConstants::SHADOW_MAP_RES} };
     vkCmdSetScissor(cb, 0U, 1U, &ss);
 
-    // Agnostic Iteration: Draw only entities that cast shadows
+    // 3. Bind the Shadow Pipeline
+    shadowPipeline->bind(cb);
+
+    // 4. Agnostic Iteration: Draw only entities that cast shadows
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
         const GE::ECS::EntityID entityID = meshRenderers.Index()[i];
@@ -114,9 +110,10 @@ void Renderer::recordShadowPass(
 
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
-                // Logic: Does the material permit shadows? (Defined in .ini)
                 if (sub.mesh && sub.material && sub.material->GetCastsShadows()) {
-                    sub.mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
+                    // Mesh::draw now handles vkCmdPushConstants internally.
+                    // We simply pass the world matrix, which shadow.vert expects.
+                    sub.mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix, glm::mat4(1.0f));
                 }
             }
         }
@@ -133,13 +130,10 @@ void Renderer::recordShadowPass(
  * @brief Records the primary opaque rendering pass (Scene geometry + Skybox).
  */
 void Renderer::recordOpaquePass(
-    const VkCommandBuffer cb,
-    const VkExtent2D& extent,
-    const Skybox* const skybox,
-    const PostProcessor* const postProcessor,
-    const VkDescriptorSet globalSet,
-    const std::vector<Pipeline*>& pipelines,
-    GE::ECS::EntityManager* const em
+    const VkCommandBuffer cb, const VkExtent2D& extent, const Skybox* const skybox,
+    const PostProcessor* const postProcessor, const VkDescriptorSet globalSet,
+    const std::vector<Pipeline*>& pipelines, GE::ECS::EntityManager* const em,
+    bool multiview
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
 
@@ -152,34 +146,69 @@ void Renderer::recordOpaquePass(
     clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
     clearValues[1].depthStencil = { DEPTH_CLEAR_VAL, 0U };
     clearValues[2].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-
     opaquePassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     opaquePassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(cb, &opaquePassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    const VkViewport vp{ 0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f };
-    vkCmdSetViewport(cb, 0U, 1U, &vp);
+    uint32_t viewCount = multiview ? 4U : 1U;
+    float fullW = static_cast<float>(extent.width);
+    float fullH = static_cast<float>(extent.height);
 
-    const VkRect2D sc{ {0, 0}, extent };
-    vkCmdSetScissor(cb, 0U, 1U, &sc);
+    for (uint32_t v = 0U; v < viewCount; ++v) {
+        // 1. Set Viewport for current quadrant
+        VkViewport vp{};
+        if (!multiview) {
+            vp = { 0.0f, 0.0f, fullW, fullH, 0.0f, 1.0f };
+        }
+        else {
+            float hw = fullW * 0.5f; float hh = fullH * 0.5f;
+            if (v == 0)      vp = { 0.0f, 0.0f, hw, hh, 0.0f, 1.0f }; // Top-Left
+            else if (v == 1) vp = { hw, 0.0f, hw, hh, 0.0f, 1.0f };   // Top-Right
+            else if (v == 2) vp = { 0.0f, hh, hw, hh, 0.0f, 1.0f };   // Bottom-Left
+            else             vp = { hw, hh, hw, hh, 0.0f, 1.0f };   // Bottom-Right
+        }
+        vkCmdSetViewport(cb, 0U, 1U, &vp);
 
-    // 1. Draw Environment (Background)
-    if (skybox != nullptr && skybox->isLoaded()) { // NEW: Only draw if loaded
-        skybox->draw(cb, globalSet);
-    }
+        const VkRect2D sc{ {0, 0}, extent };
+        vkCmdSetScissor(cb, 0U, 1U, &sc);
 
-    // 2. Agnostic ECS Iteration: Filter for Opaque objects
-    for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
-        const auto& mr = meshRenderers.Data()[i];
-        const GE::ECS::EntityID id = meshRenderers.Index()[i];
-        auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+        // 2. Resolve View-Projection for this quadrant
+        glm::mat4 vpMatrix;
+        float aspect = (vp.width / vp.height);
+        if (v == 0) {
+            auto* cam = ServiceLocator::GetInput()->getActiveCamera();
+            vpMatrix = cam->getProjectionMatrix(aspect) * cam->getViewMatrix();
+            vpMatrix[1][1] *= -1.0f; // Vulkan correction
+        }
+        else if (v == 1) vpMatrix = Camera::getStaticVP({ 0, 15, 0 }, -89.9f, -90.0f, aspect);
+        else if (v == 2) vpMatrix = Camera::getStaticVP({ 0, 0, 15 }, 0.0f, -90.0f, aspect);
+        else             vpMatrix = Camera::getStaticVP({ 15, 0, 0 }, 0.0f, 180.0f, aspect);
 
-        if (transform != nullptr) {
-            for (const auto& sub : mr.subMeshes) {
-                // Draw if the material is configured for the Opaque pass
-                if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Opaque) {
-                    sub.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+		// 3. Draw Skybox (Perspective View only)
+        if (v == 0 && skybox != nullptr && skybox->isLoaded()) {
+            // NEW: Pass the vpMatrix resolved for the main perspective quadrant
+            // This fills the 128-byte push constant expected by skybox_vert.spv
+            skybox->draw(cb, globalSet, vpMatrix);
+        }
+
+        // 4. Draw Geometry
+        for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
+            const auto& mr = meshRenderers.Data()[i];
+            auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(meshRenderers.Index()[i]);
+
+            if (transform != nullptr) {
+                for (const auto& sub : mr.subMeshes) {
+                    if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Opaque) {
+
+                        // Fulfills Requirement: Calculate both MVP and Model matrices
+                        // MVP is used for screen positioning, Model is used for 3D lighting/normals
+                        glm::mat4 modelMatrix = transform->m_worldMatrix;
+                        glm::mat4 mvpMatrix = vpMatrix * modelMatrix;
+
+                        // NEW: Update Mesh::draw signature to take both matrices
+                        sub.mesh->draw(cb, globalSet, nullptr, mvpMatrix, modelMatrix);
+                    }
                 }
             }
         }
@@ -195,13 +224,22 @@ void Renderer::recordOpaquePass(
 /**
  * @brief Records the transparent rendering pass and dispatches agnostic particles.
  */
+ /**
+  * @brief Records the transparent rendering pass, now supporting Multiview quadrants.
+  * Fulfills Requirement: Visualise primitive shapes and simulations from multiple views.
+  */
+  /**
+   * @brief Records the transparent rendering pass, supporting Multiview quadrants.
+   * Fulfills Requirement: Visualise primitive shapes and simulations from multiple views.
+   */
 void Renderer::recordTransparentPass(
     const VkCommandBuffer cb,
     const VkExtent2D& extent,
     const PostProcessor* const postProcessor,
     const VkDescriptorSet globalSet,
     const std::vector<Pipeline*>& pipelines,
-    GE::ECS::EntityManager* const em
+    GE::ECS::EntityManager* const em,
+    bool multiview
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
 
@@ -210,56 +248,92 @@ void Renderer::recordTransparentPass(
     transPassInfo.framebuffer = postProcessor->getOffscreenFramebuffer();
     transPassInfo.renderArea.extent = extent;
 
-    // Logic: Depth/Color already cleared by Opaque Pass; we reuse the existing content.
     transPassInfo.clearValueCount = 0U;
     transPassInfo.pClearValues = nullptr;
 
     vkCmdBeginRenderPass(cb, &transPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    const VkViewport vp{ 0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f };
-    vkCmdSetViewport(cb, 0U, 1U, &vp);
+    uint32_t viewCount = multiview ? 4U : 1U;
+    float fullW = static_cast<float>(extent.width);
+    float fullH = static_cast<float>(extent.height);
 
-    const VkRect2D sc{ {0, 0}, extent };
-    vkCmdSetScissor(cb, 0U, 1U, &sc);
+    for (uint32_t v = 0U; v < viewCount; ++v) {
+        VkViewport vp{};
+        if (!multiview) {
+            vp = { 0.0f, 0.0f, fullW, fullH, 0.0f, 1.0f };
+        }
+        else {
+            float hw = fullW * 0.5f; float hh = fullH * 0.5f;
+            if (v == 0)      vp = { 0.0f, 0.0f, hw, hh, 0.0f, 1.0f };
+            else if (v == 1) vp = { hw, 0.0f, hw, hh, 0.0f, 1.0f };
+            else if (v == 2) vp = { 0.0f, hh, hw, hh, 0.0f, 1.0f };
+            else             vp = { hw, hh, hw, hh, 0.0f, 1.0f };
+        }
+        vkCmdSetViewport(cb, 0U, 1U, &vp);
 
-    // 1. Agnostic ECS Iteration: Filter for Transparent objects (Glass, Water, Ice)
-    for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
-        const auto& mr = meshRenderers.Data()[i];
-        const GE::ECS::EntityID id = meshRenderers.Index()[i];
-        auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+        const VkRect2D sc{ {0, 0}, extent };
+        vkCmdSetScissor(cb, 0U, 1U, &sc);
 
-        if (transform != nullptr) {
-            for (const auto& sub : mr.subMeshes) {
-                if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Transparent) {
-                    sub.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+        glm::mat4 vpMatrix;
+        float aspect = (vp.width / vp.height);
+        if (v == 0) {
+            auto* cam = ServiceLocator::GetInput()->getActiveCamera();
+            vpMatrix = cam->getProjectionMatrix(aspect) * cam->getViewMatrix();
+            vpMatrix[1][1] *= -1.0f;
+        }
+        else if (v == 1) vpMatrix = Camera::getStaticVP({ 0, 15, 0 }, -89.9f, -90.0f, aspect);
+        else if (v == 2) vpMatrix = Camera::getStaticVP({ 0, 0, 15 }, 0.0f, -90.0f, aspect);
+        else             vpMatrix = Camera::getStaticVP({ 15, 0, 0 }, 0.0f, 180.0f, aspect);
+
+        // 3. Draw Transparent Meshes (Fixed for 3D depth)
+        for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
+            const auto& mr = meshRenderers.Data()[i];
+            auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(meshRenderers.Index()[i]);
+
+            if (transform != nullptr) {
+                for (const auto& sub : mr.subMeshes) {
+                    if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Transparent) {
+
+                        // FIX: Pass BOTH matrices to restore 3D lighting/water ripples
+                        glm::mat4 modelMatrix = transform->m_worldMatrix;
+                        glm::mat4 mvpMatrix = vpMatrix * modelMatrix;
+
+                        sub.mesh->draw(cb, globalSet, nullptr, mvpMatrix, modelMatrix);
+                    }
                 }
             }
         }
-    }
 
-    // 2. Generic Particle Pass
-    // Fulfills Requirement: Dynamic particle systems defined in .ini files
-    recordParticles(cb, globalSet, em);
+        // 4. Record Particles for this view quadrant
+        recordParticles(cb, globalSet, em, vpMatrix);
+    }
 
     vkCmdEndRenderPass(cb);
 }
 
-/**
- * @brief Generic Particle Dispatcher: Iterates over all entities with ParticleComponents.
- */
+ /**
+  * @brief Generic Particle Dispatcher: Iterates over all entities with ParticleComponents.
+  * Fulfills Requirement: Dynamic particles visible in all views (Top, Side, Front, Main).
+  */
 void Renderer::recordParticles(
     const VkCommandBuffer cb,
     const VkDescriptorSet globalSet,
-    GE::ECS::EntityManager* const em
+    GE::ECS::EntityManager* const em,
+    const glm::mat4& quadrantVP
 ) const {
     auto& particleComps = em->GetCompArr<GE::Components::ParticleComponent>();
 
     for (uint32_t i = 0; i < particleComps.GetCount(); ++i) {
         auto& pc = particleComps.Data()[i];
 
-        // Only draw if the entity is active and enabled
+        // Only draw if the system is fully initialized and active
         if (pc.enabled && pc.system) {
-            pc.system->draw(cb, globalSet);
+            /**
+             * For particles, we push the 'quadrantVP' (Projection * View).
+             * The shader uses: gl_Position = push.vp * vec4(inPosition.xyz, 1.0);
+             *
+             */
+            pc.system->draw(cb, globalSet, quadrantVP);
         }
     }
 }

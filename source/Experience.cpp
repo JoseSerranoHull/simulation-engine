@@ -7,6 +7,7 @@
 #include "../include/ParticleComponent.h"
 
 using namespace GE::Graphics;
+using namespace GE::Assets;
 
 // ========================================================================
 // SECTION 1: CONSTRUCTOR & DESTRUCTOR

@@ -25,6 +25,8 @@ enum class RenderPassType {
  * * Orchestrates the binding between a specific GPU Pipeline and the Descriptor Set (Set 1)
  * containing the material's textures (Albedo, Normal, AO, Metallic, Roughness).
  */
+namespace GE::Assets {
+
 class Material final {
 private:
     VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
@@ -102,3 +104,5 @@ public:
     RenderPassType GetPassType() const { return passType; }
     void SetPassType(RenderPassType type) { passType = type; }
 };
+
+} // namespace GE::Assets

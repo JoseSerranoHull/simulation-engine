@@ -2,6 +2,7 @@
 #include "../include/Components.h"
 
 using namespace GE::Graphics;
+using namespace GE::Assets;
 
 namespace GE::Scene {
 

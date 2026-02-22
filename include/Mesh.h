@@ -12,6 +12,8 @@
 
 namespace GE::Graphics { class Pipeline; }
 
+namespace GE::Assets {
+
 /**
  * @class Mesh
  * @brief Encapsulates a single piece of GPU geometry and its associated material.
@@ -75,3 +77,5 @@ public:
     const std::string& getName() const { return name; }
     Material* getMaterial() const { return material.get(); }
 };
+
+} // namespace GE::Assets

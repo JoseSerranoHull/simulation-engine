@@ -10,7 +10,9 @@
 
 #include <array>
 
-// Standard Interleaved Vertex Format. 
+namespace GE::Assets {
+
+// Standard Interleaved Vertex Format.
 struct Vertex {
     // --- SANITIZATION: Named Constants ---
     static constexpr uint32_t BINDING_ZERO = 0U;
@@ -83,3 +85,5 @@ struct VertexHasher {
             (std::hash<glm::vec2>()(vertex.texcoord) << Vertex::HASH_SHIFT);
     }
 };
+
+} // namespace GE::Assets

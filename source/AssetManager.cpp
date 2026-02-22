@@ -1,6 +1,7 @@
 #include "../include/AssetManager.h"
 
 using namespace GE::Graphics;
+using namespace GE::Assets;
 
 /* parasoft-begin-suppress ALL */
 #include <iostream>

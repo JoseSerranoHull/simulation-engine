@@ -10,6 +10,8 @@
 
 #include "../include/Mesh.h"
 
+namespace GE::Assets {
+
 /**
  * @class Model
  * @brief Represents a complex 3D object consisting of multiple meshes and a global transform.
@@ -82,3 +84,5 @@ public:
     /** @brief Provides read-only access to meshes for scene categorization logic. */
     const std::vector<std::unique_ptr<Mesh>>& getMeshes() const { return meshes; }
 };
+
+} // namespace GE::Assets

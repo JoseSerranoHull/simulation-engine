@@ -18,7 +18,7 @@
  * @brief Static utility for parsing Wavefront (.obj) files into GPU-ready mesh data.
  * Supports multi-object files and automatic triangulation of polygons.
  */
-namespace OBJLoader {
+namespace GE::Assets::OBJLoader {
 
     struct MeshData {
         std::string name{ "unnamed_mesh" };

@@ -128,8 +128,8 @@ private:
     std::unique_ptr<AssetManager> assetManager;
 
     // --- Shared Registries (Cleared on Scenario Change) ---
-    std::vector<Mesh*> meshes;
-    std::vector<std::unique_ptr<Model>> ownedModels;
+    std::vector<GE::Assets::Mesh*> meshes;
+    std::vector<std::unique_ptr<GE::Assets::Model>> ownedModels;
     std::vector<std::unique_ptr<GE::Graphics::ShaderModule>> shaderModules;
     std::vector<std::unique_ptr<GE::Graphics::Pipeline>> pipelines;
 

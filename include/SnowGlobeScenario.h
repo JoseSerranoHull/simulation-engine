@@ -25,6 +25,6 @@ namespace GE {
         void updateDynamicEntityScaling();
 
         std::unique_ptr<ClimateManager> m_climate;
-        std::vector<std::unique_ptr<Model>> m_ownedModels; // Local ownership of meshes
+        std::vector<std::unique_ptr<GE::Assets::Model>> m_ownedModels; // Local ownership of meshes
     };
 }

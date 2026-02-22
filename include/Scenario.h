@@ -48,7 +48,7 @@ namespace GE {
         float m_timeScale = 1.0f;
 
         /** @brief Registry of models unique to this scenario for cleanup. */
-        std::vector<std::unique_ptr<Model>> m_ownedModels;
+        std::vector<std::unique_ptr<GE::Assets::Model>> m_ownedModels;
 
         /** @brief Path to the .ini file defining this scenario's entities. */
         std::string m_configPath;

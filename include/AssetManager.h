@@ -62,9 +62,9 @@ public:
     /**
      * @brief Loads a 3D model, using the provided selector function to resolve materials by name.
      */
-    std::unique_ptr<Model> loadModel(
+    std::unique_ptr<GE::Assets::Model> loadModel(
         const std::string& path,
-        const std::function<std::shared_ptr<Material>(const std::string&)>& materialSelector,
+        const std::function<std::shared_ptr<GE::Assets::Material>(const std::string&)>& materialSelector,
         const VkCommandBuffer setupCmd,
         std::vector<VkBuffer>& stagingBuffers,
         std::vector<VkDeviceMemory>& stagingMemories
@@ -73,7 +73,7 @@ public:
     /**
      * @brief Creates a PBR material instance and allocates its Descriptor Set from the assigned pool.
      */
-    std::shared_ptr<Material> createMaterial(
+    std::shared_ptr<GE::Assets::Material> createMaterial(
         std::shared_ptr<GE::Graphics::Texture> albedo,
         std::shared_ptr<GE::Graphics::Texture> normal,
         std::shared_ptr<GE::Graphics::Texture> ao,
@@ -85,9 +85,9 @@ public:
     /**
      * @brief Uploads raw geometry data to GPU buffers and creates a Mesh object.
      */
-    std::unique_ptr<Mesh> processMeshData(
-        const OBJLoader::MeshData& data,
-        std::shared_ptr<Material> material,
+    std::unique_ptr<GE::Assets::Mesh> processMeshData(
+        const GE::Assets::OBJLoader::MeshData& data,
+        std::shared_ptr<GE::Assets::Material> material,
         const VkCommandBuffer setupCmd,
         std::vector<VkBuffer>& stagingBuffers,
         std::vector<VkDeviceMemory>& stagingMemories

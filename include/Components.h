@@ -9,8 +9,7 @@
 #include "Tag.h"
 
 // Forward declarations for your existing classes
-class Mesh;
-class Material;
+namespace GE::Assets { class Mesh; class Material; }
 
 namespace GE::Components {
     /**
@@ -18,8 +17,8 @@ namespace GE::Components {
      * @brief A single drawable part of an entity, pairing a mesh with its material.
      */
     struct SubMesh {
-        Mesh* mesh = nullptr;
-        Material* material = nullptr;
+        GE::Assets::Mesh* mesh = nullptr;
+        GE::Assets::Material* material = nullptr;
     };
 
     /**

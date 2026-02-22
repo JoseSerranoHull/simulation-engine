@@ -3,6 +3,7 @@
 #include "../include/Experience.h"
 
 using namespace GE::Graphics;
+using namespace GE::Assets;
 
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>

@@ -5,6 +5,8 @@
 #include <stdexcept>
 /* parasoft-end-suppress ALL */
 
+using namespace GE::Assets;
+
 namespace GE::Graphics {
 
 // ========================================================================

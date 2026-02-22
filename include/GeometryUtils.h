@@ -13,6 +13,8 @@
  * * Provides optimized algorithms for creating spherical, cylindrical, and
  * custom terrain-plug geometry used throughout the snow globe simulation.
  */
+namespace GE::Assets {
+
 class GeometryUtils final {
 public:
     // --- Mathematical Constants ---
@@ -37,25 +39,27 @@ public:
     /**
      * @brief Generates a UV-mapped sphere with an optional Y-axis cutoff.
      */
-    static OBJLoader::MeshData generateSphere(const uint32_t segments, const float radius, const float cutoffY, const glm::vec3& color = glm::vec3(1.0f));
+    static GE::Assets::OBJLoader::MeshData generateSphere(const uint32_t segments, const float radius, const float cutoffY, const glm::vec3& color = glm::vec3(1.0f));
 
     /**
      * @brief Generates a displaced circular mesh representing the internal sand terrain.
      */
-    static OBJLoader::MeshData generateSandPlug(const uint32_t segments, const float rimRadius, const float bowlRadius, const float depth, const glm::vec3& color = glm::vec3(0.85f, 0.75f, 0.5f));
+    static GE::Assets::OBJLoader::MeshData generateSandPlug(const uint32_t segments, const float rimRadius, const float bowlRadius, const float depth, const glm::vec3& color = glm::vec3(0.85f, 0.75f, 0.5f));
 
     /**
      * @brief Generates a cylinder with independent top and bottom radii.
      */
-    static OBJLoader::MeshData generateCylinder(const uint32_t segments, const float bottomRadius, const float topRadius, const float height, const glm::vec3& color = glm::vec3(0.25f, 0.15f, 0.1f));
+    static GE::Assets::OBJLoader::MeshData generateCylinder(const uint32_t segments, const float bottomRadius, const float topRadius, const float height, const glm::vec3& color = glm::vec3(0.25f, 0.15f, 0.1f));
 
     /**
      * @brief Generates a simple plane mesh for the base of the snow globe.
 	 */
-    static OBJLoader::MeshData generatePlane(float width, float depth);
+    static GE::Assets::OBJLoader::MeshData generatePlane(float width, float depth);
 
     /**
      * @brief Generates a capsule mesh by combining hemispherical ends with a cylindrical body.
 	 */
-	static OBJLoader::MeshData generateCapsule(float radius, float height, int segments, int stacks);
+	static GE::Assets::OBJLoader::MeshData generateCapsule(float radius, float height, int segments, int stacks);
 };
+
+} // namespace GE::Assets

@@ -5,6 +5,7 @@
 #include "../include/Experience.h"
 
 using namespace GE::Graphics;
+using namespace GE::Assets;
 
 namespace GE {
 

@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Assets {
+
 /**
  * @brief Generates a truncated sphere dome for the glass enclosure.
  */
@@ -314,3 +316,5 @@ OBJLoader::MeshData GeometryUtils::generateCapsule(float radius, float height, i
 
     return mesh;
 }
+
+} // namespace GE::Assets

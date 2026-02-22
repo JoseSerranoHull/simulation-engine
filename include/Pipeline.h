@@ -66,8 +66,8 @@ public:
         }
 
         // 2. Vertex Input Configuration
-        const VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
-        const std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = Vertex::getAttributeDescriptions();
+        const VkVertexInputBindingDescription bindingDescription = GE::Assets::Vertex::getBindingDescription();
+        const std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = GE::Assets::Vertex::getAttributeDescriptions();
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
         vertexInputInfo.vertexBindingDescriptionCount = BINDING_COUNT_ONE;

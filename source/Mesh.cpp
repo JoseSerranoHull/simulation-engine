@@ -7,6 +7,8 @@
 
 using namespace GE::Graphics;
 
+namespace GE::Assets {
+
 /**
  * @brief Constructor: Initializes geometry metadata and shared material ownership.
  */
@@ -82,3 +84,5 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* p
         vkCmdDrawIndexed(cb, indexCount, INSTANCE_COUNT_ONE, 0U, 0, 0U);
     }
 }
+
+} // namespace GE::Assets

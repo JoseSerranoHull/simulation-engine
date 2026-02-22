@@ -6,6 +6,8 @@
 
 using namespace GE::Graphics;
 
+namespace GE::Assets {
+
 /**
  * @brief Constructor: Initializes the model container.
  */
@@ -77,3 +79,5 @@ void Model::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* 
         }
     }
 }
+
+} // namespace GE::Assets

@@ -17,6 +17,8 @@ namespace GE::Components
 	struct ParticleComponent;
 }
 
+using namespace GE::Assets;
+
 namespace GE::Graphics {
 
 /**

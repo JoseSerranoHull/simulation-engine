@@ -6,6 +6,8 @@
 
 #include "SimpleAllocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @struct VulkanContext
  * @brief Centralized container for Vulkan hardware handles and global settings.
@@ -63,3 +65,5 @@ struct VulkanContext {
     VulkanContext(VulkanContext&&) noexcept = default;
     VulkanContext& operator=(VulkanContext&&) noexcept = default;
 };
+
+} // namespace GE::Graphics

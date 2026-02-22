@@ -13,6 +13,8 @@
 #include "../include/Common.h"
 #include "../include/ISystem.h"
 
+namespace GE::Graphics {
+
 /**
  * @class PostProcessor
  * @brief Orchestrates offscreen HDR rendering, MSAA resolution, and fullscreen effects.
@@ -131,3 +133,5 @@ private:
 
     void internalCreateRenderPass(bool isTransparent);
 };
+
+} // namespace GE::Graphics

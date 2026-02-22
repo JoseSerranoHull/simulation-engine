@@ -17,6 +17,8 @@
 #include "RenderPass.h"
 #include "ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @struct QueueFamilyIndices
  * @brief Identifies hardware queue support for graphics, presentation, and transfer operations.
@@ -139,3 +141,5 @@ private:
     VkSampleCountFlagBits getMaxUsableSampleCount() const;
     bool checkValidationLayerSupport() const;
 };
+
+} // namespace GE::Graphics

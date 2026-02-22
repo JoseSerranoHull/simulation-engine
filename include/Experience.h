@@ -82,19 +82,19 @@ public:
     GE::Scenario* GetCurrentScenario() const { return activeScenario.get(); }
 
     /** @brief Accessor for the Vulkan Engine hardware layer. */
-    VulkanEngine* GetVulkanEngine() const { return vulkanEngine.get(); }
+    GE::Graphics::VulkanEngine* GetVulkanEngine() const { return vulkanEngine.get(); }
 
     /** @brief Accessor for the loaded graphics pipelines. */
-    const std::vector<std::unique_ptr<Pipeline>>& GetPipelines() const { return pipelines; }
+    const std::vector<std::unique_ptr<GE::Graphics::Pipeline>>& GetPipelines() const { return pipelines; }
 
     /** @brief Provides access to the most recent global uniform data for compute systems. */
     const UniformBufferObject& GetCurrentUBO() const { return currentUBO; }
 
 	/** @brief Accessor for the post-processing. */
-    PostProcessor* GetPostProcessor() const { return postProcessor.get(); }
+    GE::Graphics::PostProcessor* GetPostProcessor() const { return postProcessor.get(); }
 
 	/** @brief Accessor for the skybox. */
-    Skybox* GetSkybox() const { return skybox.get(); }
+    GE::Graphics::Skybox* GetSkybox() const { return skybox.get(); }
 
     /** @brief Requests a scenario transition to be performed at the start of the next frame. */
     void requestScenarioChange(const std::string& path) { m_pendingScenarioPath = path; }
@@ -110,9 +110,9 @@ private:
     std::unique_ptr<GE::ECS::EntityManager> entityManager;
 
     // Core Hardware Contexts
-    std::unique_ptr<VulkanContext> context;
-    std::unique_ptr<VulkanEngine> vulkanEngine;
-    std::unique_ptr<VulkanResourceManager> resources;
+    std::unique_ptr<GE::Graphics::VulkanContext> context;
+    std::unique_ptr<GE::Graphics::VulkanEngine> vulkanEngine;
+    std::unique_ptr<GE::Graphics::VulkanResourceManager> resources;
     std::unique_ptr<SystemFactory> systemFactory;
 
     // --- Logic & Orchestration ---
@@ -123,22 +123,22 @@ private:
     std::unique_ptr<ClimateManager> climateManager;
 
     // --- Rendering Sub-Systems ---
-    std::unique_ptr<Renderer> renderer;
+    std::unique_ptr<GE::Graphics::Renderer> renderer;
     std::unique_ptr<IMGUIManager> uiManager;
     std::unique_ptr<AssetManager> assetManager;
 
     // --- Shared Registries (Cleared on Scenario Change) ---
     std::vector<Mesh*> meshes;
     std::vector<std::unique_ptr<Model>> ownedModels;
-    std::vector<std::unique_ptr<ShaderModule>> shaderModules;
-    std::vector<std::unique_ptr<Pipeline>> pipelines;
+    std::vector<std::unique_ptr<GE::Graphics::ShaderModule>> shaderModules;
+    std::vector<std::unique_ptr<GE::Graphics::Pipeline>> pipelines;
 
     // --- Global Scene Resources ---
     UniformBufferObject currentUBO;
     std::unique_ptr<GE::Scene::Scene> scene;
-    std::unique_ptr<PostProcessor> postProcessor;
-    std::unique_ptr<Skybox> skybox;
-    std::unique_ptr<Cubemap> skyboxTexture;
+    std::unique_ptr<GE::Graphics::PostProcessor> postProcessor;
+    std::unique_ptr<GE::Graphics::Skybox> skybox;
+    std::unique_ptr<GE::Graphics::Cubemap> skyboxTexture;
 
     // --- Configuration & Command Synchronization ---
     std::vector<VkFence> imagesInFlight;

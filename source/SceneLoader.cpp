@@ -4,6 +4,8 @@
 #include "../include/SystemFactory.h"
 #include "../include/Experience.h"
 
+using namespace GE::Graphics;
+
 /* parasoft-begin-suppress ALL */
 #include <fstream>
 #include <sstream>
@@ -144,7 +146,7 @@ namespace GE::Scene {
     }
 
     void SceneLoader::handleTransform(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
-        GE::Scene::Components::Transform trans;
+        GE::Components::Transform trans;
 
         // Standard properties
         if (props.count("Position")) trans.m_position = parseVec3(props.at("Position"));
@@ -161,7 +163,7 @@ namespace GE::Scene {
             }
         }
 
-        trans.m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+        trans.m_state = GE::Components::Transform::TransformState::Dirty;
         em->AddComponent(m_currentEntity, trans);
     }
 
@@ -275,7 +277,7 @@ namespace GE::Scene {
         em->AddComponent(m_currentEntity, mr);
     }
     void SceneLoader::handleTag(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, GE::Scene::Scene* scene) {
-        GE::Scene::Components::Tag tag;
+        GE::Components::Tag tag;
         tag.m_name = props.count("Name") ? props.at("Name") : "Unnamed Entity";
         em->AddComponent(m_currentEntity, tag);
         scene->addEntity(tag.m_name, m_currentEntity);

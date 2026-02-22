@@ -4,6 +4,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 /* parasoft-end-suppress ALL */
 
+using namespace GE::Graphics;
+
 /**
  * @brief Constructor: Initializes the model container.
  */

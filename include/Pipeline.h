@@ -12,6 +12,8 @@
 #include "../include/VulkanContext.h"
 #include "../include/ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class Pipeline
  * @brief Manages a Vulkan Graphics Pipeline and its associated Layout.
@@ -214,3 +216,5 @@ public:
         return layout;
     }
 };
+
+} // namespace GE::Graphics

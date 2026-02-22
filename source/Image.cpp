@@ -1,5 +1,7 @@
 #include "../include/Image.h"
 
+namespace GE::Graphics {
+
 /**
  * @brief Constructor: Allocates GPU memory and initializes a Vulkan Image and View.
  * Orchestrates the creation of hardware handles via the utility layer.
@@ -48,3 +50,5 @@ Image::~Image() {
         }
     }
 }
+
+} // namespace GE::Graphics

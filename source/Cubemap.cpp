@@ -8,6 +8,8 @@
 #include <cstring>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 // ========================================================================
 // SECTION 1: RESOURCE INITIALIZATION
 // ========================================================================
@@ -116,3 +118,5 @@ Cubemap::~Cubemap() {
         vkFreeMemory(context->device, memory, nullptr);
     }
 }
+
+} // namespace GE::Graphics

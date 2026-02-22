@@ -5,6 +5,8 @@
 #include <array>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 /**
  * @brief Constructor: Orchestrates the allocation of HDR render targets and refraction snapshots.
  */
@@ -591,3 +593,5 @@ void PostProcessor::internalCreateRenderPass(const bool isTransparent) {
         throw std::runtime_error("PostProcessor: Failed to create internal render pass!");
     }
 }
+
+} // namespace GE::Graphics

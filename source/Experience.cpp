@@ -6,6 +6,8 @@
 #include "../include/SkyboxComponent.h"
 #include "../include/ParticleComponent.h"
 
+using namespace GE::Graphics;
+
 // ========================================================================
 // SECTION 1: CONSTRUCTOR & DESTRUCTOR
 // ========================================================================
@@ -28,8 +30,8 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     entityManager = std::make_unique<GE::ECS::EntityManager>();
     entityManager->Initialize(2000, 64);
 
-    entityManager->RegisterComponent<GE::Scene::Components::Transform>();
-    entityManager->RegisterComponent<GE::Scene::Components::Tag>();
+    entityManager->RegisterComponent<GE::Components::Transform>();
+    entityManager->RegisterComponent<GE::Components::Tag>();
     entityManager->RegisterComponent<GE::Components::MeshRenderer>();
     entityManager->RegisterComponent<GE::Components::LightComponent>();
     entityManager->RegisterComponent<GE::Components::ParticleComponent>();
@@ -332,7 +334,7 @@ void Experience::updateUniformBuffer(const uint32_t currentImage) {
         // Find the first light defined in the current scenario
         const uint32_t lightEntityID = lightArray.Index()[0];
         const auto& lightComp = lightArray.Data()[0];
-        auto* const trans = em->GetTIComponent<GE::Scene::Components::Transform>(lightEntityID);
+        auto* const trans = em->GetTIComponent<GE::Components::Transform>(lightEntityID);
 
         if (trans) {
             ubo.lightPos = trans->m_position;

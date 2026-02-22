@@ -6,7 +6,7 @@
 #include <glm/vec3.hpp>
 /* parasoft-end-suppress ALL */
 
-namespace GE::Scene::Components {
+namespace GE::Components {
     struct Transform {
         enum class TransformState : uint8_t {
             Clean,   // Up to date

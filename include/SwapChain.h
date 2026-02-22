@@ -8,6 +8,8 @@
 #include "../include/VulkanContext.h"
 #include "../include/ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class SwapChain
  * @brief Manages the presentation engine state, including images, views, and framebuffers.
@@ -87,3 +89,5 @@ private:
     std::vector<VkImageView> swapChainImageViews;   /**< Views required for rendering to the images. */
     std::vector<VkFramebuffer> swapChainFramebuffers; /**< Framebuffers linked to swapchain images. */
 };
+
+} // namespace GE::Graphics

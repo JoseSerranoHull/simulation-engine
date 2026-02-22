@@ -28,16 +28,16 @@ enum class RenderPassType {
 class Material final {
 private:
     VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
-    Pipeline* pipeline{ nullptr };
+    GE::Graphics::Pipeline* pipeline{ nullptr };
 	bool castsShadows = true; // Default to true; can be toggled for transparent materials like glass
     RenderPassType passType = RenderPassType::Opaque;
 
     // Resource tracking: shared_ptr ensures textures stay in VRAM while used by any material.
-    std::shared_ptr<Texture> baseColor{ nullptr };
-    std::shared_ptr<Texture> normalMap{ nullptr };
-    std::shared_ptr<Texture> aoMap{ nullptr };
-    std::shared_ptr<Texture> metallicMap{ nullptr };
-    std::shared_ptr<Texture> roughnessMap{ nullptr };
+    std::shared_ptr<GE::Graphics::Texture> baseColor{ nullptr };
+    std::shared_ptr<GE::Graphics::Texture> normalMap{ nullptr };
+    std::shared_ptr<GE::Graphics::Texture> aoMap{ nullptr };
+    std::shared_ptr<GE::Graphics::Texture> metallicMap{ nullptr };
+    std::shared_ptr<GE::Graphics::Texture> roughnessMap{ nullptr };
 
 
 
@@ -46,7 +46,7 @@ public:
      * @brief Minimal Constructor (Delegated logic).
      * Used primarily by AssetManager when descriptor updates are handled externally.
      */
-    Material(const VkDescriptorSet inDescriptorSet, Pipeline* const inPipeline)
+    Material(const VkDescriptorSet inDescriptorSet, GE::Graphics::Pipeline* const inPipeline)
         : descriptorSet(inDescriptorSet), pipeline(inPipeline)
     {
     }
@@ -56,14 +56,14 @@ public:
      * Maps the full suite of textures to this material instance and takes ownership of references.
      */
     Material(
-        Pipeline* const inPipeline,
+        GE::Graphics::Pipeline* const inPipeline,
         const VkDescriptorSet inDescriptorSet,
-        std::shared_ptr<Texture> inColor,
-        std::shared_ptr<Texture> inNormal,
-        std::shared_ptr<Texture> inAo,
-        std::shared_ptr<Texture> inMetallic,
-        std::shared_ptr<Texture> inRoughness
-    ) : 
+        std::shared_ptr<GE::Graphics::Texture> inColor,
+        std::shared_ptr<GE::Graphics::Texture> inNormal,
+        std::shared_ptr<GE::Graphics::Texture> inAo,
+        std::shared_ptr<GE::Graphics::Texture> inMetallic,
+        std::shared_ptr<GE::Graphics::Texture> inRoughness
+    ) :
         descriptorSet(inDescriptorSet),
         pipeline(inPipeline),
         baseColor(std::move(inColor)),
@@ -76,7 +76,7 @@ public:
 
     ~Material() = default;
 
-    // RAII Safety: Materials own specific descriptor sets from a pool; 
+    // RAII Safety: Materials own specific descriptor sets from a pool;
     // copying would lead to double-use or invalid binding state.
     Material(const Material&) = delete;
     Material& operator=(const Material&) = delete;
@@ -93,7 +93,7 @@ public:
     /** * @brief Returns the graphics pipeline required to render this material.
      * Optimized with 'const' to satisfy MISRA and Renderer requirements.
      */
-    Pipeline* getPipeline() const {
+    GE::Graphics::Pipeline* getPipeline() const {
         return pipeline;
     }
 

@@ -5,6 +5,8 @@
 #include <stdexcept>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 // ========================================================================
 // SECTION 1: LIFECYCLE & INFRASTRUCTURE
 // ========================================================================
@@ -291,3 +293,5 @@ void VulkanResourceManager::cleanup() {
     vkDestroyDescriptorSetLayout(context->device, context->materialSetLayout, nullptr);
     vkDestroyCommandPool(context->device, context->graphicsCommandPool, nullptr);
 }
+
+} // namespace GE::Graphics

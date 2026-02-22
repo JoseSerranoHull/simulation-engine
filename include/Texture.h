@@ -11,6 +11,8 @@
 #include <string>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 /**
  * @class Texture
  * @brief Manages a GPU-side image resource, including its view, sampler, and mipmap chain.
@@ -138,3 +140,5 @@ public:
     uint32_t getWidth() const { return width; }
     uint32_t getHeight() const { return height; }
 };
+
+} // namespace GE::Graphics

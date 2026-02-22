@@ -19,19 +19,19 @@ namespace GE::Scene {
         if (hasEntity(KEY_MAGIC_CIRCLE)) {
             GE::ECS::EntityID id = entities[KEY_MAGIC_CIRCLE];
             // Access the Transform component directly from the ECS data arrays
-            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+            auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
 
             if (transform) {
                 transform->m_rotation.z += (CIRCLE_ROT_SPEED * deltaTime);
                 // Mark as dirty so the TransformSystem knows to update the matrices
-                transform->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+                transform->m_state = GE::Components::Transform::TransformState::Dirty;
             }
         }
 
         // Step 2: Procedural Animation for DesertQueen (Sinusoidal Hovering)
         if (hasEntity(KEY_DESERT_QUEEN)) {
             GE::ECS::EntityID id = entities[KEY_DESERT_QUEEN];
-            auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+            auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
 
             if (transform) {
                 const double time = glfwGetTime();
@@ -39,7 +39,7 @@ namespace GE::Scene {
                 const float hoverOffset = static_cast<float>(std::sin(angle)) * QUEEN_HOVER_AMP;
 
                 transform->m_position.y = QUEEN_BASE_HEIGHT + hoverOffset;
-                transform->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+                transform->m_state = GE::Components::Transform::TransformState::Dirty;
             }
         }
     }

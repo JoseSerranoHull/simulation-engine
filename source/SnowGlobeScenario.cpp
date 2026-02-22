@@ -4,6 +4,8 @@
 #include "../include/Components.h"
 #include "../include/InputManager.h"
 
+using namespace GE::Graphics;
+
 namespace GE {
 
     void SnowGlobeScenario::OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) {
@@ -34,8 +36,8 @@ namespace GE {
             GE::ECS::EntityID id = lightArray.Index()[i];
             auto& lightComp = lightArray.Data()[i];
 
-            auto* tag = em->GetTIComponent<Scene::Components::Tag>(id);
-            auto* trans = em->GetTIComponent<Scene::Components::Transform>(id);
+            auto* tag = em->GetTIComponent<Components::Tag>(id);
+            auto* trans = em->GetTIComponent<Components::Transform>(id);
 
             // orbital and seasonal logic for the 'MainSun'
             if (tag && tag->m_name == "MainSun" && !lightComp.isStatic) {
@@ -45,7 +47,7 @@ namespace GE {
                     trans->m_position.x = std::sin(totalTime * speed) * radius;
                     trans->m_position.y = radius;
                     trans->m_position.z = std::cos(totalTime * speed) * radius;
-                    trans->m_state = Scene::Components::Transform::TransformState::Dirty;
+                    trans->m_state = Components::Transform::TransformState::Dirty;
                 }
 
                 lightComp.color = m_climate->getAmbientColor();
@@ -68,10 +70,10 @@ namespace GE {
         auto scaleEntity = [&](const std::string& key, float baseScale) {
             if (scene->hasEntity(key)) {
                 auto id = scene->getEntityID(key);
-                auto* trans = em->GetTIComponent<Scene::Components::Transform>(id);
+                auto* trans = em->GetTIComponent<Components::Transform>(id);
                 if (trans) {
                     trans->m_scale = glm::vec3(baseScale) * cactusMult;
-                    trans->m_state = Scene::Components::Transform::TransformState::Dirty;
+                    trans->m_state = Components::Transform::TransformState::Dirty;
                 }
             }
             };
@@ -81,12 +83,12 @@ namespace GE {
 
         if (scene->hasEntity("Oasis")) {
             auto id = scene->getEntityID("Oasis");
-            auto* trans = em->GetTIComponent<Scene::Components::Transform>(id);
+            auto* trans = em->GetTIComponent<Components::Transform>(id);
             if (trans) {
                 // Apply the vec3 scale multiplier
                 trans->m_scale = glm::vec3(0.1f) * waterScaleVec;
                 trans->m_position.y = -0.1f + waterOffset;
-                trans->m_state = Scene::Components::Transform::TransformState::Dirty;
+                trans->m_state = Components::Transform::TransformState::Dirty;
             }
         }
     }

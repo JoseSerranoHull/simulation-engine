@@ -22,6 +22,55 @@ Shaders (GLSL `.vert`, `.frag`, `.comp`) must be compiled to SPIR-V separately u
 
 This is a real-time 3D simulation engine built on Vulkan. The architecture combines **ECS (Entity-Component-System)** with a **State Pattern** for scenario management.
 
+### Project Structure
+
+```
+simulation-engine/
+├── simulation-engine.sln / .vcxproj   # Visual Studio 2022 solution & project
+├── config/                             # Scenario .ini config files
+│   ├── snow_globe.ini
+│   ├── simulation_lab2.ini
+│   └── simulation_lab3.ini
+├── include/                            # ~70 headers (all subsystems)
+│   ├── Components.h                    # All ECS component structs
+│   ├── EntityManager.h                 # ECS core — entity lifecycle & component arrays
+│   ├── IECSystem.h / SystemFactory.h   # ECS system interface & registry
+│   ├── Experience.h                    # RAII master orchestrator
+│   ├── VulkanEngine.h                  # Device/swapchain management
+│   ├── VulkanContext.h                 # Vulkan instance/surface/device
+│   ├── VulkanResourceManager.h         # GPU buffer/image allocation
+│   ├── Renderer.h                      # Multi-pass forward renderer
+│   ├── Scenario.h / Scene.h            # State pattern base + scene graph
+│   ├── SceneLoader.h                   # .ini parser → entity instantiation
+│   ├── ServiceLocator.h                # Global service access
+│   ├── PhysicsSystem.h / Physics.h     # Gravity, AABB, math helpers
+│   ├── ParticleSystem.h / ParticleEmitterSystem.h  # GPU compute particles
+│   ├── ClimateManager.h                # Wind/temperature → particle behaviour
+│   ├── AssetManager.h                  # OBJ loading, texture caching
+│   ├── Camera.h                        # Projection/view matrices
+│   ├── InputManager.h                  # GLFW callbacks
+│   ├── IMGUIManager.h                  # ImGui debug overlay
+│   ├── Logger.h                        # Severity-level logging
+│   ├── Common.h                        # Global constants, error codes, UBO structs
+│   └── SimpleAllocator.h               # TLSF GPU memory allocator
+├── source/                             # ~37 .cpp implementations
+│   └── main.cpp                        # Entry point → Experience
+├── shaders/                            # GLSL sources + compiled .spv (committed)
+│   ├── compile.bat                     # Batch script to recompile all shaders
+│   ├── Lighting: phong.vert/frag, gouraud.vert/frag
+│   ├── Particles: snow, rain, fire, dust, smoke (.vert/.frag/.comp)
+│   └── Passes: shadow, skybox, post, water, glass, transparent, sand
+├── models/                             # OBJ assets (cacti, grass, rocks, sorceress, etc.)
+├── textures/                           # Texture assets + cubemaps
+├── external-libraries/                 # Vendored dependencies
+│   ├── glfw-3.4.bin.WIN64/
+│   ├── glm/
+│   ├── imgui/
+│   └── stb/
+├── markdown/                           # Lab book reference documents
+└── books/								# Collection of relevant textbooks (e.g. Real-Time Rendering, Physically Based Rendering)
+```
+
 ### Top-Level Orchestration
 
 `main.cpp` → `Experience` (RAII master orchestrator) owns all subsystems:

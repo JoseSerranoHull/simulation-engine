@@ -17,6 +17,8 @@ namespace GE::Components
 	struct ParticleComponent;
 }
 
+namespace GE::Graphics {
+
 /**
  * @brief Orchestrates the multi-pass command recording sequence for a single frame.
  * Refactored to be agnostic: It no longer knows about specific particle systems.
@@ -110,7 +112,7 @@ void Renderer::recordShadowPass(
         const auto& mr = meshRenderers.Data()[i];
         const GE::ECS::EntityID entityID = meshRenderers.Index()[i];
 
-        auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
+        auto* const transform = em->GetTIComponent<GE::Components::Transform>(entityID);
 
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
@@ -173,7 +175,7 @@ void Renderer::recordOpaquePass(
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
         const GE::ECS::EntityID id = meshRenderers.Index()[i];
-        auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+        auto* const transform = em->GetTIComponent<GE::Components::Transform>(id);
 
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
@@ -226,7 +228,7 @@ void Renderer::recordTransparentPass(
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
         const GE::ECS::EntityID id = meshRenderers.Index()[i];
-        auto* const transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+        auto* const transform = em->GetTIComponent<GE::Components::Transform>(id);
 
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
@@ -263,3 +265,5 @@ void Renderer::recordParticles(
         }
     }
 }
+
+} // namespace GE::Graphics

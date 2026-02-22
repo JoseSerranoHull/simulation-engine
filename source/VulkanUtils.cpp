@@ -5,6 +5,8 @@
 #include <cstring>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 // ========================================================================
 // SECTION 1: MEMORY & COMMANDS
 // ========================================================================
@@ -452,3 +454,5 @@ VkPipelineDepthStencilStateCreateInfo VulkanUtils::prepareDepthStencil(VkBool32 
     info.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     return info;
 }
+
+} // namespace GE::Graphics

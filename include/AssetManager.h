@@ -57,7 +57,7 @@ public:
     /**
      * @brief Loads a texture from disk or returns a cached pointer if already loaded.
      */
-    std::shared_ptr<Texture> loadTexture(const std::string& path);
+    std::shared_ptr<GE::Graphics::Texture> loadTexture(const std::string& path);
 
     /**
      * @brief Loads a 3D model, using the provided selector function to resolve materials by name.
@@ -74,12 +74,12 @@ public:
      * @brief Creates a PBR material instance and allocates its Descriptor Set from the assigned pool.
      */
     std::shared_ptr<Material> createMaterial(
-        std::shared_ptr<Texture> albedo,
-        std::shared_ptr<Texture> normal,
-        std::shared_ptr<Texture> ao,
-        std::shared_ptr<Texture> metallic,
-        std::shared_ptr<Texture> roughness,
-        Pipeline* const pipeline
+        std::shared_ptr<GE::Graphics::Texture> albedo,
+        std::shared_ptr<GE::Graphics::Texture> normal,
+        std::shared_ptr<GE::Graphics::Texture> ao,
+        std::shared_ptr<GE::Graphics::Texture> metallic,
+        std::shared_ptr<GE::Graphics::Texture> roughness,
+        GE::Graphics::Pipeline* const pipeline
     ) const;
 
     /**
@@ -100,5 +100,5 @@ private:
     VkDescriptorPool descriptorPool; /**< Pool handle for material descriptors. */
 
     /** @brief Local cache to prevent redundant texture loading and VRAM duplication. */
-    std::unordered_map<std::string, std::shared_ptr<Texture>> textureCache{};
+    std::unordered_map<std::string, std::shared_ptr<GE::Graphics::Texture>> textureCache{};
 };

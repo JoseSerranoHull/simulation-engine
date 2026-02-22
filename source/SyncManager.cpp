@@ -3,6 +3,8 @@
 #include <iostream>
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 /**
  * @brief Constructor: Links the manager to the centralized Vulkan context.
  */
@@ -91,3 +93,5 @@ void SyncManager::allocateCommandBuffers(VkCommandPool pool, uint32_t count) {
         throw std::runtime_error("SyncManager: Failed to allocate hardware command buffers!");
     }
 }
+
+} // namespace GE::Graphics

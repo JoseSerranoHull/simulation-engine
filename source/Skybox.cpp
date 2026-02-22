@@ -7,6 +7,8 @@
 #include "../include/Logger.h"
 /* parasoft-end-suppress ALL */
 
+namespace GE::Graphics {
+
 /**
  * @brief Constructor: Initializes skybox geometry, descriptors, and the graphics pipeline.
  */
@@ -270,3 +272,5 @@ void Skybox::loadTextures(const std::vector<std::string>& facePaths) {
 
     GE_LOG_INFO("Skybox: Successfully updated cubemap textures from Registry.");
 }
+
+} // namespace GE::Graphics

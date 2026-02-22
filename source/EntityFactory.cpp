@@ -1,6 +1,8 @@
 #include "../include/EntityFactory.h"
 #include "../include/Components.h"
 
+using namespace GE::Graphics;
+
 namespace GE::Scene {
 
     ERROR_CODE EntityFactory::Initialize(GE::ECS::EntityManager* entityManager) {
@@ -45,7 +47,7 @@ namespace GE::Scene {
         mr.subMeshes.push_back({ meshPtr.get(), nullptr });
 
         // 5. Attach Components
-        m_entityManager->AddComponent<GE::Scene::Components::Transform>(entityID, GE::Scene::Components::Transform());
+        m_entityManager->AddComponent<GE::Components::Transform>(entityID, GE::Components::Transform());
         m_entityManager->AddComponent<GE::Components::MeshRenderer>(entityID, mr);
 
         // Note: To keep the Mesh* valid, the unique_ptr must be stored. 

@@ -16,6 +16,8 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+namespace GE::Graphics {
+
 /**
  * @brief Global debug callback for the Vulkan Validation Layers.
  */
@@ -700,3 +702,5 @@ bool VulkanEngine::checkValidationLayerSupport() const {
 
     return true;
 }
+
+} // namespace GE::Graphics

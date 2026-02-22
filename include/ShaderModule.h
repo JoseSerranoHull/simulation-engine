@@ -12,6 +12,8 @@
 #include "../include/VulkanContext.h"
 #include "../include/ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class ShaderModule
  * @brief RAII wrapper for a Vulkan Shader Module (SPIR-V).
@@ -106,3 +108,5 @@ public:
         return stageInfo;
     }
 };
+
+} // namespace GE::Graphics

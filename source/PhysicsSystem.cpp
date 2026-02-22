@@ -22,7 +22,7 @@ namespace GE::Systems {
         for (uint32_t i = 0; i < rbArray.GetCount(); ++i) {
             auto id = rbArray.Index()[i];
             auto& rb = rbArray.Data()[i];
-            auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+            auto* trans = em->GetTIComponent<GE::Components::Transform>(id);
 
             if (trans && !rb.isStatic) {
                 // Fulfills Q3: Accumulate Gravity Force
@@ -38,7 +38,7 @@ namespace GE::Systems {
 
                 // Sync the internal collider position with the new ECS position
                 // This prepares the collider for the ResolveCollisions step.
-                trans->m_state = GE::Scene::Components::Transform::TransformState::Dirty;
+                trans->m_state = GE::Components::Transform::TransformState::Dirty;
             }
         }
     }
@@ -52,7 +52,7 @@ namespace GE::Systems {
         for (uint32_t sIdx = 0; sIdx < sphereArray.GetCount(); ++sIdx) {
             auto sID = sphereArray.Index()[sIdx];
             auto& sCol = sphereArray.Data()[sIdx];
-            auto* sTrans = em->GetTIComponent<GE::Scene::Components::Transform>(sID);
+            auto* sTrans = em->GetTIComponent<GE::Components::Transform>(sID);
             auto* sRB = em->GetTIComponent<GE::Components::RigidBody>(sID);
 
             if (!sTrans) continue;

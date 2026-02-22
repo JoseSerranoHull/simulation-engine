@@ -13,6 +13,8 @@
 #include "../include/AssetManager.h"
 #include "PostProcessor.h"
 
+namespace GE::Graphics {
+
 /**
  * @class VulkanResourceManager
  * @brief Orchestrates the lifecycle of global GPU resources and descriptor management.
@@ -101,3 +103,5 @@ private:
     VkRenderPass shadowRenderPass;
     VkFramebuffer shadowFramebuffer;
 };
+
+} // namespace GE::Graphics

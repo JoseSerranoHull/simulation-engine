@@ -11,8 +11,7 @@ namespace GE::ECS { class EntityManager; }
 class AssetManager;
 class InputManager;
 class SystemFactory;
-struct VulkanContext;
-class VulkanResourceManager;
+namespace GE::Graphics { struct VulkanContext; class VulkanResourceManager; }
 class TimeManager;
 class ParticleEmitterSystem;
 
@@ -22,8 +21,8 @@ namespace GE::Scene { class Scene; }
 class ServiceLocator final {
 public:
     // --- Providers ---
-    static void Provide(VulkanContext* context) { m_context = context; }
-    static void Provide(VulkanResourceManager* resources) { m_resources = resources; }
+    static void Provide(GE::Graphics::VulkanContext* context) { m_context = context; }
+    static void Provide(GE::Graphics::VulkanResourceManager* resources) { m_resources = resources; }
     static void Provide(InputManager* input) { m_input = input; }
     static void Provide(GE::ECS::EntityManager* entityManager) { m_entityManager = entityManager; }
     static void Provide(AssetManager* assetManager) { m_assetManager = assetManager; }
@@ -34,12 +33,12 @@ public:
 	static void Provide(ParticleEmitterSystem* particleEmitterSystem) { m_particleEmitterSystem = particleEmitterSystem; }
 
     // --- Retrievers ---
-    static VulkanContext* GetContext() {
+    static GE::Graphics::VulkanContext* GetContext() {
         if (!m_context) throw std::runtime_error("ServiceLocator: VulkanContext not provided!");
         return m_context;
     }
 
-    static VulkanResourceManager* GetResourceManager() {
+    static GE::Graphics::VulkanResourceManager* GetResourceManager() {
         if (!m_resources) throw std::runtime_error("ServiceLocator: VulkanResourceManager not provided!");
         return m_resources;
     }
@@ -85,8 +84,8 @@ public:
 	}
 
 private:
-    static inline VulkanContext* m_context = nullptr;
-    static inline VulkanResourceManager* m_resources = nullptr;
+    static inline GE::Graphics::VulkanContext* m_context = nullptr;
+    static inline GE::Graphics::VulkanResourceManager* m_resources = nullptr;
     static inline InputManager* m_input = nullptr;
     static inline SystemFactory* m_factory = nullptr;
     static inline GE::ECS::EntityManager* m_entityManager = nullptr;

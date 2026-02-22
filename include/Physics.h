@@ -74,7 +74,7 @@ namespace GE::Physics {
             for (uint32_t i = 0; i < sphereArray.GetCount(); ++i) {
                 uint32_t entityID = sphereArray.Index()[i];
                 auto& col = sphereArray.Data()[i];
-                auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
+                auto* trans = em->GetTIComponent<GE::Components::Transform>(entityID);
 
                 if (trans) {
                     Sphere s(trans->m_position, col.radius);
@@ -100,7 +100,7 @@ namespace GE::Physics {
             for (uint32_t i = 0; i < sphereArray.GetCount() && foundCount < bufferSize; ++i) {
                 uint32_t entityID = sphereArray.Index()[i];
                 auto& col = sphereArray.Data()[i];
-                auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(entityID);
+                auto* trans = em->GetTIComponent<GE::Components::Transform>(entityID);
 
                 if (trans) {
                     float distanceSq = glm::distance2(center, trans->m_position);

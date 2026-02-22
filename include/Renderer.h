@@ -15,6 +15,8 @@
 #include "../include/VulkanContext.h"
 #include "../include/EntityManager.h"
 
+namespace GE::Graphics {
+
 /**
  * @class Renderer
  * @brief Agnostic Frame Orchestrator.
@@ -91,3 +93,5 @@ private:
         GE::ECS::EntityManager* const em
     ) const;
 };
+
+} // namespace GE::Graphics

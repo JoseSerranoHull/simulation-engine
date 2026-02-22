@@ -8,6 +8,8 @@
 #include "../include/VulkanUtils.h"
 #include "ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class Image
  * @brief A generic wrapper for Vulkan Image resources, including their memory and views.
@@ -51,3 +53,5 @@ private:
     VkImageView imageView;       /**< View handle for shader and framebuffer access. */
     VkFormat format;             /**< The pixel layout format for this image. */
 };
+
+} // namespace GE::Graphics

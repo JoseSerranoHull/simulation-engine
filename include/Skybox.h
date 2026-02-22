@@ -13,6 +13,8 @@
 #include "../include/Common.h"
 #include "../include/ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class Skybox
  * @brief Manages the rendering of a cubic environmental background.
@@ -94,3 +96,5 @@ private:
     void createDescriptorResources() const;
     void createPipeline(const VkRenderPass renderPass) const;
 };
+
+} // namespace GE::Graphics

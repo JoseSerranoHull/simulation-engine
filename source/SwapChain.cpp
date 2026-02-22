@@ -1,5 +1,7 @@
 #include "../include/SwapChain.h"
 
+namespace GE::Graphics {
+
 /**
  * @brief Constructor: Initializes the container.
  * Note: Hardware handle allocation is typically performed by the VulkanResourceManager.
@@ -93,3 +95,5 @@ void SwapChain::addFramebuffer(VkFramebuffer buffer) {
         swapChainFramebuffers.push_back(buffer);
     }
 }
+
+} // namespace GE::Graphics

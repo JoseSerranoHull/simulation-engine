@@ -8,6 +8,8 @@
 
 #include "../include/Common.h"
 
+namespace GE::Graphics {
+
 /**
  * @class VulkanUtils
  * @brief Static utility library for Vulkan resource management.
@@ -120,3 +122,5 @@ public:
     static VkPipelineMultisampleStateCreateInfo prepareMultisampling(VkSampleCountFlagBits samples);
     static VkPipelineDepthStencilStateCreateInfo prepareDepthStencil(VkBool32 depthWrite);
 };
+
+} // namespace GE::Graphics

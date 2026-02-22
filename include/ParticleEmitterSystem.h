@@ -33,7 +33,7 @@ namespace GE::Systems {
                 if (!pc.enabled || !pc.system) continue;
 
                 GE::ECS::EntityID id = particles.Index()[i];
-                auto* transform = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+                auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
                 glm::vec3 worldPos = transform ? (transform->m_position + pc.localOffset) : pc.localOffset;
 
                 // Execute Compute Shader logic using the passed 'cb'

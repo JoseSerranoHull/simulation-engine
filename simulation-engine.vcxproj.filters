@@ -302,6 +302,9 @@
     <None Include="config\simulation_lab3.ini">
       <Filter>Config Files</Filter>
     </None>
+    <None Include="CLAUDE.md">
+      <Filter>Mardown Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\AssetManager.h">

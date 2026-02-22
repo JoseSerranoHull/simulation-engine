@@ -7,6 +7,8 @@
 #include "../include/VulkanContext.h"
 #include "../include/ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class RenderPass
  * @brief RAII wrapper for a VkRenderPass handle.
@@ -33,3 +35,5 @@ public:
     /** @brief Returns the raw Vulkan handle for use in command recording or framebuffers. */
     VkRenderPass getHandle() const { return renderPass; }
 };
+
+} // namespace GE::Graphics

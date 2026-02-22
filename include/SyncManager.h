@@ -9,6 +9,8 @@
 #include "../include/VulkanContext.h"
 #include "../include/ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class SyncManager
  * @brief Orchestrates per-frame synchronization primitives (Semaphores, Fences)
@@ -80,3 +82,5 @@ private:
     std::vector<VkSemaphore> renderFinishedSemaphores{};
     std::vector<VkFence> inFlightFences{};
 };
+
+} // namespace GE::Graphics

@@ -31,9 +31,9 @@ namespace GE::Systems {
 
     private:
         /** @brief Helper to build the local matrix from TRS data. */
-        glm::mat4 calculateLocalMatrix(const GE::Scene::Components::Transform& trans);
+        glm::mat4 calculateLocalMatrix(const GE::Components::Transform& trans);
 
         /** @brief Recursive or iterative helper to resolve the world matrix based on parentage. */
-        void resolveWorldMatrix(uint32_t id, GE::Scene::Components::Transform& trans, GE::ECS::EntityManager* em);
+        void resolveWorldMatrix(uint32_t id, GE::Components::Transform& trans, GE::ECS::EntityManager* em);
     };
 }

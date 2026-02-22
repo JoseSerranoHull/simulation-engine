@@ -4,6 +4,8 @@
 #include "../include/PhysicsSystem.h"
 #include "../include/Experience.h"
 
+using namespace GE::Graphics;
+
 namespace GE {
 
     void GenericScenario::OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) {

@@ -8,14 +8,14 @@ namespace GE::Systems {
     void TransformSystem::OnUpdate(float dt, VkCommandBuffer cb) {
         // Simply ignore 'cb', as this system is CPU-only
         auto* em = ServiceLocator::GetEntityManager();
-        auto& transformArray = em->GetCompArr<GE::Scene::Components::Transform>();
+        auto& transformArray = em->GetCompArr<GE::Components::Transform>();
 
         // 1. First Pass: Update all Local Matrices
         for (uint32_t i = 0; i < transformArray.GetCount(); ++i) {
             auto& trans = transformArray.Data()[i];
 
             // Only recalculate local matrix if the entity itself changed (Agnostic Logic)
-            if (trans.m_state == GE::Scene::Components::Transform::TransformState::Dirty) {
+            if (trans.m_state == GE::Components::Transform::TransformState::Dirty) {
                 trans.m_localMatrix = calculateLocalMatrix(trans);
             }
         }
@@ -31,7 +31,7 @@ namespace GE::Systems {
         }
     }
 
-    glm::mat4 TransformSystem::calculateLocalMatrix(const GE::Scene::Components::Transform& trans) {
+    glm::mat4 TransformSystem::calculateLocalMatrix(const GE::Components::Transform& trans) {
         glm::mat4 m = glm::translate(glm::mat4(1.0f), trans.m_position);
 
         // Rotation (Y * X * Z order)
@@ -43,14 +43,14 @@ namespace GE::Systems {
         return m;
     }
 
-    void TransformSystem::resolveWorldMatrix(uint32_t id, GE::Scene::Components::Transform& trans, GE::ECS::EntityManager* em) {
+    void TransformSystem::resolveWorldMatrix(uint32_t id, GE::Components::Transform& trans, GE::ECS::EntityManager* em) {
         // If it's a root entity (no parent)
         if (trans.m_parentEntityID == UINT32_MAX) {
             trans.m_worldMatrix = trans.m_localMatrix;
         }
         else {
             // Retrieve parent's transform
-            auto* parentTrans = em->GetTIComponent<GE::Scene::Components::Transform>(trans.m_parentEntityID);
+            auto* parentTrans = em->GetTIComponent<GE::Components::Transform>(trans.m_parentEntityID);
             if (parentTrans) {
                 // GameObject Logic: Child is relative to Parent
                 trans.m_worldMatrix = parentTrans->m_worldMatrix * trans.m_localMatrix;
@@ -61,6 +61,6 @@ namespace GE::Systems {
         }
 
         // Mark as "Clean" or "Updated" so systems like Physics or Renderer can use it
-        trans.m_state = GE::Scene::Components::Transform::TransformState::Clean;
+        trans.m_state = GE::Components::Transform::TransformState::Clean;
     }
 }

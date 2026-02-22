@@ -47,7 +47,7 @@ namespace GE::Physics {
             for (uint32_t i = 0; i < circleArray.GetCount() && count < bufferSize; ++i) {
                 uint32_t id = circleArray.Index()[i];
                 auto& col = circleArray.Data()[i];
-                auto* trans = em->GetTIComponent<GE::Scene::Components::Transform>(id);
+                auto* trans = em->GetTIComponent<GE::Components::Transform>(id);
 
                 if (trans) {
                     glm::vec2 worldPos = glm::vec2(trans->m_position.x, trans->m_position.y) + col.offset;

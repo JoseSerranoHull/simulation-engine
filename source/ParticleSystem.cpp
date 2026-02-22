@@ -1,5 +1,7 @@
 #include "../include/ParticleSystem.h"
 
+using namespace GE::Graphics;
+
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>
 #include <array>

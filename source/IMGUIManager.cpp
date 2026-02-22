@@ -2,6 +2,8 @@
 #include "../include/GenericScenario.h"
 #include "../include/Experience.h"
 
+using namespace GE::Graphics;
+
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>
 /* parasoft-end-suppress ALL */

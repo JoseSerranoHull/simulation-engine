@@ -1,5 +1,7 @@
 #include "../include/RenderPass.h"
 
+namespace GE::Graphics {
+
 /**
  * @brief Initializes the wrapper. Note: This class borrows the device pointer
  * from the context to perform destruction later.
@@ -28,3 +30,5 @@ RenderPass::~RenderPass() {
     }
     context = nullptr;
 }
+
+} // namespace GE::Graphics

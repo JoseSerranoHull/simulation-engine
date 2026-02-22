@@ -5,6 +5,8 @@
 #include <utility>
 /* parasoft-end-suppress ALL */
 
+using namespace GE::Graphics;
+
 /**
  * @brief Constructor: Initializes geometry metadata and shared material ownership.
  */

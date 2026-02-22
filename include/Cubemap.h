@@ -10,6 +10,8 @@
 #include "VulkanContext.h"
 #include "ServiceLocator.h"
 
+namespace GE::Graphics {
+
 /**
  * @class Cubemap
  * @brief Manages a 6-face GPU Cubemap texture typically used for Skyboxes or environmental mapping.
@@ -53,3 +55,5 @@ private:
     VkDeviceMemory memory;       /**< Backing VRAM allocation for the image. */
     VkSampler sampler;           /**< Hardware configuration for texture filtering. */
 };
+
+} // namespace GE::Graphics

@@ -10,7 +10,7 @@
 #include "../include/VulkanContext.h"
 #include "../include/ServiceLocator.h"
 
-class Pipeline;
+namespace GE::Graphics { class Pipeline; }
 
 /**
  * @class Mesh
@@ -65,7 +65,7 @@ public:
     void draw(
         VkCommandBuffer commandBuffer,
         VkDescriptorSet globalSet,
-        const Pipeline* pipelineOverride = nullptr,
+        const GE::Graphics::Pipeline* pipelineOverride = nullptr,
         const glm::mat4& worldMatrix = glm::mat4(1.0f) // Pre-calculated matrix from ECS
     ) const;
 

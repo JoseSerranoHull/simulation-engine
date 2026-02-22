@@ -4,7 +4,7 @@
 #include <string>
 /* parasoft-end-suppress ALL */
 
-namespace GE::Scene::Components {
+namespace GE::Components {
 	struct Tag {
 		std::string m_name = "Entity";
 	};

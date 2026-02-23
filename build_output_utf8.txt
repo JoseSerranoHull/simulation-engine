@@ -1,0 +1,1552 @@
+﻿
+  AssetManager.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/AssetManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(47,40): error C2556: 'std::shared_ptr<GE::Graphics::Texture> AssetManager::loadTexture(const std::string &)': overloaded function differs only by return type from 'std::shared_ptr AssetManager::loadTexture(const std::string &)' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30):
+      see declaration of 'AssetManager::loadTexture'
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(47,40): error C2371: 'AssetManager::loadTexture': redefinition; different basic types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30):
+      see declaration of 'AssetManager::loadTexture'
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(47,40): error C2079: 'AssetManager::loadTexture' uses undefined class 'std::shared_ptr' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(58,26): error C2440: '=': cannot convert from 'std::shared_ptr<GE::Graphics::Texture>' to 'int' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(58,26):
+      No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(109,5): error C2872: 'Pipeline': ambiguous symbol [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      could be 'Pipeline'
+      C:\Users\javie\GitHub\simulation-engine\include\Pipeline.h(22,7):
+      or       'GE::Graphics::Pipeline'
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(103,41): error C2511: 'std::shared_ptr<Material> AssetManager::createMaterial(std::shared_ptr<GE::Graphics::Texture>,std::shared_ptr<GE::Graphics::Texture>,std::shared_ptr<GE::Graphics::Texture>,std::shared_ptr<GE::Graphics::Texture>,std::shared_ptr<GE::Graphics::Texture>,Pipeline *const ) const': overloaded member function not found in 'AssetManager' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(28,7):
+      see declaration of 'AssetManager'
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(114,9): error C2597: illegal reference to non-static member 'AssetManager::descriptorPool' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(114,9):
+      see declaration of 'AssetManager::descriptorPool'
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(114,9): error C3867: 'AssetManager::descriptorPool': non-standard syntax; use '&' to create a pointer to member [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(114,9): error C2568: '==': unable to resolve function overload [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(121,32): error C2597: illegal reference to non-static member 'AssetManager::descriptorPool' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(121,32):
+      see declaration of 'AssetManager::descriptorPool'
+  
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(121,32): error C3867: 'AssetManager::descriptorPool': non-standard syntax; use '&' to create a pointer to member [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\AssetManager.cpp(121,32): error C2568: '=': unable to resolve function overload [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  Cubemap.cpp
+  EntityFactory.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityFactory.cpp')
+  
+  EntityManager.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/EntityManager.cpp')
+  
+  Experience.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,59): error C2143: syntax error: missing ',' before '*' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/Experience.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(90,16): error C2664: 'void IMGUIManager::init(GLFWwindow *const ,const int)': cannot convert argument 2 from 'GE::Graphics::VulkanEngine *' to 'const int' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(90,45):
+      There is no context in which this conversion is possible
+      C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,10):
+      see declaration of 'IMGUIManager::init'
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(90,16):
+      while trying to match the argument list '(GLFWwindow *, GE::Graphics::VulkanEngine *)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,50): error C2665: 'std::vector<Pipeline *,std::allocator<Pipeline *>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<Pipeline *,std::allocator<Pipeline *>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=Pipeline *
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,50):
+          'void std::vector<Pipeline *,std::allocator<Pipeline *>>::push_back(_Ty &&)': cannot convert argument 1 from 'GE::Graphics::Pipeline *' to '_Ty &&'
+          with
+          [
+              _Ty=Pipeline *
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,65):
+              Reason: cannot convert from 'GE::Graphics::Pipeline *' to '_Ty'
+          with
+          [
+              _Ty=Pipeline *
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,65):
+              Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<Pipeline *,std::allocator<Pipeline *>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=Pipeline *
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,50):
+          'void std::vector<Pipeline *,std::allocator<Pipeline *>>::push_back(const _Ty &)': cannot convert argument 1 from 'GE::Graphics::Pipeline *' to 'const _Ty &'
+          with
+          [
+              _Ty=Pipeline *
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,65):
+              Reason: cannot convert from 'GE::Graphics::Pipeline *' to 'const _Ty'
+          with
+          [
+              _Ty=Pipeline *
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,65):
+              Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(232,50):
+      while trying to match the argument list '(GE::Graphics::Pipeline *)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(235,15): error C2664: 'void GE::Graphics::Renderer::recordFrame(const VkCommandBuffer,const VkExtent2D &,const GE::Graphics::Skybox *const ,GE::ECS::EntityManager *const ,const GE::Graphics::PostProcessor *const ,const VkDescriptorSet,const VkRenderPass,const VkFramebuffer,const std::vector<GE::Graphics::Pipeline *,std::allocator<GE::Graphics::Pipeline *>> &) const': cannot convert argument 9 from 'std::vector<Pipeline *,std::allocator<Pipeline *>>' to 'const std::vector<GE::Graphics::Pipeline *,std::allocator<GE::Graphics::Pipeline *>> &' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(239,9):
+      Reason: cannot convert from 'std::vector<Pipeline *,std::allocator<Pipeline *>>' to 'const std::vector<GE::Graphics::Pipeline *,std::allocator<GE::Graphics::Pipeline *>>'
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(239,9):
+      No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\include\Renderer.h(43,10):
+      see declaration of 'GE::Graphics::Renderer::recordFrame'
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(235,15):
+      while trying to match the argument list '(const VkCommandBuffer, VkExtent2D, GE::Graphics::Skybox *, _Ty *const , GE::Graphics::PostProcessor *, VkDescriptorSet, VkRenderPass, VkFramebuffer, std::vector<Pipeline *,std::allocator<Pipeline *>>)'
+          with
+          [
+              _Ty=GE::ECS::EntityManager
+          ]
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(548,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(549,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(550,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(553,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(554,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(555,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,15): error C2665: 'std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back': no overloaded function could convert all the argument types [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(936,23):
+      could be 'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(_Ty &&)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty &&'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to '_Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(932,23):
+      or       'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+          C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,15):
+          'void std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>::push_back(const _Ty &)': cannot convert argument 1 from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty &'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,51):
+              Reason: cannot convert from 'std::unique_ptr<Pipeline,std::default_delete<Pipeline>>' to 'const _Ty'
+          with
+          [
+              _Ty=std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>
+          ]
+              C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,51):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\source\Experience.cpp(558,15):
+      while trying to match the argument list '(std::unique_ptr<Pipeline,std::default_delete<Pipeline>>)'
+  
+  GenericScenario.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,59): error C2143: syntax error: missing ',' before '*' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/GenericScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\source\GenericScenario.cpp(21,20): error C2664: 'void GE::Scene::SceneLoader::load(const std::string &,GE::ECS::EntityManager *,AssetManager *,GE::Scene::Scene *,const std::vector<std::unique_ptr<Pipeline,std::default_delete<Pipeline>>,std::allocator<std::unique_ptr<Pipeline,std::default_delete<Pipeline>>>> &,VkCommandBuffer,std::vector<VkBuffer,std::allocator<VkBuffer>> &,std::vector<VkDeviceMemory,std::allocator<VkDeviceMemory>> &,std::vector<std::unique_ptr<Model,std::default_delete<Model>>,std::allocator<std::unique_ptr<Model,std::default_delete<Model>>>> &)': cannot convert argument 5 from 'const std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>' to 'const std::vector<std::unique_ptr<Pipeline,std::default_delete<Pipeline>>,std::allocator<std::unique_ptr<Pipeline,std::default_delete<Pipeline>>>> &' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\GenericScenario.cpp(22,41):
+      Reason: cannot convert from 'const std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>' to 'const std::vector<std::unique_ptr<Pipeline,std::default_delete<Pipeline>>,std::allocator<std::unique_ptr<Pipeline,std::default_delete<Pipeline>>>>'
+      C:\Users\javie\GitHub\simulation-engine\source\GenericScenario.cpp(22,41):
+      No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(25,14):
+      see declaration of 'GE::Scene::SceneLoader::load'
+      C:\Users\javie\GitHub\simulation-engine\source\GenericScenario.cpp(21,20):
+      while trying to match the argument list '(std::string, GE::ECS::EntityManager *, AssetManager *, GE::Scene::Scene *, const std::vector<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>,std::allocator<std::unique_ptr<GE::Graphics::Pipeline,std::default_delete<GE::Graphics::Pipeline>>>>, VkCommandBuffer, std::vector<VkBuffer,std::allocator<VkBuffer>>, std::vector<VkDeviceMemory,std::allocator<VkDeviceMemory>>, std::vector<std::unique_ptr<Model,std::default_delete<Model>>,std::allocator<std::unique_ptr<Model,std::default_delete<Model>>>>)'
+  
+  Image.cpp
+  IMGUIManager.cpp
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,59): error C2143: syntax error: missing ',' before '*' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/IMGUIManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(32,20): error C2511: 'void IMGUIManager::init(GLFWwindow *const ,const GE::Graphics::VulkanEngine *const )': overloaded member function not found in 'IMGUIManager' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(25,7):
+      see declaration of 'IMGUIManager'
+  
+C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(58,71): error C2597: illegal reference to non-static member 'IMGUIManager::imguiPool' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(72,22):
+      see declaration of 'IMGUIManager::imguiPool'
+  
+C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(58,9): error C2664: 'VkResult vkCreateDescriptorPool(VkDevice,const VkDescriptorPoolCreateInfo *,const VkAllocationCallbacks *,VkDescriptorPool *)': cannot convert argument 4 from 'VkDescriptorPool IMGUIManager::* ' to 'VkDescriptorPool *' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(58,70):
+      There is no context in which this conversion is possible
+      C:\VulkanSDK\1.4.321.1\Include\vulkan\vulkan_core.h(4849,32):
+      see declaration of 'vkCreateDescriptorPool'
+      C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(58,9):
+      while trying to match the argument list '(VkDevice, VkDescriptorPoolCreateInfo *, nullptr, VkDescriptorPool IMGUIManager::* )'
+  
+C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(77,32): error C2597: illegal reference to non-static member 'IMGUIManager::imguiPool' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(77,32):
+      see declaration of 'IMGUIManager::imguiPool'
+  
+C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(77,32): error C3867: 'IMGUIManager::imguiPool': non-standard syntax; use '&' to create a pointer to member [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\IMGUIManager.cpp(77,32): error C2568: '=': unable to resolve function overload [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  main.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,59): error C2143: syntax error: missing ',' before '*' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/main.cpp')
+  
+  Mesh.cpp
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(51,70): error C2872: 'Pipeline': ambiguous symbol [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      could be 'Pipeline'
+      C:\Users\javie\GitHub\simulation-engine\include\Pipeline.h(22,7):
+      or       'GE::Graphics::Pipeline'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(53,11): error C2872: 'Pipeline': ambiguous symbol [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      could be 'Pipeline'
+      C:\Users\javie\GitHub\simulation-engine\include\Pipeline.h(22,7):
+      or       'GE::Graphics::Pipeline'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(55,34): error C2446: ':': no conversion from 'GE::Graphics::Pipeline *' to 'const Pipeline *' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(55,34):
+      Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(53,27): error C2737: 'activePipeline': const object must be initialized [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(59,9): error C2027: use of undefined type 'Pipeline' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      see declaration of 'Pipeline'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(68,13): error C2027: use of undefined type 'Pipeline' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      see declaration of 'Pipeline'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(67,9): error C2660: 'vkCmdBindDescriptorSets': function does not take 7 arguments [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\VulkanSDK\1.4.321.1\Include\vulkan\vulkan_core.h(4999,28):
+      see declaration of 'vkCmdBindDescriptorSets'
+      C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(67,9):
+      while trying to match the argument list '(VkCommandBuffer, VkPipelineBindPoint, const uint32_t, const uint32_t, const VkDescriptorSet [2], unsigned int, nullptr)'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(72,32): error C2027: use of undefined type 'Pipeline' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      see declaration of 'Pipeline'
+  
+C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(72,9): error C2660: 'vkCmdPushConstants': function does not take 5 arguments [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\VulkanSDK\1.4.321.1\Include\vulkan\vulkan_core.h(5218,28):
+      see declaration of 'vkCmdPushConstants'
+      C:\Users\javie\GitHub\simulation-engine\source\Mesh.cpp(72,9):
+      while trying to match the argument list '(VkCommandBuffer, VkShaderStageFlagBits, const uint32_t, uint32_t, const glm::mat4 *)'
+  
+  Model.cpp
+C:\Users\javie\GitHub\simulation-engine\source\Model.cpp(72,71): error C2872: 'Pipeline': ambiguous symbol [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(13,7):
+      could be 'Pipeline'
+      C:\Users\javie\GitHub\simulation-engine\include\Pipeline.h(22,7):
+      or       'GE::Graphics::Pipeline'
+  
+  ParticleSystem.cpp
+  Renderer.cpp
+C:\Users\javie\GitHub\simulation-engine\source\Renderer.cpp(121,31): error C2664: 'void Mesh::draw(VkCommandBuffer,VkDescriptorSet,const Pipeline *,const glm::mat4 &) const': cannot convert argument 3 from 'const GE::Graphics::Pipeline *const ' to 'const Pipeline *' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\Renderer.cpp(121,51):
+      Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+      C:\Users\javie\GitHub\simulation-engine\include\Mesh.h(65,10):
+      see declaration of 'Mesh::draw'
+      C:\Users\javie\GitHub\simulation-engine\source\Renderer.cpp(121,31):
+      while trying to match the argument list '(const VkCommandBuffer, const VkDescriptorSet, const GE::Graphics::Pipeline *const , glm::mat4)'
+  
+  Scene.cpp
+  SceneLoader.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\IMGUIManager.h(46,59): error C2143: syntax error: missing ',' before '*' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SceneLoader.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(103,45): error C2440: '=': cannot convert from 'std::shared_ptr' to 'int' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(103,45):
+      No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+  
+C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(114,76): error C2446: ':': no conversion from 'nullptr' to 'int' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(114,76):
+      A native nullptr can only be converted to bool or, using reinterpret_cast, to an integral type
+  
+C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(114,13): error C3487: 'void': all return expressions must deduce to the same type: previously it was 'int' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(121,24): error C2664: 'std::shared_ptr<Material> AssetManager::createMaterial(std::shared_ptr,std::shared_ptr,std::shared_ptr,std::shared_ptr,std::shared_ptr,Pipeline *const ) const': cannot convert argument 1 from 'int' to 'std::shared_ptr' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+      C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+      'std::shared_ptr<_Ty>::shared_ptr(std::nullptr_t) noexcept': cannot convert 'this' pointer from 'std::shared_ptr' to 'std::shared_ptr<_Ty> &'
+          C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+          Reason: cannot convert from 'std::shared_ptr' to 'std::shared_ptr<_Ty>'
+          C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+          Conversion requires a second user-defined-conversion operator or constructor
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1578,5):
+          could be 'std::shared_ptr<_Ty>::shared_ptr(std::nullptr_t) noexcept'
+              C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+              'std::shared_ptr<_Ty>::shared_ptr(std::nullptr_t) noexcept': cannot convert 'this' pointer from 'std::shared_ptr' to 'std::shared_ptr<_Ty> &'
+                  C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+                  Reason: cannot convert from 'std::shared_ptr' to 'std::shared_ptr<_Ty>'
+                  C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1673,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(std::unique_ptr<_Ux,_Dx> &&)'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1649,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(std::shared_ptr<_Ty2> &&) noexcept'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1639,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(const std::shared_ptr<_Ty2> &) noexcept'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1629,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(std::shared_ptr<_Ty2> &&,remove_extent<_Ty>::type *) noexcept'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1623,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(const std::shared_ptr<_Ty2> &,remove_extent<_Ty>::type *) noexcept'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1618,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(std::nullptr_t,_Dx,_Alloc)'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1612,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(std::nullptr_t,_Dx)'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1606,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(_Ux *,_Dx,_Alloc)'
+          C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1598,5):
+          or       'std::shared_ptr<_Ty>::shared_ptr(_Ux *,_Dx)'
+          C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(122,23):
+          while trying to match the argument list '(int)'
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(76,31):
+      see declaration of 'AssetManager::createMaterial'
+      C:\Users\javie\GitHub\simulation-engine\source\SceneLoader.cpp(121,24):
+      while trying to match the argument list '(int, int, int, int, int, Pipeline *)'
+  
+  Skybox.cpp
+  SnowGlobeScenario.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,47):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\SceneLoader.h(38,36): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/SnowGlobeScenario.cpp')
+  
+  VulkanResourceManager.cpp
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,10): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,21):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(60,30): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(77,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(78,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(79,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(80,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,14): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,25):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(81,34): error C2955: 'std::shared_ptr': use of class template requires template argument list [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(1565,7):
+      see declaration of 'std::shared_ptr'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53): error C2065: 'Texture': undeclared identifier [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C2923: 'std::shared_ptr': 'Texture' is not a valid template type argument for parameter '_Ty' [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+      C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,53):
+      see declaration of 'Texture'
+  
+C:\Users\javie\GitHub\simulation-engine\include\AssetManager.h(103,42): error C3203: 'shared_ptr': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\Users\javie\GitHub\simulation-engine\simulation-engine.vcxproj]
+  (compiling source file 'source/VulkanResourceManager.cpp')
+  
+  VulkanUtils.cpp
+  Generating Code...

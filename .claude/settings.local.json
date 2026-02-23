@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tail:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(grep:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\":*)",
+      "Bash(cygpath:*)",
+      "Bash(cat:*)",
+      "Bash(cd:*)",
+      "Bash(python3.exe --version 2>/dev/null || python.exe --version 2>/dev/null || py --version 2>/dev/null || where python 2>/dev/null)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(powershell:*)",
+      "Bash(printf %s\\\\n:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}

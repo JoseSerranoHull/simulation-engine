@@ -9,6 +9,8 @@
 
 #include "core/Common.h"
 #include "assets/Model.h"
+#include "graphics/ShaderModule.h"
+#include "graphics/GraphicsPipeline.h"
 
 namespace GE {
     /**
@@ -43,12 +45,25 @@ namespace GE {
         /** @brief Sets the data source path for this scenario instance. */
         void SetConfigPath(const std::string& path) { m_configPath = path; }
 
+        /** @brief Accessor for the scenario's material pipeline set, used by the renderer. */
+        const std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>>& GetPipelines() const {
+            return m_pipelines;
+        }
+
     protected:
+        /** @brief Builds the fixed set of material pipelines for this scenario. */
+        void createMaterialPipelines();
         bool  m_isPaused = false;
         float m_timeScale = 1.0f;
 
         /** @brief Registry of models unique to this scenario for cleanup. */
         std::vector<std::unique_ptr<GE::Assets::Model>> m_ownedModels;
+
+        /** @brief Scenario-scoped shader modules; lifetime tied to this scenario. */
+        std::vector<std::unique_ptr<GE::Graphics::ShaderModule>> m_shaderModules;
+
+        /** @brief Scenario-scoped material pipelines; destroyed on scenario unload. */
+        std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>> m_pipelines;
 
         /** @brief Path to the .ini file defining this scenario's entities. */
         std::string m_configPath;

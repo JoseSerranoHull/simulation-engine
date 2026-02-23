@@ -1,4 +1,4 @@
-﻿#include "graphics/PostProcessor.h"
+﻿#include "graphics/PostProcessBackend.h"
 
 /* parasoft-begin-suppress ALL */
 #include <stdexcept>
@@ -10,7 +10,7 @@ namespace GE::Graphics {
 /**
  * @brief Constructor: Orchestrates the allocation of HDR render targets and refraction snapshots.
  */
-PostProcessor::PostProcessor(const uint32_t inWidth, const uint32_t inHeight,
+PostProcessBackend::PostProcessBackend(const uint32_t inWidth, const uint32_t inHeight,
     const VkFormat inSwapChainFormat, const VkRenderPass finalRenderPass, const VkSampleCountFlagBits inMsaaSamples)
     : width(inWidth), height(inHeight), swapChainFormat(inSwapChainFormat), msaaSamples(inMsaaSamples)
 {
@@ -57,7 +57,7 @@ PostProcessor::PostProcessor(const uint32_t inWidth, const uint32_t inHeight,
 /**
  * @brief Destructor: Ensures ordered cleanup of all GPU resources.
  */
-PostProcessor::~PostProcessor() {
+PostProcessBackend::~PostProcessBackend() {
     try {
         VulkanContext* context = ServiceLocator::GetContext();
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
@@ -104,7 +104,7 @@ PostProcessor::~PostProcessor() {
  * @brief Reallocates all resolution-dependent GPU resources.
  * Ensures the refraction and offscreen buffers match the new window extent.
  */
-void PostProcessor::resize(const VkExtent2D& extent) {
+void PostProcessBackend::resize(const VkExtent2D& extent) {
     cleanupResources();
     width = extent.width;
     height = extent.height;
@@ -128,7 +128,7 @@ void PostProcessor::resize(const VkExtent2D& extent) {
  * @brief Captures a high-precision snapshot of the opaque scene.
  * This snapshot is used by the refraction shaders in the subsequent transparent pass.
  */
-void PostProcessor::copyScene(const VkCommandBuffer cb) const {
+void PostProcessBackend::copyScene(const VkCommandBuffer cb) const {
     // 1. Transition Background GpuImage: Shader Read -> Transfer Destination
     VulkanUtils::recordImageBarrier(cb, backgroundImage,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -167,7 +167,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
 /**
  * @brief Helper: Specifically initializes resources used for refraction snapshots.
  */
-void PostProcessor::createBackgroundResources() {
+void PostProcessBackend::createBackgroundResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     // 1. Create GpuImage and View
@@ -196,7 +196,7 @@ void PostProcessor::createBackgroundResources() {
  * @brief Records the final fullscreen post-processing pass.
  * Performs tone-mapping and applies the Bloom effect to the resolved scene.
  */
-void PostProcessor::draw(const VkCommandBuffer commandBuffer, const bool enableBloom) const {
+void PostProcessBackend::draw(const VkCommandBuffer commandBuffer, const bool enableBloom) const {
     const VkViewport vp{ 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f };
     vkCmdSetViewport(commandBuffer, 0, 1, &vp);
 
@@ -224,7 +224,7 @@ void PostProcessor::draw(const VkCommandBuffer commandBuffer, const bool enableB
  * @brief Safely releases all frame-dependent GPU memory.
  * This is called during both destruction and window resizing.
  */
-void PostProcessor::cleanupResources() {
+void PostProcessBackend::cleanupResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     // 1. Offscreen HDR Targets & Views
@@ -299,7 +299,7 @@ void PostProcessor::cleanupResources() {
 /**
  * @brief Allocates multi-sampled HDR and Resolve images.
  */
-void PostProcessor::createOffscreenResources() {
+void PostProcessBackend::createOffscreenResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     // 1. Color Target (MSAA Enabled)
@@ -339,7 +339,7 @@ void PostProcessor::createOffscreenResources() {
  * @brief Initializes the primary offscreen render pass.
  * FIX: Calls deduplicated helper to resolve CDD.DUPC.
  */
-void PostProcessor::createRenderPass() {
+void PostProcessBackend::createRenderPass() {
     internalCreateRenderPass(false);
 }
 
@@ -347,14 +347,14 @@ void PostProcessor::createRenderPass() {
  * @brief Initializes the secondary transparent pass.
  * FIX: Calls deduplicated helper to resolve CDD.DUPC.
  */
-void PostProcessor::createTransparentRenderPass() {
+void PostProcessBackend::createTransparentRenderPass() {
     internalCreateRenderPass(true);
 }
 
 /**
  * @brief Creates the offscreen framebuffer linking all three HDR attachments.
  */
-void PostProcessor::createFramebuffer() {
+void PostProcessBackend::createFramebuffer() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     const std::array<VkImageView, 3> attachments = {
@@ -379,7 +379,7 @@ void PostProcessor::createFramebuffer() {
 /**
  * @brief Sets up descriptors to sample the resolved HDR scene for post-processing.
  */
-void PostProcessor::createDescriptors() {
+void PostProcessBackend::createDescriptors() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
@@ -439,7 +439,7 @@ void PostProcessor::createDescriptors() {
 /**
  * @brief Constructs the final fullscreen graphics pipeline.
  */
-void PostProcessor::createPipeline(const VkRenderPass finalRenderPass) {
+void PostProcessBackend::createPipeline(const VkRenderPass finalRenderPass) {
     const ShaderModule vertShader("./shaders/post_vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
     const ShaderModule fragShader("./shaders/post_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
     const VkPipelineShaderStageCreateInfo shaderStages[2] = { vertShader.getStageInfo(), fragShader.getStageInfo() };
@@ -514,7 +514,7 @@ void PostProcessor::createPipeline(const VkRenderPass finalRenderPass) {
  * @brief Unified RenderPass factory.
  * Handles the logic switch for MSAA HDR rendering and Resolve targets.
  */
-void PostProcessor::internalCreateRenderPass(const bool isTransparent) {
+void PostProcessBackend::internalCreateRenderPass(const bool isTransparent) {
     // 1. Determine Ops based on pass type
     // Opaque pass clears the screen; Transparent pass loads existing data.
     const VkAttachmentLoadOp colorLoadOp = isTransparent ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;

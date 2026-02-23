@@ -7,7 +7,7 @@
 #include <functional>
 /* parasoft-end-suppress ALL */
 
-#include "ecs/ISystem.h"
+#include "ecs/IECSystem.h"
 
 /**
  * @class EngineServiceRegistry
@@ -15,8 +15,8 @@
  */
 class EngineServiceRegistry final {
 public:
-    // A Creator is a function that returns a unique_ptr to an ISystem
-    using Creator = std::function<std::unique_ptr<ISystem>()>;
+    // A Creator is a function that returns a unique_ptr to an IECSystem
+    using Creator = std::function<std::unique_ptr<GE::ECS::IECSystem>()>;
 
     /**
      * @brief Registers a new system type with the factory.
@@ -29,7 +29,7 @@ public:
     /**
      * @brief Instantiates a system by its registered name.
      */
-    std::unique_ptr<ISystem> create(const std::string& name) const {
+    std::unique_ptr<GE::ECS::IECSystem> create(const std::string& name) const {
         auto it = m_registry.find(name);
         if (it != m_registry.end()) {
             return it->second();

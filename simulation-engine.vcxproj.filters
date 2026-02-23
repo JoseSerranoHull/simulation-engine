@@ -144,6 +144,9 @@
     <ClCompile Include="source\scene\Scene.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
+    <ClCompile Include="source\scene\Scenario.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
     <ClCompile Include="source\scene\SceneLoader.cpp">
       <Filter>Source Files\scene</Filter>
     </ClCompile>
@@ -187,11 +190,11 @@
     <ClCompile Include="source\graphics\Skybox.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="source\graphics\PostProcessor.cpp">
+    <ClCompile Include="source\graphics\PostProcessBackend.cpp">
       <Filter>Source Files\graphics</Filter>
     </ClCompile>
     <!-- particles -->
-    <ClCompile Include="source\particles\ParticleSystem.cpp">
+    <ClCompile Include="source\particles\GpuParticleBackend.cpp">
       <Filter>Source Files\particles</Filter>
     </ClCompile>
     <!-- assets -->
@@ -221,10 +224,10 @@
       <Filter>Source Files\systems</Filter>
     </ClCompile>
     <!-- lighting -->
-    <ClCompile Include="source\lighting\Light.cpp">
+    <ClCompile Include="source\lighting\LightSource.cpp">
       <Filter>Source Files\lighting</Filter>
     </ClCompile>
-    <ClCompile Include="source\lighting\PointLight.cpp">
+    <ClCompile Include="source\lighting\PointLightSource.cpp">
       <Filter>Source Files\lighting</Filter>
     </ClCompile>
     <!-- services -->
@@ -311,7 +314,6 @@
     <ClInclude Include="include\ecs\IComponentArray.h"><Filter>Header Files\ecs</Filter></ClInclude>
     <ClInclude Include="include\ecs\ComponentType.h"><Filter>Header Files\ecs</Filter></ClInclude>
     <ClInclude Include="include\ecs\IECSystem.h"><Filter>Header Files\ecs</Filter></ClInclude>
-    <ClInclude Include="include\ecs\ISystem.h"><Filter>Header Files\ecs</Filter></ClInclude>
     <!-- components headers -->
     <ClInclude Include="include\components\Transform.h"><Filter>Header Files\components</Filter></ClInclude>
     <ClInclude Include="include\components\Tag.h"><Filter>Header Files\components</Filter></ClInclude>
@@ -341,14 +343,14 @@
     <ClInclude Include="include\graphics\RenderPass.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\GraphicsPipeline.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\Renderer.h"><Filter>Header Files\graphics</Filter></ClInclude>
-    <ClInclude Include="include\graphics\PostProcessor.h"><Filter>Header Files\graphics</Filter></ClInclude>
+    <ClInclude Include="include\graphics\PostProcessBackend.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\ShaderModule.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\GpuImage.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\Texture.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\Skybox.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <ClInclude Include="include\graphics\Cubemap.h"><Filter>Header Files\graphics</Filter></ClInclude>
     <!-- particles headers -->
-    <ClInclude Include="include\particles\ParticleSystem.h"><Filter>Header Files\particles</Filter></ClInclude>
+    <ClInclude Include="include\particles\GpuParticleBackend.h"><Filter>Header Files\particles</Filter></ClInclude>
     <ClInclude Include="include\particles\Particle.h"><Filter>Header Files\particles</Filter></ClInclude>
     <!-- assets headers -->
     <ClInclude Include="include\assets\AssetManager.h"><Filter>Header Files\assets</Filter></ClInclude>
@@ -370,8 +372,8 @@
     <ClInclude Include="include\physics\Line.h"><Filter>Header Files\physics</Filter></ClInclude>
     <ClInclude Include="include\physics\Collider.h"><Filter>Header Files\physics</Filter></ClInclude>
     <!-- lighting headers -->
-    <ClInclude Include="include\lighting\Light.h"><Filter>Header Files\lighting</Filter></ClInclude>
-    <ClInclude Include="include\lighting\PointLight.h"><Filter>Header Files\lighting</Filter></ClInclude>
+    <ClInclude Include="include\lighting\LightSource.h"><Filter>Header Files\lighting</Filter></ClInclude>
+    <ClInclude Include="include\lighting\PointLightSource.h"><Filter>Header Files\lighting</Filter></ClInclude>
     <!-- services headers -->
     <ClInclude Include="include\services\TimeService.h"><Filter>Header Files\services</Filter></ClInclude>
     <ClInclude Include="include\services\InputService.h"><Filter>Header Files\services</Filter></ClInclude>

@@ -11,17 +11,16 @@
 #include "graphics/VulkanContext.h"
 #include "graphics/Texture.h"
 #include "core/Common.h"
-#include "ecs/ISystem.h"
 
 namespace GE::Graphics {
 
 /**
- * @class PostProcessor
+ * @class PostProcessBackend
  * @brief Orchestrates offscreen HDR rendering, MSAA resolution, and fullscreen effects.
  * Manages the transition from high-poly scene geometry to a resolved 2D image
  * with effects like Bloom and refraction-ready snapshots.
  */
-class PostProcessor final : public ISystem{
+class PostProcessBackend final {
 public:
     // --- Layout and GraphicsPipeline Constants ---
     static constexpr uint32_t FULLSCREEN_TRI_VERTS = 3U;
@@ -32,7 +31,7 @@ public:
     /**
      * @brief Constructor: Initializes the post-processing framework.
      */
-    explicit PostProcessor(
+    explicit PostProcessBackend(
         const uint32_t inWidth,
         const uint32_t inHeight,
         const VkFormat inSwapChainFormat,
@@ -40,11 +39,11 @@ public:
         const VkSampleCountFlagBits inMsaaSamples
     );
 
-    ~PostProcessor();
+    ~PostProcessBackend();
 
     // RAII: Unique ownership of HDR and MSAA render targets
-    PostProcessor(const PostProcessor&) = delete;
-    PostProcessor& operator=(const PostProcessor&) = delete;
+    PostProcessBackend(const PostProcessBackend&) = delete;
+    PostProcessBackend& operator=(const PostProcessBackend&) = delete;
 
     // --- Core API ---
 
@@ -69,9 +68,6 @@ public:
     VkImageView getBackgroundImageView() const { return backgroundImageView; }
     VkSampler getBackgroundSampler() const { return backgroundSampler; }
     VkImage getResolveImage() const { return resolveImage; }
-
-    /** @brief Standard ISystem update override (Unused for this base class, as it requires command buffer context).*/
-    void update(float deltaTime) override { /* Interface stub */ }
 
 private:
     // Dependencies

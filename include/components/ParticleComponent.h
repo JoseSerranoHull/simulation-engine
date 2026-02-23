@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "particles/ParticleSystem.h"
+#include "particles/GpuParticleBackend.h"
 #include <memory>
 
 namespace GE::Components {
@@ -9,7 +9,7 @@ namespace GE::Components {
      */
     struct ParticleComponent {
         // Changing from unique_ptr to shared_ptr makes the component copyable
-        std::shared_ptr<ParticleSystem> system;
+        std::shared_ptr<GpuParticleBackend> system;
         bool enabled = true;
         glm::vec3 localOffset = glm::vec3(0.0f);
     };

@@ -1,15 +1,15 @@
-﻿#include "lighting/PointLight.h"
+﻿#include "lighting/PointLightSource.h"
 
 /**
  * @brief Non-inline destructor definition to satisfy OOP.25.
- * Ensures the virtual table for PointLight is established in this translation unit.
+ * Ensures the virtual table for PointLightSource is established in this translation unit.
  */
-PointLight::~PointLight() = default;
+PointLightSource::~PointLightSource() = default;
 
 /**
  * @brief Updates the light's position along a circular orbital path.
  */
-void PointLight::orbit(const float time, const float radius, const float speed, const float height) {
+void PointLightSource::orbit(const float time, const float radius, const float speed, const float height) {
     const double angle = static_cast<double>(time) * static_cast<double>(speed);
 
     // Step 1: Calculate new position using trigonometric orbital math
@@ -21,7 +21,7 @@ void PointLight::orbit(const float time, const float radius, const float speed, 
 /**
  * @brief Generates the View-Projection matrix for shadow mapping.
  */
-glm::mat4 PointLight::getLightSpaceMatrix() const {
+glm::mat4 PointLightSource::getLightSpaceMatrix() const {
     const glm::vec3 center{ ZERO_VAL, ZERO_VAL, ZERO_VAL };
     const glm::vec3 upVector{ ZERO_VAL, ONE_VAL, ZERO_VAL };
 

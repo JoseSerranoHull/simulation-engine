@@ -96,7 +96,7 @@ void DebugOverlay::init(GLFWwindow* const window, const VulkanDevice* const engi
   * Refactored to properly synchronize local UI state with InputService setters.
   */
 void DebugOverlay::update(InputService* const input, const PerformanceTracker* const stats,
-    PointLight* const light, const TimeService* const time,
+    PointLightSource* const light, const TimeService* const time,
     ClimateService* const climate) const
 {
     ImGui_ImplVulkan_NewFrame();

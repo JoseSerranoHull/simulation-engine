@@ -30,19 +30,20 @@ void Renderer::recordFrame(
     const VkExtent2D& extent,
     const Skybox* const skybox,
     GE::ECS::EntityManager* const em,
-    const PostProcessor* const postProcessor,
+    const PostProcessBackend* const postProcessor,
     const VkDescriptorSet globalDescriptorSet,
     const VkRenderPass shadowPass,
     const VkFramebuffer shadowFramebuffer,
-    const std::vector<GraphicsPipeline*>& pipelines
+    const std::vector<GraphicsPipeline*>& materialPipelines,
+    const GraphicsPipeline* shadowPipeline
 ) const {
     // Step 1: Shadow Mapping Pass (Depth-only)
     // Pulls data from MeshRenderers with "CastsShadows" flag
     recordShadowPass(cb, shadowPass, shadowFramebuffer,
-        pipelines.at(PIPELINE_IDX_SHADOW), globalDescriptorSet, em);
+        shadowPipeline, globalDescriptorSet, em);
 
     // Step 2: Main Opaque Pass (Scene geometry + Skybox)
-    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, pipelines, em);
+    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, materialPipelines, em);
 
     // Step 3: Resolve Synchronization Barrier
     // Required before copying the scene for Refraction/Glass effects
@@ -70,7 +71,7 @@ void Renderer::recordFrame(
 
     // Step 5: Transparent Pass
     // Records alpha-blended objects and generic Particle entities
-    recordTransparentPass(cb, extent, postProcessor, globalDescriptorSet, pipelines, em);
+    recordTransparentPass(cb, extent, postProcessor, globalDescriptorSet, materialPipelines, em);
 }
 
 // ========================================================================
@@ -140,7 +141,7 @@ void Renderer::recordOpaquePass(
     const VkCommandBuffer cb,
     const VkExtent2D& extent,
     const Skybox* const skybox,
-    const PostProcessor* const postProcessor,
+    const PostProcessBackend* const postProcessor,
     const VkDescriptorSet globalSet,
     const std::vector<GraphicsPipeline*>& pipelines,
     GE::ECS::EntityManager* const em
@@ -202,7 +203,7 @@ void Renderer::recordOpaquePass(
 void Renderer::recordTransparentPass(
     const VkCommandBuffer cb,
     const VkExtent2D& extent,
-    const PostProcessor* const postProcessor,
+    const PostProcessBackend* const postProcessor,
     const VkDescriptorSet globalSet,
     const std::vector<GraphicsPipeline*>& pipelines,
     GE::ECS::EntityManager* const em

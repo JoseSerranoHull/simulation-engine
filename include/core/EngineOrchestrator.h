@@ -24,7 +24,7 @@
 // Scene & Infrastructure Includes
 #include "scene/Scene.h"
 #include "assets/Model.h"
-#include "graphics/PostProcessor.h"
+#include "graphics/PostProcessBackend.h"
 #include "graphics/Skybox.h"
 #include "graphics/Cubemap.h"
 #include "core/Common.h"
@@ -84,14 +84,11 @@ public:
     /** @brief Accessor for the Vulkan Engine hardware layer. */
     GE::Graphics::VulkanDevice* GetVulkanDevice() const { return vulkanEngine.get(); }
 
-    /** @brief Accessor for the loaded graphics pipelines. */
-    const std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>>& GetPipelines() const { return pipelines; }
-
     /** @brief Provides access to the most recent global uniform data for compute systems. */
     const UniformBufferObject& GetCurrentUBO() const { return currentUBO; }
 
 	/** @brief Accessor for the post-processing. */
-    GE::Graphics::PostProcessor* GetPostProcessor() const { return postProcessor.get(); }
+    GE::Graphics::PostProcessBackend* GetPostProcessBackend() const { return postProcessor.get(); }
 
 	/** @brief Accessor for the skybox. */
     GE::Graphics::Skybox* GetSkybox() const { return skybox.get(); }
@@ -127,16 +124,15 @@ private:
     std::unique_ptr<DebugOverlay> uiManager;
     std::unique_ptr<AssetManager> assetManager;
 
-    // --- Shared Registries (Cleared on Scenario Change) ---
-    std::vector<GE::Assets::Mesh*> meshes;
-    std::vector<std::unique_ptr<GE::Assets::Model>> ownedModels;
-    std::vector<std::unique_ptr<GE::Graphics::ShaderModule>> shaderModules;
-    std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>> pipelines;
+    // --- Engine-Scoped Shadow Pipeline ---
+    std::unique_ptr<GE::Graphics::ShaderModule> m_shadowVert;
+    std::unique_ptr<GE::Graphics::ShaderModule> m_shadowFrag;
+    std::unique_ptr<GE::Graphics::GraphicsPipeline> m_shadowPipeline;
 
     // --- Global Scene Resources ---
     UniformBufferObject currentUBO;
     std::unique_ptr<GE::Scene::Scene> scene;
-    std::unique_ptr<GE::Graphics::PostProcessor> postProcessor;
+    std::unique_ptr<GE::Graphics::PostProcessBackend> postProcessor;
     std::unique_ptr<GE::Graphics::Skybox> skybox;
     std::unique_ptr<GE::Graphics::Cubemap> skyboxTexture;
 
@@ -148,7 +144,6 @@ private:
     // --- Internal Initialization Helpers ---
     void initWindow(char const* const title);
     void initVulkan();
-    void createGraphicsPipelines();
     // void loadAssets(); Due to now being agnostic, the assets are loaded in the SceneLoader
     void initSkybox();
 

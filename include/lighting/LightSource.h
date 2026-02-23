@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 /* parasoft-begin-suppress ALL */
-#include "ecs/ISystem.h"
 #include "core/libs.h"
 /* parasoft-end-suppress ALL */
 
@@ -11,7 +10,7 @@
  * Provides core properties for color and intensity, serving as the foundation
  * for Point, Directional, and Spot lights.
  */
-class Light : public ISystem {
+class LightSource {
 public:
     static constexpr float DEFAULT_INTENSITY = 1.0f;
 
@@ -23,18 +22,18 @@ public:
     /**
      * @brief Constructor for base light properties.
      */
-    Light(const glm::vec3& inColor, const float inIntensity)
+    LightSource(const glm::vec3& inColor, const float inIntensity)
         : color(inColor), intensity(inIntensity)
     {
     }
 
     /** @brief Virtual destructor ensuring safe cleanup for derived classes. */
-    virtual ~Light();
+    virtual ~LightSource();
 
-    // Standard RAII: Data-classes allow default copying/assignment 
+    // Standard RAII: Data-classes allow default copying/assignment
     // to facilitate easy passing between simulation and UBO updates.
-    Light(const Light&) = default;
-    Light& operator=(const Light&) = default;
+    LightSource(const LightSource&) = default;
+    LightSource& operator=(const LightSource&) = default;
 
     // --- Accessors ---
 
@@ -63,6 +62,4 @@ public:
         intensity = i;
     }
 
-	/** @brief Standard ISystem update override (Unused for this base class, as it requires command buffer context).*/
-    void update(float deltaTime) override { /* Interface stub */ }
 };

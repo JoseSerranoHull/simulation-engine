@@ -1,4 +1,4 @@
-﻿#include "particles/ParticleSystem.h"
+﻿#include "particles/GpuParticleBackend.h"
 
 using namespace GE::Graphics;
 
@@ -17,7 +17,7 @@ using namespace GE::Graphics;
 /**
  * @brief Constructor: Initializes the Compute simulation and Graphics rendering sub-systems.
  */
-ParticleSystem::ParticleSystem(
+GpuParticleBackend::GpuParticleBackend(
     const VkRenderPass renderPass,
     const VkDescriptorSetLayout inGlobalSetLayout,
     const std::string& compPath,
@@ -39,7 +39,7 @@ ParticleSystem::ParticleSystem(
 /**
  * @brief Destructor: Releases all GPU pipelines, layouts, and buffers.
  */
-ParticleSystem::~ParticleSystem() {
+GpuParticleBackend::~GpuParticleBackend() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
@@ -70,7 +70,7 @@ ParticleSystem::~ParticleSystem() {
 /**
  * @brief Records the Compute dispatch and memory barriers to sync with the Graphics pass.
  */
-void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float deltaTime, const bool spawnEnabled,
+void GpuParticleBackend::update(const VkCommandBuffer commandBuffer, const float deltaTime, const bool spawnEnabled,
     const float totalTime, const glm::vec3& lightColor, const glm::vec3& emitterPos)
 {
     this->lastEmitterPos = emitterPos;
@@ -115,7 +115,7 @@ void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float del
 /**
  * @brief Records drawing commands for the particles.
  */
-void ParticleSystem::draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const {
+void GpuParticleBackend::draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet globalDescriptorSet) const {
     if (graphicsPipeline == VK_NULL_HANDLE) { return; }
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
@@ -134,7 +134,7 @@ void ParticleSystem::draw(const VkCommandBuffer commandBuffer, const VkDescripto
 /**
  * @brief Retrieves dynamic light emitters from the GPU particle buffer for world-space lighting.
  */
-std::vector<SparkLight> ParticleSystem::getLightData() const {
+std::vector<SparkLight> GpuParticleBackend::getLightData() const {
     std::vector<SparkLight> lights(GE::EngineConstants::MAX_SPARK_LIGHTS);
     void* data{ nullptr };
 
@@ -176,7 +176,7 @@ std::vector<SparkLight> ParticleSystem::getLightData() const {
 // SECTION 3: INTERNAL INITIALIZATION
 // ========================================================================
 
-void ParticleSystem::createBuffers(const glm::vec3& spawnPos) {
+void GpuParticleBackend::createBuffers(const glm::vec3& spawnPos) {
     // Step 1: Generate initial particle state on the CPU
     std::vector<Particle> particles(GE::EngineConstants::PARTICLE_POOL_SIZE);
     const auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -227,7 +227,7 @@ void ParticleSystem::createBuffers(const glm::vec3& spawnPos) {
     static_cast<void>(vkMapMemory(context->device, uniformBufferMemory, 0ULL, sizeof(ParticleUBO), 0U, &uniformBufferMapped));
 }
 
-void ParticleSystem::createComputeDescriptors() {
+void GpuParticleBackend::createComputeDescriptors() {
     const std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
         VkDescriptorSetLayoutBinding{ BINDING_UBO, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1U, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
         VkDescriptorSetLayoutBinding{ BINDING_STORAGE, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1U, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
@@ -268,7 +268,7 @@ void ParticleSystem::createComputeDescriptors() {
     vkUpdateDescriptorSets(context->device, static_cast<uint32_t>(writes.size()), writes.data(), 0U, nullptr);
 }
 
-void ParticleSystem::createComputePipeline(const std::string& path) {
+void GpuParticleBackend::createComputePipeline(const std::string& path) {
     const ShaderModule compShader(path, VK_SHADER_STAGE_COMPUTE_BIT);
 
     VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -284,14 +284,14 @@ void ParticleSystem::createComputePipeline(const std::string& path) {
     pipelineInfo.layout = computePipelineLayout;
 
     if (vkCreateComputePipelines(context->device, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &computePipeline) != VK_SUCCESS) {
-        throw std::runtime_error("ParticleSystem: Failed to create compute pipeline!");
+        throw std::runtime_error("GpuParticleBackend: Failed to create compute pipeline!");
     }
 }
 
 /**
  * @brief Constructs the graphics pipeline for rendering particles.
  */
-void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const std::string& vPath, const std::string& fPath) {
+void GpuParticleBackend::createGraphicsPipeline(const VkRenderPass renderPass, const std::string& vPath, const std::string& fPath) {
     // Step 1: Shader Module Assembly
     const ShaderModule vertShader(vPath, VK_SHADER_STAGE_VERTEX_BIT);
     const ShaderModule fragShader(fPath, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -305,7 +305,7 @@ void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const
     pipelineLayoutInfo.pSetLayouts = layouts.data();
 
     if (vkCreatePipelineLayout(context->device, &pipelineLayoutInfo, nullptr, &graphicsPipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("ParticleSystem: Failed to create graphics pipeline layout!");
+        throw std::runtime_error("GpuParticleBackend: Failed to create graphics pipeline layout!");
     }
 
     // Step 3: Vertex Input - Reading directly from the simulated Storage Buffer
@@ -367,6 +367,6 @@ void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const
     );
 
     if (vkCreateGraphicsPipelines(context->device, VK_NULL_HANDLE, 1U, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-        throw std::runtime_error("ParticleSystem: Failed to create graphics pipeline!");
+        throw std::runtime_error("GpuParticleBackend: Failed to create graphics pipeline!");
     }
 }

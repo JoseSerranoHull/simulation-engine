@@ -72,7 +72,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     assetManager->setDescriptorPool(resources->getDescriptorPool());
 
     // --- Step 5: High-Level Orchestrators ---
-    postProcessor = std::make_unique<PostProcessor>(
+    postProcessor = std::make_unique<PostProcessBackend>(
         vulkanEngine->getSwapChainExtent().width, vulkanEngine->getSwapChainExtent().height,
         vulkanEngine->getSwapChainFormat(), vulkanEngine->getFinalRenderPass(), vulkanEngine->getMsaaSamples()
     );
@@ -116,7 +116,16 @@ EngineOrchestrator::~EngineOrchestrator() {
  * @brief Triggers the creation of pipelines and synchronization of descriptor sets.
  */
 void EngineOrchestrator::initVulkan() {
-    createGraphicsPipelines();
+    // Shadow pipeline is engine-lifetime (shared across all scenarios)
+    m_shadowVert = std::make_unique<GE::Graphics::ShaderModule>("./shaders/shadow_vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    m_shadowFrag = std::make_unique<GE::Graphics::ShaderModule>("./shaders/shadow_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    m_shadowPipeline = std::make_unique<GE::Graphics::GraphicsPipeline>(
+        resources->getShadowRenderPass(), context->materialSetLayout,
+        m_shadowVert.get(), m_shadowFrag.get(),
+        true, true, true, VK_SAMPLE_COUNT_1_BIT
+    );
+
+    postProcessor->createPipeline(vulkanEngine->getFinalRenderPass());
     resources->updateDescriptorSets(vulkanEngine.get(), postProcessor.get());
 }
 
@@ -228,16 +237,20 @@ void EngineOrchestrator::drawFrame() {
         em->Update(scaledDelta, cb);
     }
 
-    // Prepare raw pipelines for renderer
+    // Collect scenario-scoped material pipelines for this frame
     std::vector<GraphicsPipeline*> rawPipelines;
-    for (const auto& p : pipelines) rawPipelines.push_back(p.get());
+    if (activeScenario) {
+        for (const auto& p : activeScenario->GetPipelines()) {
+            rawPipelines.push_back(p.get());
+        }
+    }
 
     // Record Draw Calls: Renderer queries ECS for meshes/particles
     renderer->recordFrame(
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
         em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
         resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
-        rawPipelines
+        rawPipelines, m_shadowPipeline.get()
     );
 
     // --- Step 5: UI & Final Render Pass ---
@@ -438,11 +451,10 @@ void EngineOrchestrator::cleanup() {
     postProcessor.reset();
     scene.reset();
 
-    // 5. Registries
-    ownedModels.clear();
-    pipelines.clear();
-    shaderModules.clear();
-    meshes.clear();
+    // 5. Engine-scoped shadow pipeline
+    m_shadowPipeline.reset();
+    m_shadowVert.reset();
+    m_shadowFrag.reset();
 
     // 6. Managers
     statsManager.reset();
@@ -514,53 +526,6 @@ void EngineOrchestrator::mouseCallback(GLFWwindow* pWindow, double xpos, double 
 // ========================================================================
 // SECTION 8: GRAPHICS & ASSET HELPERS
 // ========================================================================
-
-/**
- * @brief Initializes graphics pipelines for Opaque, Transparent, and Shadow passes.
- */
-void EngineOrchestrator::createGraphicsPipelines() {
-    VulkanContext* ctx = ServiceLocator::GetContext();
-
-    if (postProcessor == nullptr) {
-        throw std::runtime_error("EngineOrchestrator: Cannot create pipelines, PostProcessor is null!");
-    }
-
-    const VkRenderPass offscreenPass = postProcessor->getOffscreenRenderPass();
-    const VkRenderPass transPass = postProcessor->getTransparentRenderPass();
-    const VkSampleCountFlagBits msaa = ctx->msaaSamples;
-
-    shaderModules.clear();
-    pipelines.clear();
-
-    // 1. Load Agnostic Shader Modules
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/sand_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/base_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/glass_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/transparent_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/shadow_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/shadow_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-
-    // 2. Instantiate Pipelines in RAII container
-    // Opaque
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[1].get(), true, true, true, msaa));
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[2].get(), true, true, true, msaa));
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[3].get(), true, true, true, msaa));
-
-    // Transparent (depthWrite = FALSE)
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(transPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[4].get(), true, false, false, msaa));
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[5].get(), false, false, true, msaa));
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(transPass, ctx->materialSetLayout, shaderModules[6].get(), shaderModules[7].get(), true, false, false, msaa));
-
-    // Shadow Map (1x Sample Count required)
-    pipelines.push_back(std::make_unique<GraphicsPipeline>(resources->getShadowRenderPass(), ctx->materialSetLayout,
-        shaderModules[8].get(), shaderModules[9].get(), true, true, true, VK_SAMPLE_COUNT_1_BIT));
-
-    postProcessor->createPipeline(vulkanEngine->getFinalRenderPass());
-}
 
 /**
  * @brief Initializes the environmental skybox.

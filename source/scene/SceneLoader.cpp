@@ -16,7 +16,7 @@ using namespace GE::Assets;
 #include "components/SkyboxComponent.h"
 /* parasoft-end-suppress ALL */
 
-class ParticleSystem;
+class GpuParticleBackend;
 
 namespace GE::Scene {
 
@@ -330,7 +330,7 @@ namespace GE::Scene {
         }
 
         // 2. Fetch dependencies required by the ParticleSystem constructor
-        VkRenderPass transPass = exp->GetPostProcessor()->getTransparentRenderPass();
+        VkRenderPass transPass = exp->GetPostProcessBackend()->getTransparentRenderPass();
         VkDescriptorSetLayout globalLayout = ctx->globalSetLayout;
         VkSampleCountFlagBits msaa = ctx->msaaSamples;
 
@@ -345,7 +345,7 @@ namespace GE::Scene {
 
         // 4. AGNOSTIC BUILDER CALL
         // The constructor handles the heavy lifting of GPU pipeline creation
-        auto system = std::make_unique<ParticleSystem>(
+        auto system = std::make_unique<GpuParticleBackend>(
             transPass,
             globalLayout,
             comp,

@@ -12,7 +12,7 @@
 #include "services/PerformanceTracker.h"
 #include "services/TimeService.h"
 #include "services/ClimateService.h"
-#include "lighting/PointLight.h"
+#include "lighting/PointLightSource.h"
 #include "core/ServiceLocator.h"
 #include "scene/Scenario.h"
 
@@ -52,7 +52,7 @@ public:
     void update(
         InputService* const input,
         const PerformanceTracker* const stats,
-        PointLight* const light,
+        PointLightSource* const light,
         const TimeService* const time,
         ClimateService* const climate
     ) const;

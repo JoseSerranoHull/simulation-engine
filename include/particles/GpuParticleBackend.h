@@ -10,18 +10,17 @@
 #include "particles/Particle.h"
 #include "graphics/ShaderModule.h"
 #include "core/Common.h"
-#include "ecs/ISystem.h"
 #include "graphics/VulkanContext.h"
 #include "core/ServiceLocator.h"
 
 /**
- * @class ParticleSystem
+ * @class GpuParticleBackend
  * @brief Manages GPU-based particle simulation (Compute) and rendering (Graphics).
  * * This system utilizes a Storage Buffer (SSBO) to store particle state, allowing
  * the Compute shader to update physics while the Graphics shader reads them for
  * instantiation and rendering.
  */
-class ParticleSystem final : public ISystem{
+class GpuParticleBackend final {
 public:
     // --- Lifecycle ---
 
@@ -29,7 +28,7 @@ public:
      * @brief Full constructor for the Particle System.
      * Orchestrates the creation of compute simulation and graphics rendering pipelines.
      */
-    explicit ParticleSystem(
+    explicit GpuParticleBackend(
         const VkRenderPass renderPass,
         const VkDescriptorSetLayout inGlobalSetLayout,
         const std::string& compPath,
@@ -41,11 +40,11 @@ public:
     );
 
     /** @brief Destructor: Releases all compute and graphics GPU resources. */
-    ~ParticleSystem();
+    ~GpuParticleBackend();
 
     // RAII: Prevent duplication of GPU handles and mapped memory to maintain ownership.
-    ParticleSystem(const ParticleSystem&) = delete;
-    ParticleSystem& operator=(const ParticleSystem&) = delete;
+    GpuParticleBackend(const GpuParticleBackend&) = delete;
+    GpuParticleBackend& operator=(const GpuParticleBackend&) = delete;
 
     // --- Core Execution ---
 
@@ -66,11 +65,6 @@ public:
      * @brief Retrieves dynamic light data from the simulated particles for UBO injection.
      */
     std::vector<SparkLight> getLightData() const;
-
-	/** @brief Standard ISystem update override (Unused for this system, as it requires command buffer context).
-	* The actual update logic is handled in the overloaded update() method that accepts a command buffer.
-	*/
-    void update(float deltaTime) override { /* Interface stub */ }
 
 private:
     /**

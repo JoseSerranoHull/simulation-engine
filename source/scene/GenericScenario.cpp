@@ -13,14 +13,16 @@ namespace GE {
         auto* em = ServiceLocator::GetEntityManager();
         auto* am = ServiceLocator::GetAssetManager();
         auto* scene = ServiceLocator::GetScene();
-		auto* experience = ServiceLocator::GetExperience();
 
-        // 1. Agnostic Initialization: Load everything from data
+        // 1. Build scenario-scoped pipelines from the active PostProcessBackend
+        createMaterialPipelines();
+
+        // 2. Agnostic Initialization: Load everything from data
         if (!m_configPath.empty()) {
             Scene::SceneLoader loader;
             // The loader populates the EntityManager and Scene registry
             loader.load(m_configPath, em, am, scene,
-                experience->GetPipelines(),
+                m_pipelines,
                 cmd, sb, sm, m_ownedModels);
         }
 
@@ -95,8 +97,10 @@ namespace GE {
         // 1. Cleanup Systems unique to this scenario
         em->UnregisterSystemByID(Systems::PhysicsSystem().GetID());
 
-        // 2. Memory Cleanup: Clearing m_ownedModels releases GPU buffers
+        // 2. Memory Cleanup: release GPU resources owned by this scenario
         m_ownedModels.clear();
+        m_pipelines.clear();
+        m_shaderModules.clear();
 
         GE_LOG_INFO("GenericScenario: Unloaded " + m_configPath);
     }

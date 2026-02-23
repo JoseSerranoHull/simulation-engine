@@ -11,7 +11,7 @@
 #include "graphics/VulkanContext.h"
 #include "graphics/FrameSyncManager.h"
 #include "assets/AssetManager.h"
-#include "graphics/PostProcessor.h"
+#include "graphics/PostProcessBackend.h"
 
 namespace GE::Graphics {
 
@@ -54,7 +54,7 @@ public:
     void createUniformBuffers(const uint32_t imageCount);
 
     /** @brief Links allocated UBOs and shadow maps to the GPU Descriptor Sets. */
-    void updateDescriptorSets(const VulkanDevice* const engine, const PostProcessor* const postProcessor);
+    void updateDescriptorSets(const VulkanDevice* const engine, const PostProcessBackend* const postProcessor);
 
     /** @brief Safely releases all managed Vulkan handles and mapped memory. */
     void cleanup();

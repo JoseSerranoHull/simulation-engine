@@ -221,7 +221,7 @@ void GpuResourceManager::createUniformBuffers(const uint32_t imageCount) {
 /**
  * @brief Links allocated UBOs and shadow maps to the GPU Descriptor Sets.
  */
-void GpuResourceManager::updateDescriptorSets(const VulkanDevice* const engine, const PostProcessor* const postProcessor) {
+void GpuResourceManager::updateDescriptorSets(const VulkanDevice* const engine, const PostProcessBackend* const postProcessor) {
     const uint32_t imageCount = engine->getSwapChainImageCount();
 
     VulkanContext* context = ServiceLocator::GetContext();

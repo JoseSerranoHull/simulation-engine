@@ -1,16 +1,16 @@
 ﻿#pragma once
 
 /* parasoft-begin-suppress ALL */
-#include "lighting/Light.h"
+#include "lighting/LightSource.h"
 #include <cmath>
 /* parasoft-end-suppress ALL */
 
 /**
- * @class PointLight
+ * @class PointLightSource
  * @brief Represents a dynamic point light source with orbital animation.
  * Refactored to satisfy CODSTA-MCPP.52, OOP.25, and OPT.14.
  */
-class PointLight final : public Light {
+class PointLightSource final : public LightSource {
 public:
     // --- Projection Constants ---
     static constexpr float ORTHO_RANGE = 5.0f;
@@ -24,18 +24,18 @@ private:
     glm::vec3 position{ ZERO_VAL, ZERO_VAL, ZERO_VAL };
 
 public:
-    PointLight(const glm::vec3& inPosition, const glm::vec3& inColor, const float inIntensity)
-        : Light(inColor, inIntensity), position(inPosition)
+    PointLightSource(const glm::vec3& inPosition, const glm::vec3& inColor, const float inIntensity)
+        : LightSource(inColor, inIntensity), position(inPosition)
     {
     }
 
     /** * @brief Destructor marked 'final' to satisfy CODSTA-MCPP.52.
      * Implementation moved to .cpp to satisfy OOP.25.
      */
-    ~PointLight() override final;
+    ~PointLightSource() override final;
 
-    PointLight(const PointLight&) = default;
-    PointLight& operator=(const PointLight&) = default;
+    PointLightSource(const PointLightSource&) = default;
+    PointLightSource& operator=(const PointLightSource&) = default;
 
     // --- Accessors ---
 

@@ -520,7 +520,7 @@ void VulkanDevice::createImageViews() {
 void VulkanDevice::createDepthResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
-    depthBuffer = std::make_unique<Image>(
+    depthBuffer = std::make_unique<GpuImage>(
         swapChainObj->getExtent().width,
         swapChainObj->getExtent().height,
         VK_SAMPLE_COUNT_1_BIT,
@@ -575,7 +575,7 @@ void VulkanDevice::cleanupSwapChain() {
         swapChainObj->cleanup();
     }
 
-    // Resetting unique_ptr triggers the Image destructor (vkDestroyImage)
+    // Resetting unique_ptr triggers the GpuImage destructor (vkDestroyImage)
     depthBuffer.reset();
 }
 

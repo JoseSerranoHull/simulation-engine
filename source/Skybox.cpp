@@ -158,7 +158,7 @@ void Skybox::createDescriptorResources() const {
 }
 
 /**
- * @brief Constructs the specialized Graphics Pipeline for the Skybox.
+ * @brief Constructs the specialized Graphics GraphicsPipeline for the Skybox.
  */
 void Skybox::createPipeline(const VkRenderPass renderPass) const {
     // Step 1: Load Skybox Shaders
@@ -171,7 +171,7 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
 
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // Step 2: Pipeline Layout Creation (Primary exception boundary)
+    // Step 2: GraphicsPipeline Layout Creation (Primary exception boundary)
     const std::array<VkDescriptorSetLayout, 2U> layouts = {
         context->globalSetLayout,
         descriptorSetLayout
@@ -224,7 +224,7 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
     colorBlending.attachmentCount = GE::EngineConstants::COUNT_ONE;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Step 4: Finalize Pipeline Creation
+    // Step 4: Finalize GraphicsPipeline Creation
     const VkGraphicsPipelineCreateInfo pipelineInfo = VulkanUtils::preparePipelineCreateInfo(
         shaderStages, &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
         &multisampling, &depthStencil, &colorBlending, &dynamicState,

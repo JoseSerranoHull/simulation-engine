@@ -14,7 +14,7 @@ RenderPass::RenderPass(const VkRenderPass pass)
 /**
  * @brief Destructor: Performs the mandatory Vulkan cleanup.
  * Validation layers will flag an error if a Render Pass is destroyed while
- * commands using it are still in flight; ensure SyncManager has fenced the frame.
+ * commands using it are still in flight; ensure FrameSyncManager has fenced the frame.
  */
 RenderPass::~RenderPass() {
     VulkanContext* context = ServiceLocator::GetContext();

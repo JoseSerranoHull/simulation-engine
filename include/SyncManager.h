@@ -12,11 +12,11 @@
 namespace GE::Graphics {
 
 /**
- * @class SyncManager
+ * @class FrameSyncManager
  * @brief Orchestrates per-frame synchronization primitives (Semaphores, Fences)
  * and command buffer lifecycles to ensure safe GPU/CPU execution.
  */
-class SyncManager final {
+class FrameSyncManager final {
 public:
     /**
      * @brief Define the maximum number of frames that can be processed concurrently.
@@ -26,12 +26,12 @@ public:
 
     // --- Lifecycle ---
 
-    explicit SyncManager();
-    ~SyncManager();
+    explicit FrameSyncManager();
+    ~FrameSyncManager();
 
     // RAII: Prevent accidental copies of synchronization handles
-    SyncManager(const SyncManager&) = delete;
-    SyncManager& operator=(const SyncManager&) = delete;
+    FrameSyncManager(const FrameSyncManager&) = delete;
+    FrameSyncManager& operator=(const FrameSyncManager&) = delete;
 
     void init(uint32_t maxFrames, uint32_t imageCount);
 
@@ -47,7 +47,7 @@ public:
         return commandBuffers.at(index);
     }
 
-    /** @brief Returns the 'Image Available' semaphore for a specific frame. */
+    /** @brief Returns the 'GpuImage Available' semaphore for a specific frame. */
     VkSemaphore getImageAvailableSemaphore(const uint32_t index) const {
         return imageAvailableSemaphores.at(index);
     }

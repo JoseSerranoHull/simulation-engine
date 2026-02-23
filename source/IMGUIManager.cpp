@@ -12,13 +12,13 @@ using namespace GE::Assets;
 /**
  * @brief Constructor: Links the UI manager to the centralized Vulkan context.
  */
-IMGUIManager::IMGUIManager()
+DebugOverlay::DebugOverlay()
     : imguiPool(VK_NULL_HANDLE) { }
 
 /**
  * @brief Destructor: Triggers the cleanup of ImGui and Vulkan handles.
  */
-IMGUIManager::~IMGUIManager() {
+DebugOverlay::~DebugOverlay() {
     try {
         cleanup();
     }
@@ -30,7 +30,7 @@ IMGUIManager::~IMGUIManager() {
 /**
  * @brief Initializes the ImGui library and creates a dedicated descriptor pool.
  */
-void IMGUIManager::init(GLFWwindow* const window, const VulkanDevice* const engine) {
+void DebugOverlay::init(GLFWwindow* const window, const VulkanDevice* const engine) {
     // Step 1: Define Descriptor Pool for UI logic.
     // We allocate a large pool to accommodate potential external textures in the UI.
     static constexpr uint32_t POOL_SIZE = 1000U;
@@ -57,7 +57,7 @@ void IMGUIManager::init(GLFWwindow* const window, const VulkanDevice* const engi
     VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkCreateDescriptorPool(context->device, &pool_info, nullptr, &imguiPool) != VK_SUCCESS) {
-        throw std::runtime_error("IMGUIManager: Failed to create descriptor pool!");
+        throw std::runtime_error("DebugOverlay: Failed to create descriptor pool!");
     }
 
     // Step 2: Initialize ImGui Context and GLFW link.
@@ -84,7 +84,7 @@ void IMGUIManager::init(GLFWwindow* const window, const VulkanDevice* const engi
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
     if (!ImGui_ImplVulkan_Init(&init_info)) {
-        throw std::runtime_error("IMGUIManager: Failed to initialize Vulkan backend!");
+        throw std::runtime_error("DebugOverlay: Failed to initialize Vulkan backend!");
     }
 }
 
@@ -93,11 +93,11 @@ void IMGUIManager::init(GLFWwindow* const window, const VulkanDevice* const engi
  */
  /**
   * @brief Constructs the diagnostic UI widgets for the current frame.
-  * Refactored to properly synchronize local UI state with InputManager setters.
+  * Refactored to properly synchronize local UI state with InputService setters.
   */
-void IMGUIManager::update(InputManager* const input, const StatsManager* const stats,
-    PointLight* const light, const TimeManager* const time,
-    ClimateManager* const climate) const
+void DebugOverlay::update(InputService* const input, const PerformanceTracker* const stats,
+    PointLight* const light, const TimeService* const time,
+    ClimateService* const climate) const
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -174,7 +174,7 @@ void IMGUIManager::update(InputManager* const input, const StatsManager* const s
         if (ImGui::CollapsingHeader("Simulation Logic")) {
             if (time != nullptr) {
                 ImGui::Text("Global Timestep: %.2fx", static_cast<double>(time->getScale()));
-                if (ImGui::Button("Reset Clock")) { /* Logic handled via InputManager 'r' */ }
+                if (ImGui::Button("Reset Clock")) { /* Logic handled via InputService 'r' */ }
             }
 
             // Note: Once the activeScenario is fully integrated, 
@@ -242,7 +242,7 @@ void IMGUIManager::update(InputManager* const input, const StatsManager* const s
 /**
  * @brief Implementation of the top-level Menu Bar.
  */
-void IMGUIManager::DrawMainMenuBar(InputManager* const input) const {
+void DebugOverlay::DrawMainMenuBar(InputService* const input) const {
     auto* experience = ServiceLocator::GetExperience();
 
     // Fulfills Requirement: ImGui Main Menu Bar
@@ -312,7 +312,7 @@ void IMGUIManager::DrawMainMenuBar(InputManager* const input) const {
 /**
  * @brief Records ImGui render commands into the current frame's command buffer.
  */
-void IMGUIManager::draw(const VkCommandBuffer cb) const {
+void DebugOverlay::draw(const VkCommandBuffer cb) const {
     ImDrawData* const data = ImGui::GetDrawData();
     if (data != nullptr) {
         ImGui_ImplVulkan_RenderDrawData(data, cb);
@@ -322,7 +322,7 @@ void IMGUIManager::draw(const VkCommandBuffer cb) const {
 /**
  * @brief Shuts down ImGui and destroys the local descriptor pool.
  */
-void IMGUIManager::cleanup() {
+void DebugOverlay::cleanup() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {

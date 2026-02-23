@@ -21,7 +21,7 @@ class ParticleSystem;
 namespace GE::Scene {
 
     void SceneLoader::load(const std::string& path, GE::ECS::EntityManager* em, AssetManager* am, GE::Scene::Scene* scene,
-        const std::vector<std::unique_ptr<Pipeline>>& pipelines, VkCommandBuffer setupCmd,
+        const std::vector<std::unique_ptr<GraphicsPipeline>>& pipelines, VkCommandBuffer setupCmd,
         std::vector<VkBuffer>& stagingBufs, std::vector<VkDeviceMemory>& stagingMems, std::vector<std::unique_ptr<Model>>& outOwnedModels) {
 
         std::ifstream file(path);
@@ -105,7 +105,7 @@ namespace GE::Scene {
         }
     }
 
-    void GE::Scene::SceneLoader::handleMaterial(const std::string& id, const std::map<std::string, std::string>& props, AssetManager* am, const std::vector<std::unique_ptr<Pipeline>>& pipelines) {
+    void GE::Scene::SceneLoader::handleMaterial(const std::string& id, const std::map<std::string, std::string>& props, AssetManager* am, const std::vector<std::unique_ptr<GraphicsPipeline>>& pipelines) {
 
         // Helper to fetch texture from registry or fallback
         auto getSafeTex = [&](const std::string& key, const std::string& fallbackID) {
@@ -116,7 +116,7 @@ namespace GE::Scene {
             };
 
         // Determine which pipeline index to use (0 = Opaque, 1 = Checkerboard)
-        int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 0;
+        int pipeIdx = props.count("GraphicsPipeline") ? std::stoi(props.at("GraphicsPipeline")) : 0;
 
         // UNIFIED CREATION: Procedural materials no longer ignore custom textures
         auto mat = am->createMaterial(
@@ -263,8 +263,8 @@ namespace GE::Scene {
             if (model) {
                 for (auto& meshPtr : model->getMeshes()) {
                     GE::Components::SubMesh sub;
-                    sub.mesh = meshPtr.get();
-                    sub.material = meshPtr->getMaterial();
+                    sub.m_mesh = meshPtr.get();
+                    sub.m_material = meshPtr->getMaterial();
                     mr.subMeshes.push_back(sub);
                 }
                 outOwnedModels.push_back(std::move(model));

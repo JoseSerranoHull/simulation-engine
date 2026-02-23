@@ -35,13 +35,13 @@
 #include "../include/VulkanResourceManager.h"
 
 /**
- * @class Experience
+ * @class EngineOrchestrator
  * @brief master orchestrator for the Agnostic Game Engine.
  * * Orchestrates the relationship between hardware initialization, ECS execution,
  * and scenario lifecycle. This class no longer contains scenario-specific data
  * like particle systems or lights; those are now managed as entities within the ECS.
  */
-class Experience final {
+class EngineOrchestrator final {
 public:
     // --- Named Constants ---
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2U;
@@ -51,14 +51,14 @@ public:
     // --- Lifecycle Management ---
 
     /** @brief Initializes core systems (Vulkan, ECS, Managers) and windows. */
-    Experience(const uint32_t width, const uint32_t height, char const* const title);
+    EngineOrchestrator(const uint32_t width, const uint32_t height, char const* const title);
 
     /** @brief Triggers a full teardown of the engine and hardware handles. */
-    ~Experience();
+    ~EngineOrchestrator();
 
     // RAII: Unique ownership of hardware handles.
-    Experience(const Experience&) = delete;
-    Experience& operator=(const Experience&) = delete;
+    EngineOrchestrator(const EngineOrchestrator&) = delete;
+    EngineOrchestrator& operator=(const EngineOrchestrator&) = delete;
 
     // --- Core Execution ---
 
@@ -85,7 +85,7 @@ public:
     GE::Graphics::VulkanDevice* GetVulkanDevice() const { return vulkanEngine.get(); }
 
     /** @brief Accessor for the loaded graphics pipelines. */
-    const std::vector<std::unique_ptr<GE::Graphics::Pipeline>>& GetPipelines() const { return pipelines; }
+    const std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>>& GetPipelines() const { return pipelines; }
 
     /** @brief Provides access to the most recent global uniform data for compute systems. */
     const UniformBufferObject& GetCurrentUBO() const { return currentUBO; }
@@ -112,26 +112,26 @@ private:
     // Core Hardware Contexts
     std::unique_ptr<GE::Graphics::VulkanContext> context;
     std::unique_ptr<GE::Graphics::VulkanDevice> vulkanEngine;
-    std::unique_ptr<GE::Graphics::VulkanResourceManager> resources;
-    std::unique_ptr<SystemFactory> systemFactory;
+    std::unique_ptr<GE::Graphics::GpuResourceManager> resources;
+    std::unique_ptr<EngineServiceRegistry> systemFactory;
 
     // --- Logic & Orchestration ---
     std::unique_ptr<GE::Scenario> activeScenario; // The "Soul" of the current level
-    std::unique_ptr<TimeManager> timeManager;
-    std::unique_ptr<InputManager> inputManager;
-    std::unique_ptr<StatsManager> statsManager;
-    std::unique_ptr<ClimateManager> climateManager;
+    std::unique_ptr<TimeService> timeManager;
+    std::unique_ptr<InputService> inputManager;
+    std::unique_ptr<PerformanceTracker> statsManager;
+    std::unique_ptr<ClimateService> climateManager;
 
     // --- Rendering Sub-Systems ---
     std::unique_ptr<GE::Graphics::Renderer> renderer;
-    std::unique_ptr<IMGUIManager> uiManager;
+    std::unique_ptr<DebugOverlay> uiManager;
     std::unique_ptr<AssetManager> assetManager;
 
     // --- Shared Registries (Cleared on Scenario Change) ---
     std::vector<GE::Assets::Mesh*> meshes;
     std::vector<std::unique_ptr<GE::Assets::Model>> ownedModels;
     std::vector<std::unique_ptr<GE::Graphics::ShaderModule>> shaderModules;
-    std::vector<std::unique_ptr<GE::Graphics::Pipeline>> pipelines;
+    std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>> pipelines;
 
     // --- Global Scene Resources ---
     UniformBufferObject currentUBO;

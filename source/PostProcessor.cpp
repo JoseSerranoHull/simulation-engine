@@ -22,7 +22,7 @@ PostProcessor::PostProcessor(const uint32_t inWidth, const uint32_t inHeight,
 
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // 3. Initialize Background Snapshot Image (Refraction Buffer)
+    // 3. Initialize Background Snapshot GpuImage (Refraction Buffer)
     // Uses 64-bit HDR precision (R16G16B16A16_SFLOAT) to match offscreen targets
     VulkanUtils::createImage(context->device, context->physicalDevice, width, height, GE::EngineConstants::COUNT_ONE,
         VK_SAMPLE_COUNT_1_BIT, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
@@ -64,7 +64,7 @@ PostProcessor::~PostProcessor() {
             // 1. Clean up transient frame-dependent resources (Images/Views)
             cleanupResources();
 
-            // 2. Destroy Permanent Pipeline Objects
+            // 2. Destroy Permanent GraphicsPipeline Objects
             if (pipeline != VK_NULL_HANDLE) {
                 vkDestroyPipeline(context->device, pipeline, nullptr);
                 pipeline = VK_NULL_HANDLE;
@@ -129,7 +129,7 @@ void PostProcessor::resize(const VkExtent2D& extent) {
  * This snapshot is used by the refraction shaders in the subsequent transparent pass.
  */
 void PostProcessor::copyScene(const VkCommandBuffer cb) const {
-    // 1. Transition Background Image: Shader Read -> Transfer Destination
+    // 1. Transition Background GpuImage: Shader Read -> Transfer Destination
     VulkanUtils::recordImageBarrier(cb, backgroundImage,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -147,7 +147,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
     vkCmdCopyImage(cb, resolveImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         backgroundImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1U, &copyRegion);
 
-    // 3. Transition Background Image: Transfer Destination -> Shader Read
+    // 3. Transition Background GpuImage: Transfer Destination -> Shader Read
     // Ready for consumption by glass and water refraction shaders
     VulkanUtils::recordImageBarrier(cb, backgroundImage,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -155,7 +155,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         GE::EngineConstants::COUNT_ONE);
 
-    // 4. Transition Resolve Image: Transfer Source -> Shader Read
+    // 4. Transition Resolve GpuImage: Transfer Source -> Shader Read
     // Synchronizes the HDR target for the following transparent pass
     VulkanUtils::recordImageBarrier(cb, resolveImage,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -170,7 +170,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
 void PostProcessor::createBackgroundResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // 1. Create Image and View
+    // 1. Create GpuImage and View
     VulkanUtils::createImage(context->device, context->physicalDevice, width, height, 1U,
         VK_SAMPLE_COUNT_1_BIT, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
         (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
@@ -203,7 +203,7 @@ void PostProcessor::draw(const VkCommandBuffer commandBuffer, const bool enableB
     const VkRect2D sc{ {0, 0}, {width, height} };
     vkCmdSetScissor(commandBuffer, 0, 1, &sc);
 
-    // 2. Bind the Post-FX Pipeline
+    // 2. Bind the Post-FX GraphicsPipeline
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     // 3. Bind Descriptors (Set 0: Resolved HDR Scene)
@@ -444,7 +444,7 @@ void PostProcessor::createPipeline(const VkRenderPass finalRenderPass) {
     const ShaderModule fragShader("./shaders/post_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
     const VkPipelineShaderStageCreateInfo shaderStages[2] = { vertShader.getStageInfo(), fragShader.getStageInfo() };
 
-    // --- 1. Pipeline Configuration State ---
+    // --- 1. GraphicsPipeline Configuration State ---
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 

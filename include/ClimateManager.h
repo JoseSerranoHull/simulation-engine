@@ -20,12 +20,12 @@ enum class WeatherState { SUMMER, RAIN, SNOW };
 enum class WeatherMode : int { AUTO = 0, SUMMER = 1, RAIN = 2, SNOW = 3 };
 
 /**
- * @class ClimateManager
+ * @class ClimateService
  * @brief Manages scene-wide environmental effects, including weather cycles and orbital lighting.
  * * Orchestrates the transition between different weather states, calculates time-of-day
  * sun positions, and maintains interpolation targets for various visual components.
  */
-class ClimateManager final : public ISystem {
+class ClimateService final : public ISystem {
 public:
     // --- Core Lifecycle & Updates ---
 

@@ -13,7 +13,7 @@ using namespace GE::Assets;
 // SECTION 1: CONSTRUCTOR & DESTRUCTOR
 // ========================================================================
 
-Experience::Experience(const uint32_t width, const uint32_t height, char const* const title)
+EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t height, char const* const title)
     : WINDOW_WIDTH(width), WINDOW_HEIGHT(height), framebufferResized(false), currentFrame(0)
 {
     ServiceLocator::Provide(this);
@@ -53,17 +53,17 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     entityManager->RegisterSystem(new GE::Systems::ParticleEmitterSystem());
 
     // --- Step 4: Engine Infrastructure ---
-    resources = std::make_unique<VulkanResourceManager>();
+    resources = std::make_unique<GpuResourceManager>();
     ServiceLocator::Provide(resources.get());
 
-    // AGNOSTIC FIX: SystemFactory is kept for logic, but Particle Recipes are REMOVED.
+    // AGNOSTIC FIX: EngineServiceRegistry is kept for logic, but Particle Recipes are REMOVED.
     // The SceneLoader now builds ParticleSystems directly from .ini shader paths.
-    systemFactory = std::make_unique<SystemFactory>();
+    systemFactory = std::make_unique<EngineServiceRegistry>();
     ServiceLocator::Provide(systemFactory.get());
 
-    timeManager = std::make_unique<TimeManager>();
+    timeManager = std::make_unique<TimeService>();
     ServiceLocator::Provide(timeManager.get());
-    statsManager = std::make_unique<StatsManager>();
+    statsManager = std::make_unique<PerformanceTracker>();
     assetManager = std::make_unique<AssetManager>();
     ServiceLocator::Provide(assetManager.get());
 
@@ -81,10 +81,10 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     renderer = std::make_unique<Renderer>();
     scene = std::make_unique<GE::Scene::Scene>();
     ServiceLocator::Provide(scene.get());
-    inputManager = std::make_unique<InputManager>(window, timeManager.get());
+    inputManager = std::make_unique<InputService>(window, timeManager.get());
     ServiceLocator::Provide(inputManager.get());
-    uiManager = std::make_unique<IMGUIManager>();
-    climateManager = std::make_unique<ClimateManager>();
+    uiManager = std::make_unique<DebugOverlay>();
+    climateManager = std::make_unique<ClimateService>();
 
     // --- Step 6: Final Boot Sequence ---
     initVulkan();
@@ -99,7 +99,7 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
 /**
  * @brief Destructor: Triggers a safe and orderly shutdown.
  */
-Experience::~Experience() {
+EngineOrchestrator::~EngineOrchestrator() {
     try {
         cleanup();
     }
@@ -115,7 +115,7 @@ Experience::~Experience() {
 /**
  * @brief Triggers the creation of pipelines and synchronization of descriptor sets.
  */
-void Experience::initVulkan() {
+void EngineOrchestrator::initVulkan() {
     createGraphicsPipelines();
     resources->updateDescriptorSets(vulkanEngine.get(), postProcessor.get());
 }
@@ -123,7 +123,7 @@ void Experience::initVulkan() {
 /**
  * @brief Enters the main execution loop.
  */
-void Experience::run() {
+void EngineOrchestrator::run() {
     while (glfwWindowShouldClose(window) == GLFW_FALSE) {
         // Step 1: Poll OS Events
         glfwPollEvents();
@@ -150,7 +150,7 @@ void Experience::run() {
  * @brief Master frame orchestration: Agnostic version.
  * Now delegates particle updates to ECS systems and uses the Scenario timescale.
  */
-void Experience::drawFrame() {
+void EngineOrchestrator::drawFrame() {
     VulkanContext* const ctx = ServiceLocator::GetContext();
 
     if (!m_pendingScenarioPath.empty()) {
@@ -170,7 +170,7 @@ void Experience::drawFrame() {
     auto* const em = entityManager.get();
 
     // --- Step 1: CPU-GPU Throttling ---
-    SyncManager* const sync = resources->getSyncManager();
+    FrameSyncManager* const sync = resources->getSyncManager();
     const VkFence currentFence = sync->getInFlightFence(currentFrame);
     static_cast<void>(vkWaitForFences(ctx->device, 1U, &currentFence, VK_TRUE, UINT64_MAX));
 
@@ -229,7 +229,7 @@ void Experience::drawFrame() {
     }
 
     // Prepare raw pipelines for renderer
-    std::vector<Pipeline*> rawPipelines;
+    std::vector<GraphicsPipeline*> rawPipelines;
     for (const auto& p : pipelines) rawPipelines.push_back(p.get());
 
     // Record Draw Calls: Renderer queries ECS for meshes/particles
@@ -279,7 +279,7 @@ void Experience::drawFrame() {
     submitInfo.pSignalSemaphores = &signalSem;
 
     if (vkQueueSubmit(ctx->graphicsQueue, 1U, &submitInfo, frameFence) != VK_SUCCESS) {
-        throw std::runtime_error("Experience: Queue submit failed!");
+        throw std::runtime_error("EngineOrchestrator: Queue submit failed!");
     }
 
     VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
@@ -310,7 +310,7 @@ void Experience::drawFrame() {
  * @brief Syncs CPU simulation state to the GPU Uniform Buffer.
  * Now queries the ECS for lighting data rather than using a hardcoded pointer.
  */
-void Experience::updateUniformBuffer(const uint32_t currentImage) {
+void EngineOrchestrator::updateUniformBuffer(const uint32_t currentImage) {
     void* const mappedData = resources->getMappedBuffer(currentImage);
     if (mappedData == nullptr) return;
 
@@ -360,7 +360,7 @@ void Experience::updateUniformBuffer(const uint32_t currentImage) {
  * @brief Transitions the engine to a new state defined by a configuration file.
  * Safely flushes the ECS and Scene registry before loading new data.
  */
-void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
+void EngineOrchestrator::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
     if (activeScenario) {
         activeScenario->OnUnload();
 
@@ -398,13 +398,13 @@ void Experience::changeScenario(std::unique_ptr<GE::Scenario> newScenario) {
 
 /** * @brief Fulfills Requirement: Debug simulation stepping.
  */
-void Experience::stepSimulation(float fixedStep) {
+void EngineOrchestrator::stepSimulation(float fixedStep) {
     if (activeScenario && activeScenario->IsPaused()) {
         // Fix: Pass VK_NULL_HANDLE because there is no active frame buffer during a manual step
         entityManager->Update(fixedStep, VK_NULL_HANDLE);
         activeScenario->OnUpdate(fixedStep, timeManager->getTotal());
 
-        GE_LOG_INFO("Experience: Manual simulation step performed.");
+        GE_LOG_INFO("EngineOrchestrator: Manual simulation step performed.");
     }
 }
 
@@ -412,7 +412,7 @@ void Experience::stepSimulation(float fixedStep) {
 // SECTION 6: TEARDOWN
 // ========================================================================
 
-void Experience::cleanup() {
+void EngineOrchestrator::cleanup() {
     // 1. Synchronize GPU
     if (context && context->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(context->device);
@@ -461,7 +461,7 @@ void Experience::cleanup() {
     // 8. Foundation dies LAST
     context.reset();
 
-    GE_LOG_INFO("Experience: Agnostic cleanup complete.");
+    GE_LOG_INFO("EngineOrchestrator: Agnostic cleanup complete.");
 }
 
 // ========================================================================
@@ -471,9 +471,9 @@ void Experience::cleanup() {
 /**
  * @brief Configures the OS window for Vulkan via GLFW.
  */
-void Experience::initWindow(char const* const title) {
+void EngineOrchestrator::initWindow(char const* const title) {
     if (glfwInit() == GLFW_FALSE) {
-        throw std::runtime_error("Experience: Failed to initialize GLFW");
+        throw std::runtime_error("EngineOrchestrator: Failed to initialize GLFW");
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // No OpenGL
@@ -481,7 +481,7 @@ void Experience::initWindow(char const* const title) {
 
     window = glfwCreateWindow(static_cast<int>(WINDOW_WIDTH), static_cast<int>(WINDOW_HEIGHT), title, nullptr, nullptr);
     if (window == nullptr) {
-        throw std::runtime_error("Experience: Failed to create GLFW window");
+        throw std::runtime_error("EngineOrchestrator: Failed to create GLFW window");
     }
 
     glfwSetWindowUserPointer(window, this);
@@ -490,22 +490,22 @@ void Experience::initWindow(char const* const title) {
     glfwSetCursorPosCallback(window, mouseCallback);
 }
 
-void Experience::framebufferResizeCallback(GLFWwindow* pWindow, int width, int height) {
-    auto* const app = reinterpret_cast<Experience*>(glfwGetWindowUserPointer(pWindow));
+void EngineOrchestrator::framebufferResizeCallback(GLFWwindow* pWindow, int width, int height) {
+    auto* const app = reinterpret_cast<EngineOrchestrator*>(glfwGetWindowUserPointer(pWindow));
     if (app != nullptr) {
         app->framebufferResized = true;
     }
 }
 
-void Experience::keyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int mods) {
-    auto* const app = reinterpret_cast<Experience*>(glfwGetWindowUserPointer(pWindow));
+void EngineOrchestrator::keyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int mods) {
+    auto* const app = reinterpret_cast<EngineOrchestrator*>(glfwGetWindowUserPointer(pWindow));
     if ((app != nullptr) && (app->inputManager != nullptr)) {
         app->inputManager->handleKeyEvent(key, scancode, action, mods);
     }
 }
 
-void Experience::mouseCallback(GLFWwindow* pWindow, double xpos, double ypos) {
-    auto* const app = reinterpret_cast<Experience*>(glfwGetWindowUserPointer(pWindow));
+void EngineOrchestrator::mouseCallback(GLFWwindow* pWindow, double xpos, double ypos) {
+    auto* const app = reinterpret_cast<EngineOrchestrator*>(glfwGetWindowUserPointer(pWindow));
     if ((app != nullptr) && (app->inputManager != nullptr)) {
         app->inputManager->handleMouseEvent(xpos, ypos);
     }
@@ -518,11 +518,11 @@ void Experience::mouseCallback(GLFWwindow* pWindow, double xpos, double ypos) {
 /**
  * @brief Initializes graphics pipelines for Opaque, Transparent, and Shadow passes.
  */
-void Experience::createGraphicsPipelines() {
+void EngineOrchestrator::createGraphicsPipelines() {
     VulkanContext* ctx = ServiceLocator::GetContext();
 
     if (postProcessor == nullptr) {
-        throw std::runtime_error("Experience: Cannot create pipelines, PostProcessor is null!");
+        throw std::runtime_error("EngineOrchestrator: Cannot create pipelines, PostProcessor is null!");
     }
 
     const VkRenderPass offscreenPass = postProcessor->getOffscreenRenderPass();
@@ -546,17 +546,17 @@ void Experience::createGraphicsPipelines() {
 
     // 2. Instantiate Pipelines in RAII container
     // Opaque
-    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[1].get(), true, true, true, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[2].get(), true, true, true, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[3].get(), true, true, true, msaa));
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[1].get(), true, true, true, msaa));
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[2].get(), true, true, true, msaa));
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[3].get(), true, true, true, msaa));
 
     // Transparent (depthWrite = FALSE)
-    pipelines.push_back(std::make_unique<Pipeline>(transPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[4].get(), true, false, false, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[5].get(), false, false, true, msaa));
-    pipelines.push_back(std::make_unique<Pipeline>(transPass, ctx->materialSetLayout, shaderModules[6].get(), shaderModules[7].get(), true, false, false, msaa));
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(transPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[4].get(), true, false, false, msaa));
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, shaderModules[0].get(), shaderModules[5].get(), false, false, true, msaa));
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(transPass, ctx->materialSetLayout, shaderModules[6].get(), shaderModules[7].get(), true, false, false, msaa));
 
     // Shadow Map (1x Sample Count required)
-    pipelines.push_back(std::make_unique<Pipeline>(resources->getShadowRenderPass(), ctx->materialSetLayout,
+    pipelines.push_back(std::make_unique<GraphicsPipeline>(resources->getShadowRenderPass(), ctx->materialSetLayout,
         shaderModules[8].get(), shaderModules[9].get(), true, true, true, VK_SAMPLE_COUNT_1_BIT));
 
     postProcessor->createPipeline(vulkanEngine->getFinalRenderPass());
@@ -565,7 +565,7 @@ void Experience::createGraphicsPipelines() {
 /**
  * @brief Initializes the environmental skybox.
  */
-void Experience::initSkybox() {
+void EngineOrchestrator::initSkybox() {
     skybox = std::make_unique<Skybox>(
         postProcessor->getOffscreenRenderPass(),
         nullptr, // No texture yet

@@ -11,29 +11,29 @@
 namespace GE::Graphics {
 
 /**
- * @class Image
- * @brief A generic wrapper for Vulkan Image resources, including their memory and views.
+ * @class GpuImage
+ * @brief A generic wrapper for Vulkan GpuImage resources, including their memory and views.
  * * This class encapsulates the creation, memory allocation, and view generation
  * for offscreen attachments, MSAA resolve targets, and depth-stencil buffers.
  */
-class Image final {
+class GpuImage final {
 public:
     // --- Lifecycle ---
 
     /**
      * @brief Constructor: Allocates and initializes a GPU image with a corresponding view.
      */
-    Image(const uint32_t width, const uint32_t height,
+    GpuImage(const uint32_t width, const uint32_t height,
         const VkSampleCountFlagBits samples, const VkFormat fmt, const VkImageTiling tiling,
         const VkImageUsageFlags usage, const VkMemoryPropertyFlags properties,
         const VkImageAspectFlags aspect);
 
     /** @brief Destructor: Releases all image, memory, and view handles from the GPU. */
-    ~Image();
+    ~GpuImage();
 
     // RAII: Prevent copying to maintain strict, unique ownership of GPU memory handles.
-    Image(const Image&) = delete;
-    Image& operator=(const Image&) = delete;
+    GpuImage(const GpuImage&) = delete;
+    GpuImage& operator=(const GpuImage&) = delete;
 
     // --- Accessors ---
 

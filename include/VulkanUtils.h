@@ -54,7 +54,7 @@ public:
     static void copyBuffer(const VkDevice device, const VkCommandPool commandPool, const VkQueue graphicsQueue,
         const VkBuffer srcBuffer, const VkBuffer dstBuffer, const VkDeviceSize size);
 
-    // --- Image & Texture Management ---
+    // --- GpuImage & Texture Management ---
 
     /** @brief Creates a Vulkan image and allocates its backing device memory. */
     static void createImage(const VkDevice device, const VkPhysicalDevice physicalDevice, const uint32_t width, const uint32_t height,
@@ -92,7 +92,7 @@ public:
         const VkQueue graphicsQueue, const VkImage image, const VkFormat imageFormat, const int32_t texWidth, const int32_t texHeight,
         const uint32_t mipLevels, const uint32_t layerCount = 1U);
 
-    // --- Pipeline & Barrier Synchronization ---
+    // --- GraphicsPipeline & Barrier Synchronization ---
 
     /** @brief Records a high-level image memory barrier for synchronization. */
     static void recordImageBarrier(VkCommandBuffer cb, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout,
@@ -101,7 +101,7 @@ public:
     /** @brief Creates a minimal render pass used specifically for shadow depth maps. */
     static VkRenderPass createDepthRenderPass(const VkDevice device, const VkFormat depthFormat);
 
-    /** @brief Helper to initialize the complex Graphics Pipeline creation structure. */
+    /** @brief Helper to initialize the complex Graphics GraphicsPipeline creation structure. */
     static VkGraphicsPipelineCreateInfo preparePipelineCreateInfo(
         const VkPipelineShaderStageCreateInfo* shaderStages,
         const VkPipelineVertexInputStateCreateInfo* vertexInput,
@@ -116,7 +116,7 @@ public:
         const VkRenderPass renderPass
     );
 
-    // --- Pipeline State Preparation Helpers ---
+    // --- GraphicsPipeline State Preparation Helpers ---
     static VkPipelineDynamicStateCreateInfo prepareDynamicState(const std::vector<VkDynamicState>& states);
     static VkPipelineRasterizationStateCreateInfo prepareRasterizer(VkCullModeFlags cullMode);
     static VkPipelineMultisampleStateCreateInfo prepareMultisampling(VkSampleCountFlagBits samples);

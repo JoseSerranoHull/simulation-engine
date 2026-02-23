@@ -22,7 +22,7 @@ enum class RenderPassType {
 /**
  * @class Material
  * @brief Represents a PBR (Physically Based Rendering) material.
- * * Orchestrates the binding between a specific GPU Pipeline and the Descriptor Set (Set 1)
+ * * Orchestrates the binding between a specific GPU GraphicsPipeline and the Descriptor Set (Set 1)
  * containing the material's textures (Albedo, Normal, AO, Metallic, Roughness).
  */
 namespace GE::Assets {
@@ -30,7 +30,7 @@ namespace GE::Assets {
 class Material final {
 private:
     VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
-    GE::Graphics::Pipeline* pipeline{ nullptr };
+    GE::Graphics::GraphicsPipeline* pipeline{ nullptr };
 	bool castsShadows = true; // Default to true; can be toggled for transparent materials like glass
     RenderPassType passType = RenderPassType::Opaque;
 
@@ -48,7 +48,7 @@ public:
      * @brief Minimal Constructor (Delegated logic).
      * Used primarily by AssetManager when descriptor updates are handled externally.
      */
-    Material(const VkDescriptorSet inDescriptorSet, GE::Graphics::Pipeline* const inPipeline)
+    Material(const VkDescriptorSet inDescriptorSet, GE::Graphics::GraphicsPipeline* const inPipeline)
         : descriptorSet(inDescriptorSet), pipeline(inPipeline)
     {
     }
@@ -58,7 +58,7 @@ public:
      * Maps the full suite of textures to this material instance and takes ownership of references.
      */
     Material(
-        GE::Graphics::Pipeline* const inPipeline,
+        GE::Graphics::GraphicsPipeline* const inPipeline,
         const VkDescriptorSet inDescriptorSet,
         std::shared_ptr<GE::Graphics::Texture> inColor,
         std::shared_ptr<GE::Graphics::Texture> inNormal,
@@ -95,7 +95,7 @@ public:
     /** * @brief Returns the graphics pipeline required to render this material.
      * Optimized with 'const' to satisfy MISRA and Renderer requirements.
      */
-    GE::Graphics::Pipeline* getPipeline() const {
+    GE::Graphics::GraphicsPipeline* getPipeline() const {
         return pipeline;
     }
 

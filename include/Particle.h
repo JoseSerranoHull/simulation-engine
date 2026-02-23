@@ -16,11 +16,11 @@ struct Particle {
     static constexpr float FULL_OPACITY = 1.0f;
 
     // x, y, z = Position | w = Size
-    alignas(16) glm::vec4 position{ DEFAULT_POS_VAL, DEFAULT_POS_VAL, DEFAULT_POS_VAL, DEFAULT_SIZE };
+    alignas(16) glm::vec4 m_position{ DEFAULT_POS_VAL, DEFAULT_POS_VAL, DEFAULT_POS_VAL, DEFAULT_SIZE };
 
     // x, y, z = Velocity | w = Remaining Life
-    alignas(16) glm::vec4 velocity{ INITIAL_VELOCITY, INITIAL_VELOCITY, INITIAL_VELOCITY, INITIAL_LIFE };
+    alignas(16) glm::vec4 m_velocity{ INITIAL_VELOCITY, INITIAL_VELOCITY, INITIAL_VELOCITY, INITIAL_LIFE };
 
     // r, g, b, a = Color/Transparency
-    alignas(16) glm::vec4 color{ 1.0f, 1.0f, 1.0f, FULL_OPACITY };
+    alignas(16) glm::vec4 m_color{ 1.0f, 1.0f, 1.0f, FULL_OPACITY };
 };

@@ -82,13 +82,13 @@ public:
 
         stbi_image_free(pixels); // CPU memory is no longer needed after staging
 
-        // 3. Create GPU Image (Device Local) with support for blitting (required for mipmaps)
+        // 3. Create GPU GpuImage (Device Local) with support for blitting (required for mipmaps)
         VulkanUtils::createImage(context->device, context->physicalDevice, width, height, mipLevels,
             VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
             (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, memory);
 
-        // 4. Transfer pixel data from Staging -> GPU Image
+        // 4. Transfer pixel data from Staging -> GPU GpuImage
         VulkanUtils::transitionImageLayout(context->device, context->graphicsCommandPool, context->graphicsQueue,
             image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 
@@ -103,7 +103,7 @@ public:
         VulkanUtils::generateMipmaps(context->device, context->physicalDevice, context->graphicsCommandPool,
             context->graphicsQueue, image, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
 
-        // 7. Establish the Image View and Sampler
+        // 7. Establish the GpuImage View and Sampler
         imageView = VulkanUtils::createImageView(context->device, image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
         VulkanUtils::createTextureSampler(context->device, sampler, mipLevels);
     }

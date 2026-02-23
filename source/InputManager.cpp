@@ -3,7 +3,7 @@
 /**
  * @brief Constructor: Initializes hardware-dependent mouse offsets and camera perspectives.
  */
-InputManager::InputManager(GLFWwindow* const inWindow, TimeManager* const inTime)
+InputService::InputService(GLFWwindow* const inWindow, TimeService* const inTime)
     : window(inWindow),
     timeManager(inTime),
     activeCameraIndex(static_cast<int32_t>(GE::EngineConstants::INDEX_ZERO)),
@@ -53,7 +53,7 @@ InputManager::InputManager(GLFWwindow* const inWindow, TimeManager* const inTime
 /**
  * @brief Discrete event handler: Processes state-changing key presses.
  */
-void InputManager::handleKeyEvent(const int32_t key, const int32_t scancode, const int32_t action, const int32_t mods) {
+void InputService::handleKeyEvent(const int32_t key, const int32_t scancode, const int32_t action, const int32_t mods) {
     static_cast<void>(scancode);
 
     // Only process discrete presses
@@ -135,7 +135,7 @@ void InputManager::handleKeyEvent(const int32_t key, const int32_t scancode, con
 /**
  * @brief Continuous update: Processes WASD movement if the cursor is captured.
  */
-void InputManager::update(const float deltaTime) const {
+void InputService::update(const float deltaTime) const {
     if (!cursorCaptured) {
         return;
     }
@@ -159,7 +159,7 @@ void InputManager::update(const float deltaTime) const {
 /**
  * @brief Mouse displacement handler: Converts raw delta values into Euler angles.
  */
-void InputManager::handleMouseEvent(const double xpos, const double ypos) {
+void InputService::handleMouseEvent(const double xpos, const double ypos) {
     if (!cursorCaptured) {
         return;
     }
@@ -188,7 +188,7 @@ void InputManager::handleMouseEvent(const double xpos, const double ypos) {
 /**
  * @brief Returns a diagnostic label for the active camera state.
  */
-const char* InputManager::getActiveCameraLabel() const {
+const char* InputService::getActiveCameraLabel() const {
     switch (static_cast<uint32_t>(activeCameraIndex)) {
     case CAM_IDX_FRONT: return "Frontal Perspective";
     case CAM_IDX_BIRD:  return "High-Angle Overview";
@@ -199,13 +199,13 @@ const char* InputManager::getActiveCameraLabel() const {
 
 /**
  * @brief Restores UI toggles and lighting modifiers to their original engine state.
- * This is triggered by the 'R' key and allows the ClimateManager to reclaim
+ * This is triggered by the 'R' key and allows the ClimateService to reclaim
  * control over the simulation settings.
  */
  /**
   * @brief Restores UI toggles and lighting modifiers to their original engine state.
   */
-void InputManager::resetDefaults() {
+void InputService::resetDefaults() {
     useGouraud = false;
     bloomEnabled = false;
     autoOrbit = true;
@@ -221,7 +221,7 @@ void InputManager::resetDefaults() {
  * @brief Thread-safe style consumption of the reset flag.
  * Returns true only once per request to prevent infinite reset loops.
  */
-bool InputManager::consumeResetRequest() {
+bool InputService::consumeResetRequest() {
     bool requestActive = false;
 
     if (resetRequested) {
@@ -235,7 +235,7 @@ bool InputManager::consumeResetRequest() {
 /**
  * @brief Resets the specified camera to its original factory settings.
  */
-void InputManager::resetCameraToDefault(uint32_t index) const {
+void InputService::resetCameraToDefault(uint32_t index) const {
     if (index >= cameras.size()) return;
     Camera* cam = cameras.at(index).get();
     if (!cam) return;

@@ -34,7 +34,7 @@ void Renderer::recordFrame(
     const VkDescriptorSet globalDescriptorSet,
     const VkRenderPass shadowPass,
     const VkFramebuffer shadowFramebuffer,
-    const std::vector<Pipeline*>& pipelines
+    const std::vector<GraphicsPipeline*>& pipelines
 ) const {
     // Step 1: Shadow Mapping Pass (Depth-only)
     // Pulls data from MeshRenderers with "CastsShadows" flag
@@ -84,7 +84,7 @@ void Renderer::recordShadowPass(
     const VkCommandBuffer cb,
     const VkRenderPass renderPass,
     const VkFramebuffer framebuffer,
-    const Pipeline* const shadowPipeline,
+    const GraphicsPipeline* const shadowPipeline,
     const VkDescriptorSet globalSet,
     GE::ECS::EntityManager* const em
 ) const {
@@ -119,8 +119,8 @@ void Renderer::recordShadowPass(
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
                 // Logic: Does the material permit shadows? (Defined in .ini)
-                if (sub.mesh && sub.material && sub.material->GetCastsShadows()) {
-                    sub.mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
+                if (sub.m_mesh && sub.m_material && sub.m_material->GetCastsShadows()) {
+                    sub.m_mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
                 }
             }
         }
@@ -142,7 +142,7 @@ void Renderer::recordOpaquePass(
     const Skybox* const skybox,
     const PostProcessor* const postProcessor,
     const VkDescriptorSet globalSet,
-    const std::vector<Pipeline*>& pipelines,
+    const std::vector<GraphicsPipeline*>& pipelines,
     GE::ECS::EntityManager* const em
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
@@ -182,8 +182,8 @@ void Renderer::recordOpaquePass(
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
                 // Draw if the material is configured for the Opaque pass
-                if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Opaque) {
-                    sub.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+                if (sub.m_mesh && sub.m_material && sub.m_material->GetPassType() == RenderPassType::Opaque) {
+                    sub.m_mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
                 }
             }
         }
@@ -204,7 +204,7 @@ void Renderer::recordTransparentPass(
     const VkExtent2D& extent,
     const PostProcessor* const postProcessor,
     const VkDescriptorSet globalSet,
-    const std::vector<Pipeline*>& pipelines,
+    const std::vector<GraphicsPipeline*>& pipelines,
     GE::ECS::EntityManager* const em
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
@@ -234,8 +234,8 @@ void Renderer::recordTransparentPass(
 
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
-                if (sub.mesh && sub.material && sub.material->GetPassType() == RenderPassType::Transparent) {
-                    sub.mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+                if (sub.m_mesh && sub.m_material && sub.m_material->GetPassType() == RenderPassType::Transparent) {
+                    sub.m_mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
                 }
             }
         }

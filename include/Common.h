@@ -127,8 +127,8 @@ namespace GE::EngineConstants {
  * * Uses alignas(16) to comply with std140/std430 layout rules for GLSL arrays.
  */
 struct SparkLight {
-    alignas(16) glm::vec3 position{ 0.0f, 0.0f, 0.0f };
-    alignas(16) glm::vec3 color{ 0.0f, 0.0f, 0.0f };
+    alignas(16) glm::vec3 m_position{ 0.0f, 0.0f, 0.0f };
+    alignas(16) glm::vec3 m_color{ 0.0f, 0.0f, 0.0f };
 };
 
 /**

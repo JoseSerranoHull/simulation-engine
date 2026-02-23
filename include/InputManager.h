@@ -13,12 +13,12 @@
 #include "TimeManager.h"
 
 /**
- * @class InputManager
+ * @class InputService
  * @brief Handles user interaction, camera switching, and simulation toggles.
  * * Acts as the bridge between raw GLFW window events and engine systems.
  * Refactored to eliminate friend classes and maintain strict encapsulation.
  */
-class InputManager final {
+class InputService final {
 public:
     // --- Named Constants ---
     static constexpr uint32_t CAM_IDX_FRONT = 0U;
@@ -32,14 +32,14 @@ public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Initializes managers and sets up the camera array. */
-    explicit InputManager(GLFWwindow* const inWindow, TimeManager* const inTime);
+    explicit InputService(GLFWwindow* const inWindow, TimeService* const inTime);
 
     /** @brief Default destructor. */
-    ~InputManager() = default;
+    ~InputService() = default;
 
     // RAII: Prevent duplication to ensure unique ownership of input callbacks.
-    InputManager(const InputManager&) = delete;
-    InputManager& operator=(const InputManager&) = delete;
+    InputService(const InputService&) = delete;
+    InputService& operator=(const InputService&) = delete;
 
     // --- Core API ---
 
@@ -93,7 +93,7 @@ public:
 private:
     // --- Hardware Dependencies ---
     GLFWwindow* window;
-    TimeManager* timeManager;
+    TimeService* timeManager;
 
     // --- Internal Camera State ---
     std::vector<std::unique_ptr<Camera>> cameras{};

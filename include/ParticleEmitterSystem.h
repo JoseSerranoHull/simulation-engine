@@ -25,7 +25,7 @@ namespace GE::Systems {
             auto* em = ServiceLocator::GetEntityManager();
             auto* exp = ServiceLocator::GetExperience();
 
-            // REMOVED: No longer asking SyncManager for a buffer
+            // REMOVED: No longer asking FrameSyncManager for a buffer
             auto& particles = em->GetCompArr<Components::ParticleComponent>();
 
             for (uint32_t i = 0; i < particles.GetCount(); ++i) {

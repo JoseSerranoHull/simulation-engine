@@ -23,7 +23,7 @@ namespace GE::Graphics {
  */
 class PostProcessor final : public ISystem{
 public:
-    // --- Layout and Pipeline Constants ---
+    // --- Layout and GraphicsPipeline Constants ---
     static constexpr uint32_t FULLSCREEN_TRI_VERTS = 3U;
     static constexpr uint32_t ATTACHMENT_COUNT_OFFSCREEN = 2U;
     static constexpr uint32_t DEPENDENCY_COUNT_OFFSCREEN = 2U;
@@ -57,7 +57,7 @@ public:
     /** @brief Captures a snapshot of the opaque scene for use in refraction shaders. */
     void copyScene(const VkCommandBuffer cb) const;
 
-    /** @brief Rebuilds the post-processing pipeline (Set 0: Resolve Image). */
+    /** @brief Rebuilds the post-processing pipeline (Set 0: Resolve GpuImage). */
     void createPipeline(const VkRenderPass finalRenderPass);
 
     // --- Synchronization Getters ---

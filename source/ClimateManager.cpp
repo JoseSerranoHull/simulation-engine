@@ -8,7 +8,7 @@
 /**
  * @brief Updates the procedural weather simulation, orbital sun logic, and atmospheric tints.
  */
-void ClimateManager::update(const float dt, const float totalTime, const bool autoOrbit,
+void ClimateService::update(const float dt, const float totalTime, const bool autoOrbit,
     const float orbitRadius, const float orbitSpeed, const float configIntensity)
 {
     // Step 1: Sanitize delta time to prevent simulation "explosions" during frame drops
@@ -96,7 +96,7 @@ void ClimateManager::update(const float dt, const float totalTime, const bool au
 
 /** * @brief Returns a human-readable label for the current simulated season.
  */
-const char* ClimateManager::getSeasonLabel() const {
+const char* ClimateService::getSeasonLabel() const {
     switch (currentState) {
     case WeatherState::RAIN:
         return "Rainy Season";

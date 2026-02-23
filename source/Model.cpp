@@ -71,7 +71,7 @@ void Model::updateMatrix() {
 /**
  * @brief Orchestrates the draw call for all child meshes.
  */
-void Model::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* const pipelineOverride) {
+void Model::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPipeline* const pipelineOverride) {
     for (const auto& mesh : meshes) {
         if (mesh != nullptr) {
             // Note: Mesh::draw handles specific material binding and descriptor logic

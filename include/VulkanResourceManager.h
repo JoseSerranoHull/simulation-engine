@@ -16,25 +16,25 @@
 namespace GE::Graphics {
 
 /**
- * @class VulkanResourceManager
+ * @class GpuResourceManager
  * @brief Orchestrates the lifecycle of global GPU resources and descriptor management.
  * * This manager handles the allocation of global uniform buffers, the creation of
  * the shadow mapping sub-system, and the synchronization primitives required for
  * frame-overlapping (Double/Triple buffering).
  */
-class VulkanResourceManager final {
+class GpuResourceManager final {
 public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Links the manager to the centralized Vulkan hardware context. */
-    explicit VulkanResourceManager();
+    explicit GpuResourceManager();
 
     /** @brief Destructor: Triggers the full cleanup of allocated GPU handles. */
-    ~VulkanResourceManager();
+    ~GpuResourceManager();
 
     // RAII: Prevent duplication to ensure explicit ownership of GPU memory and handles.
-    VulkanResourceManager(const VulkanResourceManager&) = delete;
-    VulkanResourceManager& operator=(const VulkanResourceManager&) = delete;
+    GpuResourceManager(const GpuResourceManager&) = delete;
+    GpuResourceManager& operator=(const GpuResourceManager&) = delete;
 
     // --- Core Resource API ---
 
@@ -62,7 +62,7 @@ public:
     // --- Accessors (Const-Safe) ---
 
     /** @brief Returns the manager responsible for CPU-GPU fence synchronization. */
-    SyncManager* getSyncManager() const { return syncManager.get(); }
+    FrameSyncManager* getSyncManager() const { return syncManager.get(); }
 
     /** @brief Returns the pool used for allocating global descriptor sets. */
     VkDescriptorPool getDescriptorPool() const { return descriptorPool; }
@@ -81,7 +81,7 @@ public:
 
 private:
     // --- Context & Synchronization ---
-    std::unique_ptr<SyncManager> syncManager;
+    std::unique_ptr<FrameSyncManager> syncManager;
 
     // --- Global Pools ---
     VkDescriptorPool descriptorPool;

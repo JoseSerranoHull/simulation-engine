@@ -4,7 +4,7 @@ namespace GE::Graphics {
 
 /**
  * @brief Constructor: Initializes the container.
- * Note: Hardware handle allocation is typically performed by the VulkanResourceManager.
+ * Note: Hardware handle allocation is typically performed by the GpuResourceManager.
  */
 SwapChain::SwapChain()
     : swapChain(VK_NULL_HANDLE),
@@ -29,7 +29,7 @@ SwapChain::~SwapChain() {
 
 /**
  * @brief Explicitly destroys all swapchain-related resources in the correct order.
- * Order: Framebuffers -> Image Views -> Swapchain KHR.
+ * Order: Framebuffers -> GpuImage Views -> Swapchain KHR.
  */
 void SwapChain::cleanup() {
     VulkanContext* context = ServiceLocator::GetContext();
@@ -46,7 +46,7 @@ void SwapChain::cleanup() {
         }
         swapChainFramebuffers.clear();
 
-        // 2. Destroy Image Views
+        // 2. Destroy GpuImage Views
         // These are the "windows" into the raw swapchain images.
         for (const VkImageView imageView : swapChainImageViews) {
             if (imageView != VK_NULL_HANDLE) {

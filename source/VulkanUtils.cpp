@@ -374,7 +374,7 @@ VkRenderPass VulkanUtils::createDepthRenderPass(const VkDevice device, const VkF
 }
 
 /**
- * @brief Transfers pixel data from a staging buffer into a GPU Image.
+ * @brief Transfers pixel data from a staging buffer into a GPU GpuImage.
  */
 void VulkanUtils::copyBufferToImage(const VkDevice device, const VkCommandPool commandPool, const VkQueue graphicsQueue,
     const VkBuffer buffer, const VkImage image, const uint32_t width, const uint32_t height, const uint32_t layerCount)
@@ -392,7 +392,7 @@ void VulkanUtils::copyBufferToImage(const VkDevice device, const VkCommandPool c
 }
 
 /**
- * @brief Helper to initialize the complex Graphics Pipeline creation structure.
+ * @brief Helper to initialize the complex Graphics GraphicsPipeline creation structure.
  */
 VkGraphicsPipelineCreateInfo VulkanUtils::preparePipelineCreateInfo(
     const VkPipelineShaderStageCreateInfo* shaderStages,

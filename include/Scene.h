@@ -11,7 +11,7 @@
 #include "../include/Components.h"
 
 // Forward declarations
-namespace GE::Graphics { class Pipeline; }
+namespace GE::Graphics { class GraphicsPipeline; }
 
 namespace GE::Scene
 {

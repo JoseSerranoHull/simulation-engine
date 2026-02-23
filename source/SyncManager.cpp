@@ -8,15 +8,15 @@ namespace GE::Graphics {
 /**
  * @brief Constructor: Links the manager to the centralized Vulkan context.
  */
-SyncManager::SyncManager() {
+FrameSyncManager::FrameSyncManager() {
     // Note: The actual allocation of buffers and primitives is handled by 
-    // VulkanResourceManager to satisfy hardware dependencies during init.
+    // GpuResourceManager to satisfy hardware dependencies during init.
 }
 
 /**
  * @brief Destructor: Ensures all GPU synchronization primitives are safely destroyed.
  */
-SyncManager::~SyncManager() {
+FrameSyncManager::~FrameSyncManager() {
     try {
         VulkanContext* context = ServiceLocator::GetContext();
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
@@ -41,7 +41,7 @@ SyncManager::~SyncManager() {
 
             // 3. Command Buffer Note: Handled by Pool destruction.
             // We wrap the print in the try-block to catch exceptions from operator<<
-            std::cout << "Engine: SyncManager Cleaned Up." << std::endl;
+            std::cout << "Engine: FrameSyncManager Cleaned Up." << std::endl;
         }
     }
     catch (...) {
@@ -52,7 +52,7 @@ SyncManager::~SyncManager() {
 /**
  * @brief Initializes synchronization primitives.
  */
-void SyncManager::init(uint32_t maxFrames, uint32_t imageCount) {
+void FrameSyncManager::init(uint32_t maxFrames, uint32_t imageCount) {
     commandBuffers.resize(maxFrames);
     imageAvailableSemaphores.resize(maxFrames);
     inFlightFences.resize(maxFrames);
@@ -79,7 +79,7 @@ void SyncManager::init(uint32_t maxFrames, uint32_t imageCount) {
 /**
  * @brief Allocates command buffers.
  */
-void SyncManager::allocateCommandBuffers(VkCommandPool pool, uint32_t count) {
+void FrameSyncManager::allocateCommandBuffers(VkCommandPool pool, uint32_t count) {
     commandBuffers.resize(static_cast<size_t>(count));
 
     VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -90,7 +90,7 @@ void SyncManager::allocateCommandBuffers(VkCommandPool pool, uint32_t count) {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkAllocateCommandBuffers(context->device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
-        throw std::runtime_error("SyncManager: Failed to allocate hardware command buffers!");
+        throw std::runtime_error("FrameSyncManager: Failed to allocate hardware command buffers!");
     }
 }
 

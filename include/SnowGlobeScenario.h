@@ -24,7 +24,7 @@ namespace GE {
         /** @brief Handles the scaling of Cacti and the Oasis based on weather. */
         void updateDynamicEntityScaling();
 
-        std::unique_ptr<ClimateManager> m_climate;
+        std::unique_ptr<ClimateService> m_climate;
         std::vector<std::unique_ptr<GE::Assets::Model>> m_ownedModels; // Local ownership of meshes
     };
 }

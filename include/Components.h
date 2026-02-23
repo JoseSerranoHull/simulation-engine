@@ -17,8 +17,8 @@ namespace GE::Components {
      * @brief A single drawable part of an entity, pairing a mesh with its material.
      */
     struct SubMesh {
-        GE::Assets::Mesh* mesh = nullptr;
-        GE::Assets::Material* material = nullptr;
+        GE::Assets::Mesh* m_mesh = nullptr;
+        GE::Assets::Material* m_material = nullptr;
     };
 
     /**

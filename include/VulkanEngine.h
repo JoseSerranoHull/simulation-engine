@@ -113,10 +113,10 @@ private:
 
     // --- RAII Managed Hardware Objects ---
     std::unique_ptr<SwapChain> swapChainObj;
-    std::unique_ptr<Image> depthBuffer;
+    std::unique_ptr<GpuImage> depthBuffer;
     std::unique_ptr<RenderPass> finalPass;
 
-    // --- Initialization Pipeline ---
+    // --- Initialization GraphicsPipeline ---
     void initVulkan(GLFWwindow* const window);
     void createInstance() const;
     void setupDebugMessenger() const;

@@ -10,10 +10,10 @@
 #include "../include/ISystem.h"
 
 /**
- * @class SystemFactory
+ * @class EngineServiceRegistry
  * @brief Registry-based factory that manages system creation logic.
  */
-class SystemFactory final {
+class EngineServiceRegistry final {
 public:
     // A Creator is a function that returns a unique_ptr to an ISystem
     using Creator = std::function<std::unique_ptr<ISystem>()>;

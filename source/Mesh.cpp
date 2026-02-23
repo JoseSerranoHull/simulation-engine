@@ -50,14 +50,14 @@ bool Mesh::hasTransparency() const {
  * Orchestrates pipeline binding, descriptor mapping (Global/Material),
  * and indexed draw execution.
  */
-void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* pipelineOverride, const glm::mat4& worldMatrix) const {
+void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPipeline* pipelineOverride, const glm::mat4& worldMatrix) const {
     // 1. Resolve active pipeline using your existing logic
-    const Pipeline* const activePipeline = (pipelineOverride != nullptr)
+    const GraphicsPipeline* const activePipeline = (pipelineOverride != nullptr)
         ? pipelineOverride
         : ((material != nullptr) ? material->getPipeline() : nullptr);
 
     if ((activePipeline != nullptr) && (cb != VK_NULL_HANDLE)) {
-        // 2. Bind Pipeline State (using your actual API)
+        // 2. Bind GraphicsPipeline State (using your actual API)
         activePipeline->bind(cb);
 
         // 3. Bind Descriptor Sets (using an array to handle the shared_ptr/r-value correctly)

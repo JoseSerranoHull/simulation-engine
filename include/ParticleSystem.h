@@ -115,14 +115,14 @@ private:
     VkDeviceMemory uniformBufferMemory;
     void* uniformBufferMapped;
 
-    // --- Compute Pipeline State ---
+    // --- Compute GraphicsPipeline State ---
     VkDescriptorSetLayout computeSetLayout;
     VkPipelineLayout computePipelineLayout;
     VkPipeline computePipeline;
     VkDescriptorPool computeDescriptorPool;
     VkDescriptorSet computeDescriptorSet;
 
-    // --- Graphics Pipeline State ---
+    // --- Graphics GraphicsPipeline State ---
     VkPipelineLayout graphicsPipelineLayout;
     VkPipeline graphicsPipeline;
 

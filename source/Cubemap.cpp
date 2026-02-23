@@ -94,7 +94,7 @@ Cubemap::Cubemap(const std::vector<std::string>& filePaths)
     vkDestroyBuffer(context->device, stagingBuffer, nullptr);
     vkFreeMemory(context->device, stagingMemory, nullptr);
 
-    // Step 10: Create the specialized Cubemap Image View and Sampler
+    // Step 10: Create the specialized Cubemap GpuImage View and Sampler
     imageView = VulkanUtils::createImageView(context->device, image, VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_ASPECT_COLOR_BIT, MIP_LEVEL_ONE, VK_IMAGE_VIEW_TYPE_CUBE, FACE_COUNT);
 

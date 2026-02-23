@@ -16,7 +16,7 @@ namespace GE::Graphics {
 /**
  * @brief Constructor: Links the manager to the centralized Vulkan hardware context.
  */
-VulkanResourceManager::VulkanResourceManager()
+GpuResourceManager::GpuResourceManager()
     : descriptorPool(VK_NULL_HANDLE),
     transferCommandPool(VK_NULL_HANDLE),
     shadowImage(VK_NULL_HANDLE),
@@ -31,7 +31,7 @@ VulkanResourceManager::VulkanResourceManager()
 /**
  * @brief Destructor: Triggers the full cleanup of allocated GPU handles.
  */
-VulkanResourceManager::~VulkanResourceManager() {
+GpuResourceManager::~GpuResourceManager() {
     try {
         cleanup();
     }
@@ -43,7 +43,7 @@ VulkanResourceManager::~VulkanResourceManager() {
 /**
  * @brief Orchestrates the primary allocation sequence for global engine resources.
  */
-void VulkanResourceManager::init(const VulkanDevice* const engine, const uint32_t maxFrames) {
+void GpuResourceManager::init(const VulkanDevice* const engine, const uint32_t maxFrames) {
     // Step 1: Establish Layouts and Infrastructure Pools
     createLayouts();
     createPools(engine);
@@ -55,8 +55,8 @@ void VulkanResourceManager::init(const VulkanDevice* const engine, const uint32_
     const uint32_t imageCount = engine->getSwapChainImageCount();
     createUniformBuffers(imageCount);
 
-    // Step 4: Initialize CPU-GPU Synchronization (SyncManager)
-    syncManager = std::make_unique<SyncManager>();
+    // Step 4: Initialize CPU-GPU Synchronization (FrameSyncManager)
+    syncManager = std::make_unique<FrameSyncManager>();
     syncManager->init(maxFrames, imageCount);
 
     // Step 5: Allocate Primary Graphics Command Buffers
@@ -71,7 +71,7 @@ void VulkanResourceManager::init(const VulkanDevice* const engine, const uint32_
 /**
  * @brief Creates global descriptor set layouts for scene and material data.
  */
-void VulkanResourceManager::createLayouts() const {
+void GpuResourceManager::createLayouts() const {
     // Step 1: Global Set (Set 0) - Shared across all shaders (UBOs, Shadows, Refraction)
     const VkDescriptorSetLayoutBinding uboBinding{
         GE::EngineConstants::BINDING_UBO, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1U,
@@ -96,7 +96,7 @@ void VulkanResourceManager::createLayouts() const {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &context->globalSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanResourceManager: Failed to create global descriptor set layout!");
+        throw std::runtime_error("GpuResourceManager: Failed to create global descriptor set layout!");
     }
 
     // Step 2: Material Set (Set 1) - Mesh-specific PBR Textures
@@ -110,14 +110,14 @@ void VulkanResourceManager::createLayouts() const {
     matLayoutInfo.pBindings = matBindings.data();
 
     if (vkCreateDescriptorSetLayout(context->device, &matLayoutInfo, nullptr, &context->materialSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanResourceManager: Failed to create material descriptor set layout!");
+        throw std::runtime_error("GpuResourceManager: Failed to create material descriptor set layout!");
     }
 }
 
 /**
  * @brief Reserves memory pools for command recording and descriptor allocation.
  */
-void VulkanResourceManager::createPools(const VulkanDevice* const engine) {
+void GpuResourceManager::createPools(const VulkanDevice* const engine) {
     const uint32_t imageCount = engine->getSwapChainImageCount();
 
     // Step 1: Descriptor Pool for UBOs and Samplers
@@ -154,13 +154,13 @@ void VulkanResourceManager::createPools(const VulkanDevice* const engine) {
 /**
  * @brief Initializes the textures and render passes required for Shadow Mapping.
  */
-void VulkanResourceManager::createShadowResources(const VulkanDevice* const engine) {
+void GpuResourceManager::createShadowResources(const VulkanDevice* const engine) {
     const VkFormat shadowFormat = engine->getDepthFormat();
     const uint32_t res = GE::EngineConstants::SHADOW_MAP_RES;
 
     VulkanContext* context = ServiceLocator::GetContext();
 
-    // Step 1: Create Shadow Map Image and View
+    // Step 1: Create Shadow Map GpuImage and View
     VulkanUtils::createImage(context->device, context->physicalDevice, res, res, 1U,
         VK_SAMPLE_COUNT_1_BIT, shadowFormat, VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -179,7 +179,7 @@ void VulkanResourceManager::createShadowResources(const VulkanDevice* const engi
     samplerInfo.compareOp = VK_COMPARE_OP_LESS;
 
     if (vkCreateSampler(context->device, &samplerInfo, nullptr, &shadowSampler) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanResourceManager: Failed to create shadow sampler!");
+        throw std::runtime_error("GpuResourceManager: Failed to create shadow sampler!");
     }
 
     // Step 3: Finalize Shadow RenderPass and Framebuffer
@@ -194,14 +194,14 @@ void VulkanResourceManager::createShadowResources(const VulkanDevice* const engi
     fbInfo.layers = 1U;
 
     if (vkCreateFramebuffer(context->device, &fbInfo, nullptr, &shadowFramebuffer) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanResourceManager: Failed to create shadow framebuffer!");
+        throw std::runtime_error("GpuResourceManager: Failed to create shadow framebuffer!");
     }
 }
 
 /**
  * @brief Allocates and maps memory for the per-frame Uniform Buffer Objects (UBO).
  */
-void VulkanResourceManager::createUniformBuffers(const uint32_t imageCount) {
+void GpuResourceManager::createUniformBuffers(const uint32_t imageCount) {
     uniformBuffers.resize(static_cast<size_t>(imageCount));
     uniformBuffersMemory.resize(static_cast<size_t>(imageCount));
     uniformBuffersMapped.resize(static_cast<size_t>(imageCount));
@@ -221,7 +221,7 @@ void VulkanResourceManager::createUniformBuffers(const uint32_t imageCount) {
 /**
  * @brief Links allocated UBOs and shadow maps to the GPU Descriptor Sets.
  */
-void VulkanResourceManager::updateDescriptorSets(const VulkanDevice* const engine, const PostProcessor* const postProcessor) {
+void GpuResourceManager::updateDescriptorSets(const VulkanDevice* const engine, const PostProcessor* const postProcessor) {
     const uint32_t imageCount = engine->getSwapChainImageCount();
 
     VulkanContext* context = ServiceLocator::GetContext();
@@ -236,7 +236,7 @@ void VulkanResourceManager::updateDescriptorSets(const VulkanDevice* const engin
 
         descriptorSets.resize(static_cast<size_t>(imageCount));
         if (vkAllocateDescriptorSets(context->device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-            throw std::runtime_error("VulkanResourceManager: Failed to allocate global descriptor sets!");
+            throw std::runtime_error("GpuResourceManager: Failed to allocate global descriptor sets!");
         }
     }
 
@@ -262,7 +262,7 @@ void VulkanResourceManager::updateDescriptorSets(const VulkanDevice* const engin
 /**
  * @brief Safely releases all managed Vulkan handles and mapped memory.
  */
-void VulkanResourceManager::cleanup() {
+void GpuResourceManager::cleanup() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if ((context == nullptr) || (context->device == VK_NULL_HANDLE)) {

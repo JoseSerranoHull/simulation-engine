@@ -107,7 +107,7 @@ std::shared_ptr<Material> AssetManager::createMaterial(
     std::shared_ptr<Texture> ao,
     std::shared_ptr<Texture> metallic,
     std::shared_ptr<Texture> roughness,
-    Pipeline* const pipeline
+    GraphicsPipeline* const pipeline
 ) const {
     VulkanContext* context = ServiceLocator::GetContext();
 

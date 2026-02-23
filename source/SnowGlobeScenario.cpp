@@ -10,7 +10,7 @@ using namespace GE::Assets;
 namespace GE {
 
     void SnowGlobeScenario::OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) {
-        m_climate = std::make_unique<ClimateManager>();
+        m_climate = std::make_unique<ClimateService>();
 
         auto* em = ServiceLocator::GetEntityManager();
         auto* am = ServiceLocator::GetAssetManager();

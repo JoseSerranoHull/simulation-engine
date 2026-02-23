@@ -97,7 +97,7 @@ void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float del
     const uint32_t groupCount = (particleCount / COMPUTE_WORKGROUP_SIZE) + GE::EngineConstants::OFFSET_ONE;
     vkCmdDispatch(commandBuffer, groupCount, GE::EngineConstants::COUNT_ONE, GE::EngineConstants::COUNT_ONE);
 
-    // Step 3: Pipeline Barrier - Ensure Compute writes finish before Vertex Input reads the SSBO
+    // Step 3: GraphicsPipeline Barrier - Ensure Compute writes finish before Vertex Input reads the SSBO
     VkBufferMemoryBarrier bufferBarrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
     bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
@@ -153,19 +153,19 @@ std::vector<SparkLight> ParticleSystem::getLightData() const {
 
     for (uint32_t i = 0U; i < GE::EngineConstants::MAX_SPARK_LIGHTS; ++i) {
         const uint32_t idx = sectors[i];
-        const glm::vec3 pos = glm::vec3(gpuParticles[idx].position);
+        const glm::vec3 pos = glm::vec3(gpuParticles[idx].m_position);
         const glm::vec2 toCenter{ pos.x - lastEmitterPos.x, pos.z - lastEmitterPos.z };
 
         if (glm::length(toCenter) > LENGTH_THRESHOLD) {
             const glm::vec2 pushDir = glm::normalize(toCenter);
-            lights[i].position = glm::vec3(pos.x + (pushDir.x * PUSH_FACTOR), pos.y, pos.z + (pushDir.y * PUSH_FACTOR));
+            lights[i].m_position = glm::vec3(pos.x + (pushDir.x * PUSH_FACTOR), pos.y, pos.z + (pushDir.y * PUSH_FACTOR));
         }
         else {
-            lights[i].position = pos;
+            lights[i].m_position = pos;
         }
 
-        const float life = gpuParticles[idx].velocity.w;
-        lights[i].color = glm::vec3(1.0f, 0.45f, 0.1f) * (life * 0.04f);
+        const float life = gpuParticles[idx].m_velocity.w;
+        lights[i].m_color = glm::vec3(1.0f, 0.45f, 0.1f) * (life * 0.04f);
     }
 
     vkUnmapMemory(context->device, storageBufferMemory);
@@ -185,9 +185,9 @@ void ParticleSystem::createBuffers(const glm::vec3& spawnPos) {
 
     for (auto& p : particles) {
         const float initialYOffset = rndLife(rndEngine) * 0.2f;
-        p.position = glm::vec4(spawnPos.x, spawnPos.y + initialYOffset, spawnPos.z, 2.0f);
-        p.velocity = glm::vec4(0.0f, 0.0f, 0.0f, rndLife(rndEngine));
-        p.color = glm::vec4(1.0f);
+        p.m_position = glm::vec4(spawnPos.x, spawnPos.y + initialYOffset, spawnPos.z, 2.0f);
+        p.m_velocity = glm::vec4(0.0f, 0.0f, 0.0f, rndLife(rndEngine));
+        p.m_color = glm::vec4(1.0f);
     }
 
     const VkDeviceSize bufferSize = static_cast<VkDeviceSize>(sizeof(Particle)) * GE::EngineConstants::PARTICLE_POOL_SIZE;
@@ -315,9 +315,9 @@ void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     const std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {
-        VkVertexInputAttributeDescription{ 0U, 0U, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Particle, position) },
-        VkVertexInputAttributeDescription{ 1U, 0U, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Particle, velocity) },
-        VkVertexInputAttributeDescription{ 2U, 0U, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Particle, color) }
+        VkVertexInputAttributeDescription{ 0U, 0U, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Particle, m_position) },
+        VkVertexInputAttributeDescription{ 1U, 0U, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Particle, m_velocity) },
+        VkVertexInputAttributeDescription{ 2U, 0U, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Particle, m_color) }
     };
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
@@ -359,7 +359,7 @@ void ParticleSystem::createGraphicsPipeline(const VkRenderPass renderPass, const
     colorBlending.attachmentCount = 1U;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Step 6: Final Pipeline Creation
+    // Step 6: Final GraphicsPipeline Creation
     const VkGraphicsPipelineCreateInfo pipelineInfo = VulkanUtils::preparePipelineCreateInfo(
         shaderStages, &vertexInputInfo, &inputAssembly, &viewportState, &rasterizer,
         &multisampling, &depthStencil, &colorBlending, &dynamicState,

@@ -49,7 +49,7 @@ public:
         const VkDescriptorSet globalDescriptorSet,
         const VkRenderPass shadowPass,
         const VkFramebuffer shadowFramebuffer,
-        const std::vector<Pipeline*>& pipelines
+        const std::vector<GraphicsPipeline*>& pipelines
     ) const;
 
 private:
@@ -60,7 +60,7 @@ private:
         const VkCommandBuffer cb,
         const VkRenderPass renderPass,
         const VkFramebuffer framebuffer,
-        const Pipeline* const shadowPipeline,
+        const GraphicsPipeline* const shadowPipeline,
         const VkDescriptorSet globalSet,
         GE::ECS::EntityManager* const em
     ) const;
@@ -72,7 +72,7 @@ private:
         const Skybox* const skybox,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
-        const std::vector<Pipeline*>& pipelines,
+        const std::vector<GraphicsPipeline*>& pipelines,
         GE::ECS::EntityManager* const em
     ) const;
 
@@ -82,7 +82,7 @@ private:
         const VkExtent2D& extent,
         const PostProcessor* const postProcessor,
         const VkDescriptorSet globalSet,
-        const std::vector<Pipeline*>& pipelines,
+        const std::vector<GraphicsPipeline*>& pipelines,
         GE::ECS::EntityManager* const em
     ) const;
 

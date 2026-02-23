@@ -20,10 +20,10 @@ int main() {
         static constexpr uint32_t WINDOW_HEIGHT = 720U;
         static constexpr char const* WINDOW_TITLE = "Vulkan Lab: Sandy-Snow Globe (Audited)";
 
-        // 3. Initialize the Experience
-        // RAII: The 'app' object owns all sub-systems. Construction handles 
+        // 3. Initialize the EngineOrchestrator
+        // RAII: The 'app' object owns all sub-systems. Construction handles
         // the full Vulkan handshake and asset loading sequence.
-        Experience app(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
+        EngineOrchestrator app(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
 
         // 4. Execution
         // Enters the primary OS message loop and simulation update cycle.

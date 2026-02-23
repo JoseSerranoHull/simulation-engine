@@ -6,11 +6,11 @@
 /* parasoft-end-suppress ALL */
 
 /**
- * @class TimeManager
+ * @class TimeService
  * @brief Handles frame-timing, global clock accumulation, and simulation scaling.
  * Provides the Delta Time required for frame-independent movement and animations.
  */
-class TimeManager final {
+class TimeService final {
 public:
     /** @brief Delta increment constant for simulation speed adjustments. */
     static constexpr float SCALE_STEP = 0.2f;
@@ -20,15 +20,15 @@ public:
     /**
      * @brief Constructor: Captures the initial timestamp to prevent massive first-frame jumps.
      */
-    TimeManager() = default;
+    TimeService() = default;
 
     /** @brief Destructor: Defaulted as no external heap resources are managed. */
-    ~TimeManager() = default;
+    ~TimeService() = default;
 
     // RAII: Time is a global singleton-like state; prevent copies to maintain 
     // a consistent clock across all engine systems.
-    TimeManager(const TimeManager&) = delete;
-    TimeManager& operator=(const TimeManager&) = delete;
+    TimeService(const TimeService&) = delete;
+    TimeService& operator=(const TimeService&) = delete;
 
     /**
      * @brief Calculates elapsed time since the last update and advances the global clock.

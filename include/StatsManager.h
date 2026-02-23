@@ -7,11 +7,11 @@
 /* parasoft-end-suppress ALL */
 
 /**
- * @class StatsManager
+ * @class PerformanceTracker
  * @brief Encapsulates performance metrics and history for UI visualization.
  * Provides a circular buffer for tracking FPS history over a fixed window of frames.
  */
-class StatsManager final {
+class PerformanceTracker final {
 public:
     /** @brief Number of frames stored for historical plotting. */
     static constexpr uint32_t HISTORY_SIZE = 100U;
@@ -19,16 +19,16 @@ public:
     /**
      * @brief Constructor: Initializes the history buffer with zeros.
      */
-    StatsManager() {
+    PerformanceTracker() {
         fpsHistory.assign(static_cast<size_t>(HISTORY_SIZE), 0.0f);
     }
 
-    ~StatsManager() = default;
+    ~PerformanceTracker() = default;
 
-    // RAII: StatsManager is a simple data container, but we prevent copies to ensure 
+    // RAII: PerformanceTracker is a simple data container, but we prevent copies to ensure 
     // a single source of truth for engine performance metrics.
-    StatsManager(const StatsManager&) = delete;
-    StatsManager& operator=(const StatsManager&) = delete;
+    PerformanceTracker(const PerformanceTracker&) = delete;
+    PerformanceTracker& operator=(const PerformanceTracker&) = delete;
 
     /**
      * @brief Updates the history with the latest frame metrics.

@@ -15,13 +15,13 @@
 namespace GE::Graphics {
 
 /**
- * @class Pipeline
- * @brief Manages a Vulkan Graphics Pipeline and its associated Layout.
+ * @class GraphicsPipeline
+ * @brief Manages a Vulkan Graphics GraphicsPipeline and its associated Layout.
  * Handles state configuration for rasterization, blending, depth testing, and MSAA.
  */
-class Pipeline final {
+class GraphicsPipeline final {
 public:
-    // --- Static Pipeline Constants ---
+    // --- Static GraphicsPipeline Constants ---
     static constexpr uint32_t BINDING_COUNT_ONE = 1U;
     static constexpr uint32_t VIEWPORT_COUNT_ONE = 1U;
     static constexpr uint32_t SCISSOR_COUNT_ONE = 1U;
@@ -45,7 +45,7 @@ public:
     /**
      * @brief Constructs a specialized graphics pipeline.
      */
-    Pipeline(
+    GraphicsPipeline(
         const VkRenderPass renderPass,
         const VkDescriptorSetLayout inMaterialLayout,
         ShaderModule* const vertShader,
@@ -128,7 +128,7 @@ public:
         colorBlending.attachmentCount = ATTACHMENT_COUNT_ONE;
         colorBlending.pAttachments = &colorBlendAttachment;
 
-        // 8. Pipeline Layout (Global UBO + Material Set + Push Constants)
+        // 8. GraphicsPipeline Layout (Global UBO + Material Set + Push Constants)
         const VkPushConstantRange pushConstantRange{
             VK_SHADER_STAGE_VERTEX_BIT,
             PUSH_CONSTANT_OFFSET,
@@ -149,10 +149,10 @@ public:
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
         if (vkCreatePipelineLayout(context->device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-            throw std::runtime_error("Pipeline: Failed to create pipeline layout!");
+            throw std::runtime_error("GraphicsPipeline: Failed to create pipeline layout!");
         }
 
-        // 9. Graphics Pipeline Assembly
+        // 9. Graphics GraphicsPipeline Assembly
         VkGraphicsPipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
         pipelineInfo.pStages = shaderStages.data();
@@ -168,14 +168,14 @@ public:
         pipelineInfo.renderPass = renderPass;
 
         if (vkCreateGraphicsPipelines(context->device, VK_NULL_HANDLE, PIPELINE_COUNT_ONE, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
-            throw std::runtime_error("Pipeline: Failed to create graphics pipeline!");
+            throw std::runtime_error("GraphicsPipeline: Failed to create graphics pipeline!");
         }
     }
 
     /**
      * @brief Destructor: Explicitly destroys the pipeline and its layout.
      */
-    ~Pipeline() {
+    ~GraphicsPipeline() {
         VulkanContext* context = ServiceLocator::GetContext();
 
         if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
@@ -187,8 +187,8 @@ public:
     }
 
     // RAII: Prevent duplication of pipeline handles
-    Pipeline(const Pipeline&) = delete;
-    Pipeline& operator=(const Pipeline&) = delete;
+    GraphicsPipeline(const GraphicsPipeline&) = delete;
+    GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
 
     /**
      * @brief Binds this pipeline to the current command buffer.

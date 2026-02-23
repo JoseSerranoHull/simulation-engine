@@ -79,7 +79,7 @@ public:
         std::shared_ptr<GE::Graphics::Texture> ao,
         std::shared_ptr<GE::Graphics::Texture> metallic,
         std::shared_ptr<GE::Graphics::Texture> roughness,
-        GE::Graphics::Pipeline* const pipeline
+        GE::Graphics::GraphicsPipeline* const pipeline
     ) const;
 
     /**

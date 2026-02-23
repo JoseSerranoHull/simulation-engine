@@ -185,11 +185,16 @@
     <None Include="config\simulation_lab2.ini" />
     <None Include="config\simulation_lab3.ini" />
     <None Include="config\snow_globe.ini" />
+    <None Include="markdown\Claude - Refactor Plan.md" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md" />
+    <None Include="markdown\Final Lab README.md" />
+    <None Include="markdown\Gemini - Refactor Plan.md" />
     <None Include="markdown\Licenses.md" />
-    <None Include="markdown\MasterPlan.md" />
     <None Include="markdown\SimulationLab2.md" />
+    <None Include="markdown\SimulationLab3.md" />
+    <None Include="markdown\SimulationLab4.md" />
+    <None Include="markdown\SimulationWorshops.md" />
     <None Include="README.md" />
     <None Include="shaders\base.frag" />
     <None Include="shaders\dust.comp" />

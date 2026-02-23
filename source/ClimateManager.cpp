@@ -60,7 +60,7 @@ void ClimateManager::update(const float dt, const float totalTime, const bool au
     // Step 5: Sun Position Calculation - Orbital mechanics
     if (autoOrbit) {
         const double angle = static_cast<double>(totalTime * orbitSpeed);
-        currentSunPos.x = EngineConstants::SUN_X_OFFSET;
+        currentSunPos.x = GE::EngineConstants::SUN_X_OFFSET;
         currentSunPos.y = static_cast<float>(std::sin(angle)) * orbitRadius;
         currentSunPos.z = static_cast<float>(std::cos(angle)) * orbitRadius;
     }
@@ -69,8 +69,8 @@ void ClimateManager::update(const float dt, const float totalTime, const bool au
     // Calculate the base ambient color based on sun height (Day/Sunset/Night)
     const float normalizedHeight = currentSunPos.y / orbitRadius;
     const glm::vec3 baseAmbient = (normalizedHeight > 0.0f)
-        ? glm::mix(EngineConstants::COLOR_SUNSET, EngineConstants::COLOR_DAY, normalizedHeight)
-        : glm::mix(EngineConstants::COLOR_SUNSET, EngineConstants::COLOR_NIGHT, std::abs(normalizedHeight));
+        ? glm::mix(GE::EngineConstants::COLOR_SUNSET, GE::EngineConstants::COLOR_DAY, normalizedHeight)
+        : glm::mix(GE::EngineConstants::COLOR_SUNSET, GE::EngineConstants::COLOR_NIGHT, std::abs(normalizedHeight));
 
     // Apply the weather-specific tint (e.g., grey for rain) to the natural sunlight
     const glm::vec3 tintedSun = baseAmbient * weatherTint;

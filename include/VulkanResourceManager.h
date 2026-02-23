@@ -39,22 +39,22 @@ public:
     // --- Core Resource API ---
 
     /** @brief Initializes the resource manager and child synchronization systems. */
-    void init(const VulkanEngine* const engine, const uint32_t maxFrames);
+    void init(const VulkanDevice* const engine, const uint32_t maxFrames);
 
     /** @brief Defines the Descriptor Set Layouts for global UBO access. */
     void createLayouts() const;
 
     /** @brief Reserves memory pools for command recording and descriptor allocation. */
-    void createPools(const VulkanEngine* const engine);
+    void createPools(const VulkanDevice* const engine);
 
     /** @brief Initializes the textures and render passes required for Shadow Mapping. */
-    void createShadowResources(const VulkanEngine* const engine);
+    void createShadowResources(const VulkanDevice* const engine);
 
     /** @brief Allocates and maps memory for the per-frame Uniform Buffer Objects (UBO). */
     void createUniformBuffers(const uint32_t imageCount);
 
     /** @brief Links allocated UBOs and shadow maps to the GPU Descriptor Sets. */
-    void updateDescriptorSets(const VulkanEngine* const engine, const PostProcessor* const postProcessor);
+    void updateDescriptorSets(const VulkanDevice* const engine, const PostProcessor* const postProcessor);
 
     /** @brief Safely releases all managed Vulkan handles and mapped memory. */
     void cleanup();

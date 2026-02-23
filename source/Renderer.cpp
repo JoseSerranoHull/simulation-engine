@@ -93,7 +93,7 @@ void Renderer::recordShadowPass(
     VkRenderPassBeginInfo shadowPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     shadowPassInfo.renderPass = renderPass;
     shadowPassInfo.framebuffer = framebuffer;
-    shadowPassInfo.renderArea.extent = { EngineConstants::SHADOW_MAP_RES, EngineConstants::SHADOW_MAP_RES };
+    shadowPassInfo.renderArea.extent = { GE::EngineConstants::SHADOW_MAP_RES, GE::EngineConstants::SHADOW_MAP_RES };
 
     VkClearValue shadowClear{};
     shadowClear.depthStencil = { DEPTH_CLEAR_VAL, 0U };
@@ -102,11 +102,11 @@ void Renderer::recordShadowPass(
 
     vkCmdBeginRenderPass(cb, &shadowPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    const float shadowRes = static_cast<float>(EngineConstants::SHADOW_MAP_RES);
+    const float shadowRes = static_cast<float>(GE::EngineConstants::SHADOW_MAP_RES);
     const VkViewport sv{ 0.0f, 0.0f, shadowRes, shadowRes, 0.0f, 1.0f };
     vkCmdSetViewport(cb, 0U, 1U, &sv);
 
-    const VkRect2D ss{ {0, 0}, {EngineConstants::SHADOW_MAP_RES, EngineConstants::SHADOW_MAP_RES} };
+    const VkRect2D ss{ {0, 0}, {GE::EngineConstants::SHADOW_MAP_RES, GE::EngineConstants::SHADOW_MAP_RES} };
     vkCmdSetScissor(cb, 0U, 1U, &ss);
 
     // Agnostic Iteration: Draw only entities that cast shadows

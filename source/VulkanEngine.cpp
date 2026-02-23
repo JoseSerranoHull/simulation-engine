@@ -44,7 +44,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
  * @brief Constructor: Orchestrates the sequential initialization of the Vulkan hardware stack.
  * Satisfies INIT.06 by explicitly initializing all primitives and handles.
  */
-VulkanEngine::VulkanEngine(GLFWwindow* const window)
+VulkanDevice::VulkanDevice(GLFWwindow* const window)
     : depthFormat(VK_FORMAT_UNDEFINED),
     msaaSamples(VK_SAMPLE_COUNT_1_BIT)
 {
@@ -58,7 +58,7 @@ VulkanEngine::VulkanEngine(GLFWwindow* const window)
 /**
  * @brief Destructor: Ensures the GPU is idle before releasing RAII unique_ptrs.
  */
-VulkanEngine::~VulkanEngine() {
+VulkanDevice::~VulkanDevice() {
     VulkanContext* context = ServiceLocator::GetContext();
     if (context != nullptr && context->device != VK_NULL_HANDLE) {
         // Step 1: Wait for GPU to finish all in-flight work
@@ -70,7 +70,7 @@ VulkanEngine::~VulkanEngine() {
  * @brief Primary initialization sequence.
  * Follows strict Vulkan dependency order: Instance -> Surface -> Physical Device -> Logical Device.
  */
-void VulkanEngine::initVulkan(GLFWwindow* const window) {
+void VulkanDevice::initVulkan(GLFWwindow* const window) {
     createInstance();
     setupDebugMessenger();
     createSurface(window);
@@ -96,9 +96,9 @@ void VulkanEngine::initVulkan(GLFWwindow* const window) {
 /**
  * @brief Creates the Vulkan Instance with application metadata and extensions.
  */
-void VulkanEngine::createInstance() const {
+void VulkanDevice::createInstance() const {
     if (enableValidationLayers && !checkValidationLayerSupport()) {
-        throw std::runtime_error("VulkanEngine: Validation layers requested but unavailable.");
+        throw std::runtime_error("VulkanDevice: Validation layers requested but unavailable.");
     }
 
     // Step 1: Define Application Metadata
@@ -136,14 +136,14 @@ void VulkanEngine::createInstance() const {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if (vkCreateInstance(&createInfo, nullptr, &context->instance) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanEngine: Critical failure during instance creation.");
+        throw std::runtime_error("VulkanDevice: Critical failure during instance creation.");
     }
 }
 
 /**
  * @brief Sets up the debug messenger for validation layer output.
  */
-void VulkanEngine::setupDebugMessenger() const {
+void VulkanDevice::setupDebugMessenger() const {
     if (!enableValidationLayers) {
         return;
     }
@@ -167,11 +167,11 @@ void VulkanEngine::setupDebugMessenger() const {
 /**
  * @brief Creates the WSI surface to connect Vulkan to the GLFW window.
  */
-void VulkanEngine::createSurface(GLFWwindow* const window) const {
+void VulkanDevice::createSurface(GLFWwindow* const window) const {
     VulkanContext* context = ServiceLocator::GetContext();
 
     if (glfwCreateWindowSurface(context->instance, window, nullptr, &context->surface) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanEngine: Failed to create window surface.");
+        throw std::runtime_error("VulkanDevice: Failed to create window surface.");
     }
 }
 
@@ -183,7 +183,7 @@ void VulkanEngine::createSurface(GLFWwindow* const window) const {
  * @brief Selects a GPU that supports the required queue families and extensions.
  * Evaluates available hardware and selects the most capable device based on MSAA support.
  */
-void VulkanEngine::pickPhysicalDevice() {
+void VulkanDevice::pickPhysicalDevice() {
     uint32_t deviceCount = 0U;
 
     VulkanContext* context = ServiceLocator::GetContext();
@@ -191,7 +191,7 @@ void VulkanEngine::pickPhysicalDevice() {
     static_cast<void>(vkEnumeratePhysicalDevices(context->instance, &deviceCount, nullptr));
 
     if (deviceCount == 0U) {
-        throw std::runtime_error("VulkanEngine: No compatible GPUs found with Vulkan support.");
+        throw std::runtime_error("VulkanDevice: No compatible GPUs found with Vulkan support.");
     }
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -212,7 +212,7 @@ void VulkanEngine::pickPhysicalDevice() {
     }
 
     if (context->physicalDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("VulkanEngine: Failed to identify a suitable GPU.");
+        throw std::runtime_error("VulkanDevice: Failed to identify a suitable GPU.");
     }
 }
 
@@ -220,7 +220,7 @@ void VulkanEngine::pickPhysicalDevice() {
  * @brief Allocates a Logical Device and retrieves Command Queue handles.
  * Configures required device extensions and enables anisotropy for high-quality sampling.
  */
-void VulkanEngine::createLogicalDevice() {
+void VulkanDevice::createLogicalDevice() {
     VulkanContext* context = ServiceLocator::GetContext();
     queueIndices = findQueueFamilies(context->physicalDevice);
 
@@ -236,7 +236,7 @@ void VulkanEngine::createLogicalDevice() {
     for (const uint32_t queueFamily : uniqueQueueFamilies) {
         VkDeviceQueueCreateInfo queueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
         queueCreateInfo.queueFamilyIndex = queueFamily;
-        queueCreateInfo.queueCount = EngineConstants::COUNT_ONE;
+        queueCreateInfo.queueCount = GE::EngineConstants::COUNT_ONE;
         queueCreateInfo.pQueuePriorities = &queuePriority;
         queueCreateInfos.push_back(queueCreateInfo);
     }
@@ -262,7 +262,7 @@ void VulkanEngine::createLogicalDevice() {
     }
 
     if (vkCreateDevice(context->physicalDevice, &createInfo, nullptr, &context->device) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanEngine: Failed to allocate logical hardware device.");
+        throw std::runtime_error("VulkanDevice: Failed to allocate logical hardware device.");
     }
 
     // Step 4: Retrieve hardware handles for queue submissions
@@ -274,12 +274,12 @@ void VulkanEngine::createLogicalDevice() {
 /**
  * @brief Reserves a global VRAM pool for the engine's linear sub-allocator.
  */
-void VulkanEngine::initAllocator() {
+void VulkanDevice::initAllocator() {
     VulkanContext* context = ServiceLocator::GetContext();
-    context->allocator.init(context->device, context->physicalDevice, EngineConstants::VRAM_POOL_SIZE);
+    context->allocator.init(context->device, context->physicalDevice, GE::EngineConstants::VRAM_POOL_SIZE);
 }
 
-void VulkanEngine::createCommandPool() {
+void VulkanDevice::createCommandPool() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     VkCommandPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -287,7 +287,7 @@ void VulkanEngine::createCommandPool() {
     poolInfo.queueFamilyIndex = queueIndices.graphicsFamily.value();
 
     if (vkCreateCommandPool(context->device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanEngine: Failed to create graphics command pool.");
+        throw std::runtime_error("VulkanDevice: Failed to create graphics command pool.");
     }
 }
 
@@ -298,7 +298,7 @@ void VulkanEngine::createCommandPool() {
 /**
  * @brief Negotiates hardware capabilities and creates the VkSwapchainKHR.
  */
-void VulkanEngine::createSwapChain(GLFWwindow* const window) {
+void VulkanDevice::createSwapChain(GLFWwindow* const window) {
     VulkanContext* context = ServiceLocator::GetContext();
     // Step 1: Query current hardware support and negotiate surface settings
     const SwapChainSupportDetails swapChainSupport = querySwapChainSupport(context->physicalDevice);
@@ -345,7 +345,7 @@ void VulkanEngine::createSwapChain(GLFWwindow* const window) {
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = EngineConstants::COUNT_ONE;
+    createInfo.imageArrayLayers = GE::EngineConstants::COUNT_ONE;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
@@ -365,7 +365,7 @@ void VulkanEngine::createSwapChain(GLFWwindow* const window) {
 
     VkSwapchainKHR newSwapChain{ VK_NULL_HANDLE };
     if (vkCreateSwapchainKHR(context->device, &createInfo, nullptr, &newSwapChain) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanEngine: Failed to create hardware swap chain.");
+        throw std::runtime_error("VulkanDevice: Failed to create hardware swap chain.");
     }
 
     // Step 5: Transfer ownership to the SwapChain RAII object
@@ -383,7 +383,7 @@ void VulkanEngine::createSwapChain(GLFWwindow* const window) {
 /**
  * @brief Constructs the final Graphics Render Pass for the presentation engine.
  */
-void VulkanEngine::createRenderPass() {
+void VulkanDevice::createRenderPass() {
     // [0] Color Attachment: Target for tone-mapping
     VkAttachmentDescription colorAttr{};
     colorAttr.format = swapChainObj->getFormat();
@@ -407,7 +407,7 @@ void VulkanEngine::createRenderPass() {
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = EngineConstants::COUNT_ONE;
+    subpass.colorAttachmentCount = GE::EngineConstants::COUNT_ONE;
     subpass.pColorAttachments = &colorRef;
     subpass.pDepthStencilAttachment = &depthRef;
 
@@ -415,14 +415,14 @@ void VulkanEngine::createRenderPass() {
     VkRenderPassCreateInfo passInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
     passInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
     passInfo.pAttachments = attachments.data();
-    passInfo.subpassCount = EngineConstants::COUNT_ONE;
+    passInfo.subpassCount = GE::EngineConstants::COUNT_ONE;
     passInfo.pSubpasses = &subpass;
 
     VulkanContext* context = ServiceLocator::GetContext();
 
     VkRenderPass rawPass{ VK_NULL_HANDLE };
     if (vkCreateRenderPass(context->device, &passInfo, nullptr, &rawPass) != VK_SUCCESS) {
-        throw std::runtime_error("VulkanEngine: Failed to construct presentation RenderPass.");
+        throw std::runtime_error("VulkanDevice: Failed to construct presentation RenderPass.");
     }
 
     finalPass = std::make_unique<RenderPass>(rawPass);
@@ -435,7 +435,7 @@ void VulkanEngine::createRenderPass() {
 /**
  * @brief Queries hardware for the highest supported Multisample Count (MSAA).
  */
-VkSampleCountFlagBits VulkanEngine::getMaxUsableSampleCount() const {
+VkSampleCountFlagBits VulkanDevice::getMaxUsableSampleCount() const {
     VkPhysicalDeviceProperties props;
     VulkanContext* context = ServiceLocator::GetContext();
     vkGetPhysicalDeviceProperties(context->physicalDevice, &props);
@@ -456,7 +456,7 @@ VkSampleCountFlagBits VulkanEngine::getMaxUsableSampleCount() const {
 /**
  * @brief Retrieves hardware-specific depth format support.
  */
-VkFormat VulkanEngine::findDepthFormat() const {
+VkFormat VulkanDevice::findDepthFormat() const {
     return findSupportedFormat(
         { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
         VK_IMAGE_TILING_OPTIMAL,
@@ -467,7 +467,7 @@ VkFormat VulkanEngine::findDepthFormat() const {
 /**
  * @brief Recreates the swapchain and all resolution-dependent resources.
  */
-void VulkanEngine::recreateSwapChain(GLFWwindow* const window) {
+void VulkanDevice::recreateSwapChain(GLFWwindow* const window) {
     int width{ 0 }, height{ 0 };
     glfwGetFramebufferSize(window, &width, &height);
 
@@ -495,7 +495,7 @@ void VulkanEngine::recreateSwapChain(GLFWwindow* const window) {
  * @brief Creates image views for the acquired swapchain images.
  * Adheres to MISRA2008.9_3_2_b by using the addImageView interface.
  */
-void VulkanEngine::createImageViews() {
+void VulkanDevice::createImageViews() {
     const auto& images = swapChainObj->getImages();
 
     VulkanContext* context = ServiceLocator::GetContext();
@@ -506,7 +506,7 @@ void VulkanEngine::createImageViews() {
             images[i],
             swapChainObj->getFormat(),
             VK_IMAGE_ASPECT_COLOR_BIT,
-            EngineConstants::COUNT_ONE
+            GE::EngineConstants::COUNT_ONE
         );
 
         // Push the handle into the RAII object for managed cleanup
@@ -517,7 +517,7 @@ void VulkanEngine::createImageViews() {
 /**
  * @brief Allocates the Hardware Depth Buffer for the final presentation pass.
  */
-void VulkanEngine::createDepthResources() {
+void VulkanDevice::createDepthResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     depthBuffer = std::make_unique<Image>(
@@ -535,7 +535,7 @@ void VulkanEngine::createDepthResources() {
 /**
  * @brief Creates the final framebuffers for window presentation.
  */
-void VulkanEngine::createFramebuffers() {
+void VulkanDevice::createFramebuffers() {
     const auto& views = swapChainObj->getImageViews();
     const auto& extent = swapChainObj->getExtent();
 
@@ -552,14 +552,14 @@ void VulkanEngine::createFramebuffers() {
         fbInfo.pAttachments = attachments.data();
         fbInfo.width = extent.width;
         fbInfo.height = extent.height;
-        fbInfo.layers = EngineConstants::COUNT_ONE;
+        fbInfo.layers = GE::EngineConstants::COUNT_ONE;
 
         VkFramebuffer newFramebuffer{ VK_NULL_HANDLE };
 
         VulkanContext* context = ServiceLocator::GetContext();
 
         if (vkCreateFramebuffer(context->device, &fbInfo, nullptr, &newFramebuffer) != VK_SUCCESS) {
-            throw std::runtime_error("VulkanEngine: Framebuffer allocation failed.");
+            throw std::runtime_error("VulkanDevice: Framebuffer allocation failed.");
         }
 
         // Transfer handle to SwapChain container
@@ -570,7 +570,7 @@ void VulkanEngine::createFramebuffers() {
 /**
  * @brief Safely releases resolution-dependent GPU memory and RAII objects.
  */
-void VulkanEngine::cleanupSwapChain() {
+void VulkanDevice::cleanupSwapChain() {
     if (swapChainObj) {
         swapChainObj->cleanup();
     }
@@ -586,7 +586,7 @@ void VulkanEngine::cleanupSwapChain() {
 /**
  * @brief Identifies support for Graphics, Presentation, and Transfer queues on a GPU.
  */
-QueueFamilyIndices VulkanEngine::findQueueFamilies(const VkPhysicalDevice device) const {
+QueueFamilyIndices VulkanDevice::findQueueFamilies(const VkPhysicalDevice device) const {
     QueueFamilyIndices indices;
     uint32_t count = 0U;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
@@ -624,7 +624,7 @@ QueueFamilyIndices VulkanEngine::findQueueFamilies(const VkPhysicalDevice device
 /**
  * @brief Queries the physical device for surface format and presentation mode support.
  */
-SwapChainSupportDetails VulkanEngine::querySwapChainSupport(const VkPhysicalDevice device) const {
+SwapChainSupportDetails VulkanDevice::querySwapChainSupport(const VkPhysicalDevice device) const {
     SwapChainSupportDetails details;
     VulkanContext* context = ServiceLocator::GetContext();
     static_cast<void>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, context->surface, &details.capabilities));
@@ -649,7 +649,7 @@ SwapChainSupportDetails VulkanEngine::querySwapChainSupport(const VkPhysicalDevi
  * @brief Searches the GPU for an image format that supports specific tiling and features.
  * Matches the const signature in VulkanEngine.h to resolve LNK2019.
  */
-VkFormat VulkanEngine::findSupportedFormat(
+VkFormat VulkanDevice::findSupportedFormat(
     const std::vector<VkFormat>& candidates,
     const VkImageTiling tiling,
     const VkFormatFeatureFlags features) const
@@ -670,14 +670,14 @@ VkFormat VulkanEngine::findSupportedFormat(
         }
     }
 
-    throw std::runtime_error("VulkanEngine: Failed to identify a hardware-supported image format.");
+    throw std::runtime_error("VulkanDevice: Failed to identify a hardware-supported image format.");
 }
 
 /**
  * @brief Verifies that the hardware/driver supports the requested Vulkan Validation Layers.
  * Matches the const signature in VulkanEngine.h to resolve LNK2019.
  */
-bool VulkanEngine::checkValidationLayerSupport() const {
+bool VulkanDevice::checkValidationLayerSupport() const {
     uint32_t layerCount = 0U;
     static_cast<void>(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
 

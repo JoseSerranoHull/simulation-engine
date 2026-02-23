@@ -52,19 +52,19 @@ void Skybox::draw(const VkCommandBuffer commandBuffer, const VkDescriptorSet glo
     // Step 1: Bind the specialized skybox pipeline and vertex data
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    const VkBuffer vertexBuffers[EngineConstants::COUNT_ONE] = { vertexBuffer };
-    const VkDeviceSize offsets[EngineConstants::COUNT_ONE] = { EngineConstants::SZ_ZERO };
-    vkCmdBindVertexBuffers(commandBuffer, EngineConstants::INDEX_ZERO, EngineConstants::COUNT_ONE, vertexBuffers, offsets);
+    const VkBuffer vertexBuffers[GE::EngineConstants::COUNT_ONE] = { vertexBuffer };
+    const VkDeviceSize offsets[GE::EngineConstants::COUNT_ONE] = { GE::EngineConstants::SZ_ZERO };
+    vkCmdBindVertexBuffers(commandBuffer, GE::EngineConstants::INDEX_ZERO, GE::EngineConstants::COUNT_ONE, vertexBuffers, offsets);
 
     // Step 2: Bind descriptors (Global UBO and Skybox Cubemap)
     const uint32_t setCount = 2U;
     const VkDescriptorSet sets[setCount] = { globalDescriptorSet, descriptorSet };
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-        EngineConstants::INDEX_ZERO, setCount, sets, EngineConstants::OFFSET_ZERO, nullptr);
+        GE::EngineConstants::INDEX_ZERO, setCount, sets, GE::EngineConstants::OFFSET_ZERO, nullptr);
 
     // Step 3: Dispatch the draw call for the cube geometry
     const uint32_t vertexCount = static_cast<uint32_t>(vertices.size() / VERT_FLOATS_PER_POS);
-    vkCmdDraw(commandBuffer, vertexCount, EngineConstants::COUNT_ONE, EngineConstants::OFFSET_ZERO, EngineConstants::OFFSET_ZERO);
+    vkCmdDraw(commandBuffer, vertexCount, GE::EngineConstants::COUNT_ONE, GE::EngineConstants::OFFSET_ZERO, GE::EngineConstants::OFFSET_ZERO);
 }
 
 /**
@@ -85,7 +85,7 @@ void Skybox::createVertexBuffer() const {
         stagingBuffer, stagingMemory);
 
     void* data{ nullptr };
-    static_cast<void>(vkMapMemory(context->device, stagingMemory, EngineConstants::SZ_ZERO, bufferSize, 0U, &data));
+    static_cast<void>(vkMapMemory(context->device, stagingMemory, GE::EngineConstants::SZ_ZERO, bufferSize, 0U, &data));
     static_cast<void>(std::memcpy(data, vertices.data(), static_cast<size_t>(bufferSize)));
     vkUnmapMemory(context->device, stagingMemory);
 
@@ -110,27 +110,27 @@ void Skybox::createDescriptorResources() const {
 
     // Step 1: Create the Descriptor Set Layout (Must happen regardless of texture)
     VkDescriptorSetLayoutBinding samplerLayoutBinding{
-        EngineConstants::INDEX_ZERO, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        EngineConstants::COUNT_ONE, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr
+        GE::EngineConstants::INDEX_ZERO, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        GE::EngineConstants::COUNT_ONE, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr
     };
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    layoutInfo.bindingCount = EngineConstants::COUNT_ONE;
+    layoutInfo.bindingCount = GE::EngineConstants::COUNT_ONE;
     layoutInfo.pBindings = &samplerLayoutBinding;
     static_cast<void>(vkCreateDescriptorSetLayout(context->device, &layoutInfo, nullptr, &descriptorSetLayout));
 
     // Step 2: Initialize a dedicated Descriptor Pool (Must happen regardless of texture)
-    VkDescriptorPoolSize poolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineConstants::COUNT_ONE };
+    VkDescriptorPoolSize poolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, GE::EngineConstants::COUNT_ONE };
     VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-    poolInfo.poolSizeCount = EngineConstants::COUNT_ONE;
+    poolInfo.poolSizeCount = GE::EngineConstants::COUNT_ONE;
     poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = EngineConstants::COUNT_ONE;
+    poolInfo.maxSets = GE::EngineConstants::COUNT_ONE;
     static_cast<void>(vkCreateDescriptorPool(context->device, &poolInfo, nullptr, &descriptorPool));
 
     // Step 3: Allocate the Descriptor Set
     VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = EngineConstants::COUNT_ONE;
+    allocInfo.descriptorSetCount = GE::EngineConstants::COUNT_ONE;
     allocInfo.pSetLayouts = &descriptorSetLayout;
     static_cast<void>(vkAllocateDescriptorSets(context->device, &allocInfo, &descriptorSet));
 
@@ -147,12 +147,12 @@ void Skybox::createDescriptorResources() const {
 
         VkWriteDescriptorSet descriptorWrite{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         descriptorWrite.dstSet = descriptorSet;
-        descriptorWrite.dstBinding = EngineConstants::INDEX_ZERO;
-        descriptorWrite.descriptorCount = EngineConstants::COUNT_ONE;
+        descriptorWrite.dstBinding = GE::EngineConstants::INDEX_ZERO;
+        descriptorWrite.descriptorCount = GE::EngineConstants::COUNT_ONE;
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrite.pImageInfo = &imageInfo;
 
-        vkUpdateDescriptorSets(context->device, EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
+        vkUpdateDescriptorSets(context->device, GE::EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
     }
     // --- GUARD END ---
 }
@@ -187,24 +187,24 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
 
     // Step 3: Define Fixed-Function States (Postponed for safety)
     const uint32_t stride = static_cast<uint32_t>(VERT_FLOATS_PER_POS * sizeof(float));
-    VkVertexInputBindingDescription bindingDescription{ EngineConstants::INDEX_ZERO, stride, VK_VERTEX_INPUT_RATE_VERTEX };
+    VkVertexInputBindingDescription bindingDescription{ GE::EngineConstants::INDEX_ZERO, stride, VK_VERTEX_INPUT_RATE_VERTEX };
     VkVertexInputAttributeDescription attributeDescription{
-        EngineConstants::INDEX_ZERO, EngineConstants::INDEX_ZERO,
-        VK_FORMAT_R32G32B32_SFLOAT, EngineConstants::OFFSET_ZERO
+        GE::EngineConstants::INDEX_ZERO, GE::EngineConstants::INDEX_ZERO,
+        VK_FORMAT_R32G32B32_SFLOAT, GE::EngineConstants::OFFSET_ZERO
     };
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vertexInputInfo.vertexBindingDescriptionCount = EngineConstants::COUNT_ONE;
+    vertexInputInfo.vertexBindingDescriptionCount = GE::EngineConstants::COUNT_ONE;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = EngineConstants::COUNT_ONE;
+    vertexInputInfo.vertexAttributeDescriptionCount = GE::EngineConstants::COUNT_ONE;
     vertexInputInfo.pVertexAttributeDescriptions = &attributeDescription;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineViewportStateCreateInfo viewportState{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-    viewportState.viewportCount = EngineConstants::COUNT_ONE;
-    viewportState.scissorCount = EngineConstants::COUNT_ONE;
+    viewportState.viewportCount = GE::EngineConstants::COUNT_ONE;
+    viewportState.scissorCount = GE::EngineConstants::COUNT_ONE;
 
     // Use VulkanUtils for deduplicated boilerplate states
     const std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -221,7 +221,7 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
     colorBlendAttachment.blendEnable = VK_FALSE;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    colorBlending.attachmentCount = EngineConstants::COUNT_ONE;
+    colorBlending.attachmentCount = GE::EngineConstants::COUNT_ONE;
     colorBlending.pAttachments = &colorBlendAttachment;
 
     // Step 4: Finalize Pipeline Creation
@@ -231,7 +231,7 @@ void Skybox::createPipeline(const VkRenderPass renderPass) const {
         pipelineLayout, renderPass
     );
 
-    if (vkCreateGraphicsPipelines(context->device, VK_NULL_HANDLE, EngineConstants::COUNT_ONE,
+    if (vkCreateGraphicsPipelines(context->device, VK_NULL_HANDLE, GE::EngineConstants::COUNT_ONE,
         &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
         throw std::runtime_error("Skybox: Failed to create graphics pipeline!");
     }
@@ -261,12 +261,12 @@ void Skybox::loadTextures(const std::vector<std::string>& facePaths) {
 
     VkWriteDescriptorSet descriptorWrite{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
     descriptorWrite.dstSet = descriptorSet;
-    descriptorWrite.dstBinding = EngineConstants::INDEX_ZERO;
-    descriptorWrite.descriptorCount = EngineConstants::COUNT_ONE;
+    descriptorWrite.dstBinding = GE::EngineConstants::INDEX_ZERO;
+    descriptorWrite.descriptorCount = GE::EngineConstants::COUNT_ONE;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptorWrite.pImageInfo = &imageInfo;
 
-    vkUpdateDescriptorSets(context->device, EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
+    vkUpdateDescriptorSets(context->device, GE::EngineConstants::COUNT_ONE, &descriptorWrite, 0U, nullptr);
 
     m_texturesLoaded = true; // Set this after vkUpdateDescriptorSets
 

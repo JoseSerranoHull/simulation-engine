@@ -6,7 +6,7 @@
 InputManager::InputManager(GLFWwindow* const inWindow, TimeManager* const inTime)
     : window(inWindow),
     timeManager(inTime),
-    activeCameraIndex(static_cast<int32_t>(EngineConstants::INDEX_ZERO)),
+    activeCameraIndex(static_cast<int32_t>(GE::EngineConstants::INDEX_ZERO)),
     lastX(0.0f),
     lastY(0.0f),
     firstMouse(true),

@@ -72,7 +72,7 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const Pipeline* p
         // 4. Update World Matrix via Push Constants
         // We now use the passed worldMatrix instead of the old internal modelMatrix
         vkCmdPushConstants(cb, activePipeline->getPipelineLayout(),
-            VK_SHADER_STAGE_VERTEX_BIT, EngineConstants::OFFSET_ZERO,
+            VK_SHADER_STAGE_VERTEX_BIT, GE::EngineConstants::OFFSET_ZERO,
             static_cast<uint32_t>(sizeof(glm::mat4)), &worldMatrix);
 
         // 5. Bind Geometry Buffers

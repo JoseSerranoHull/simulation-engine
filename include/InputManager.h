@@ -97,7 +97,7 @@ private:
 
     // --- Internal Camera State ---
     std::vector<std::unique_ptr<Camera>> cameras{};
-    int32_t activeCameraIndex{ static_cast<int32_t>(EngineConstants::INDEX_ZERO) };
+    int32_t activeCameraIndex{ static_cast<int32_t>(GE::EngineConstants::INDEX_ZERO) };
 
     // --- Mouse Tracking ---
     float lastX;

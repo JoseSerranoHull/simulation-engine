@@ -85,7 +85,7 @@ namespace GE::Graphics
  * * This namespace organizes fixed parameters for rendering, memory management,
  * and environmental logic to satisfy Parasoft audit requirements.
  */
-namespace EngineConstants {
+namespace GE::EngineConstants {
     // --- Global Simulation & Rendering ---
     static constexpr uint32_t SHADOW_MAP_RES = 2048U;       /**< Resolution for the depth-pass texture. */
     static constexpr uint32_t PARTICLE_POOL_SIZE = 20000U;  /**< Maximum number of active particles. */
@@ -149,9 +149,9 @@ struct UniformBufferObject {
     alignas(16) glm::vec3 lightColor{ 1.0f, 1.0f, 1.0f };
 
     // 3. Simulation Logic Flags and Scalars
-    int32_t useGouraud{ EngineConstants::SHADER_FALSE };
+    int32_t useGouraud{ GE::EngineConstants::SHADER_FALSE };
     float time{ 0.0f };
 
     // 4. Dynamic Light Data Array
-    alignas(16) SparkLight sparks[EngineConstants::MAX_SPARK_LIGHTS]{};
+    alignas(16) SparkLight sparks[GE::EngineConstants::MAX_SPARK_LIGHTS]{};
 };

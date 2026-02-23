@@ -82,7 +82,7 @@ public:
     GE::Scenario* GetCurrentScenario() const { return activeScenario.get(); }
 
     /** @brief Accessor for the Vulkan Engine hardware layer. */
-    GE::Graphics::VulkanEngine* GetVulkanEngine() const { return vulkanEngine.get(); }
+    GE::Graphics::VulkanDevice* GetVulkanDevice() const { return vulkanEngine.get(); }
 
     /** @brief Accessor for the loaded graphics pipelines. */
     const std::vector<std::unique_ptr<GE::Graphics::Pipeline>>& GetPipelines() const { return pipelines; }
@@ -111,7 +111,7 @@ private:
 
     // Core Hardware Contexts
     std::unique_ptr<GE::Graphics::VulkanContext> context;
-    std::unique_ptr<GE::Graphics::VulkanEngine> vulkanEngine;
+    std::unique_ptr<GE::Graphics::VulkanDevice> vulkanEngine;
     std::unique_ptr<GE::Graphics::VulkanResourceManager> resources;
     std::unique_ptr<SystemFactory> systemFactory;
 

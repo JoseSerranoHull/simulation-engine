@@ -45,24 +45,24 @@ struct SwapChainSupportDetails final {
 };
 
 /**
- * @class VulkanEngine
+ * @class VulkanDevice
  * @brief The Hardware Abstraction Layer (HAL).
  * * Responsible for physical and logical device management, Swapchain orchestration,
  * and hardware-dependent state such as MSAA levels and Depth formats.
  */
-class VulkanEngine final {
+class VulkanDevice final {
 public:
     // --- Lifecycle ---
 
     /** @brief Constructor: Orchestrates the full Vulkan initialization sequence. */
-    VulkanEngine(GLFWwindow* const window);
+    VulkanDevice(GLFWwindow* const window);
 
     /** @brief Destructor: Triggers GPU safety checks before releasing hardware handles. */
-    ~VulkanEngine();
+    ~VulkanDevice();
 
     // RAII: The hardware engine represents a unique link to the GPU; prevent copying.
-    VulkanEngine(const VulkanEngine&) = delete;
-    VulkanEngine& operator=(const VulkanEngine&) = delete;
+    VulkanDevice(const VulkanDevice&) = delete;
+    VulkanDevice& operator=(const VulkanDevice&) = delete;
 
     // --- High-Level Interface ---
 

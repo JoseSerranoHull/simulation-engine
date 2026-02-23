@@ -30,7 +30,7 @@ IMGUIManager::~IMGUIManager() {
 /**
  * @brief Initializes the ImGui library and creates a dedicated descriptor pool.
  */
-void IMGUIManager::init(GLFWwindow* const window, const VulkanEngine* const engine) {
+void IMGUIManager::init(GLFWwindow* const window, const VulkanDevice* const engine) {
     // Step 1: Define Descriptor Pool for UI logic.
     // We allocate a large pool to accommodate potential external textures in the UI.
     static constexpr uint32_t POOL_SIZE = 1000U;

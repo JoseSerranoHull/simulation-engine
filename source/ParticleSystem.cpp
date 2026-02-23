@@ -78,7 +78,7 @@ void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float del
     // Step 1: Update Simulation Parameters (UBO) using std140 alignment
     ParticleUBO ubo{};
     ubo.deltaTime = deltaTime;
-    ubo.spawnEnabled = spawnEnabled ? static_cast<float>(EngineConstants::SHADER_TRUE) : static_cast<float>(EngineConstants::SHADER_FALSE);
+    ubo.spawnEnabled = spawnEnabled ? static_cast<float>(GE::EngineConstants::SHADER_TRUE) : static_cast<float>(GE::EngineConstants::SHADER_FALSE);
     ubo.totalTime = totalTime;
     ubo.padding = 0.0f;
     ubo.lightColor = lightColor;
@@ -92,10 +92,10 @@ void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float del
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
     const VkDescriptorSet sets[DESCRIPTOR_COUNT_ONE] = { computeDescriptorSet };
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout,
-        EngineConstants::INDEX_ZERO, DESCRIPTOR_COUNT_ONE, sets, EngineConstants::OFFSET_ZERO, nullptr);
+        GE::EngineConstants::INDEX_ZERO, DESCRIPTOR_COUNT_ONE, sets, GE::EngineConstants::OFFSET_ZERO, nullptr);
 
-    const uint32_t groupCount = (particleCount / COMPUTE_WORKGROUP_SIZE) + EngineConstants::OFFSET_ONE;
-    vkCmdDispatch(commandBuffer, groupCount, EngineConstants::COUNT_ONE, EngineConstants::COUNT_ONE);
+    const uint32_t groupCount = (particleCount / COMPUTE_WORKGROUP_SIZE) + GE::EngineConstants::OFFSET_ONE;
+    vkCmdDispatch(commandBuffer, groupCount, GE::EngineConstants::COUNT_ONE, GE::EngineConstants::COUNT_ONE);
 
     // Step 3: Pipeline Barrier - Ensure Compute writes finish before Vertex Input reads the SSBO
     VkBufferMemoryBarrier bufferBarrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
@@ -104,12 +104,12 @@ void ParticleSystem::update(const VkCommandBuffer commandBuffer, const float del
     bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     bufferBarrier.buffer = storageBuffer;
-    bufferBarrier.offset = static_cast<VkDeviceSize>(EngineConstants::OFFSET_ZERO);
+    bufferBarrier.offset = static_cast<VkDeviceSize>(GE::EngineConstants::OFFSET_ZERO);
     bufferBarrier.size = VK_WHOLE_SIZE;
 
     vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        static_cast<VkDependencyFlags>(EngineConstants::OFFSET_ZERO), 0U, nullptr,
-        EngineConstants::COUNT_ONE, &bufferBarrier, 0U, nullptr);
+        static_cast<VkDependencyFlags>(GE::EngineConstants::OFFSET_ZERO), 0U, nullptr,
+        GE::EngineConstants::COUNT_ONE, &bufferBarrier, 0U, nullptr);
 }
 
 /**
@@ -120,25 +120,25 @@ void ParticleSystem::draw(const VkCommandBuffer commandBuffer, const VkDescripto
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-    const VkBuffer vertexBuffers[EngineConstants::COUNT_ONE] = { storageBuffer };
-    const VkDeviceSize offsets[EngineConstants::COUNT_ONE] = { static_cast<VkDeviceSize>(EngineConstants::OFFSET_ZERO) };
-    vkCmdBindVertexBuffers(commandBuffer, EngineConstants::INDEX_ZERO, EngineConstants::COUNT_ONE, vertexBuffers, offsets);
+    const VkBuffer vertexBuffers[GE::EngineConstants::COUNT_ONE] = { storageBuffer };
+    const VkDeviceSize offsets[GE::EngineConstants::COUNT_ONE] = { static_cast<VkDeviceSize>(GE::EngineConstants::OFFSET_ZERO) };
+    vkCmdBindVertexBuffers(commandBuffer, GE::EngineConstants::INDEX_ZERO, GE::EngineConstants::COUNT_ONE, vertexBuffers, offsets);
 
     const VkDescriptorSet sets[DESCRIPTOR_COUNT_ONE] = { globalDescriptorSet };
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout,
-        SET_INDEX_GLOBAL, DESCRIPTOR_COUNT_ONE, sets, EngineConstants::OFFSET_ZERO, nullptr);
+        SET_INDEX_GLOBAL, DESCRIPTOR_COUNT_ONE, sets, GE::EngineConstants::OFFSET_ZERO, nullptr);
 
-    vkCmdDraw(commandBuffer, particleCount, EngineConstants::COUNT_ONE, EngineConstants::OFFSET_ZERO, EngineConstants::OFFSET_ZERO);
+    vkCmdDraw(commandBuffer, particleCount, GE::EngineConstants::COUNT_ONE, GE::EngineConstants::OFFSET_ZERO, GE::EngineConstants::OFFSET_ZERO);
 }
 
 /**
  * @brief Retrieves dynamic light emitters from the GPU particle buffer for world-space lighting.
  */
 std::vector<SparkLight> ParticleSystem::getLightData() const {
-    std::vector<SparkLight> lights(EngineConstants::MAX_SPARK_LIGHTS);
+    std::vector<SparkLight> lights(GE::EngineConstants::MAX_SPARK_LIGHTS);
     void* data{ nullptr };
 
-    const VkDeviceSize mapSize = static_cast<VkDeviceSize>(EngineConstants::PARTICLE_POOL_SIZE) * sizeof(Particle);
+    const VkDeviceSize mapSize = static_cast<VkDeviceSize>(GE::EngineConstants::PARTICLE_POOL_SIZE) * sizeof(Particle);
     VulkanContext* context = ServiceLocator::GetContext();
     if (vkMapMemory(context->device, storageBufferMemory, 0ULL, mapSize, 0U, &data) != VK_SUCCESS) {
         return lights;
@@ -147,11 +147,11 @@ std::vector<SparkLight> ParticleSystem::getLightData() const {
     const Particle* const gpuParticles = static_cast<const Particle*>(data);
 
     // Sample specific particle sectors to simulate dynamic flickering lights
-    const uint32_t sectors[EngineConstants::MAX_SPARK_LIGHTS] = { 100U, 1000U, 2000U, 3000U };
+    const uint32_t sectors[GE::EngineConstants::MAX_SPARK_LIGHTS] = { 100U, 1000U, 2000U, 3000U };
     static constexpr float LENGTH_THRESHOLD = 0.001f;
     static constexpr float PUSH_FACTOR = 0.15f;
 
-    for (uint32_t i = 0U; i < EngineConstants::MAX_SPARK_LIGHTS; ++i) {
+    for (uint32_t i = 0U; i < GE::EngineConstants::MAX_SPARK_LIGHTS; ++i) {
         const uint32_t idx = sectors[i];
         const glm::vec3 pos = glm::vec3(gpuParticles[idx].position);
         const glm::vec2 toCenter{ pos.x - lastEmitterPos.x, pos.z - lastEmitterPos.z };
@@ -178,7 +178,7 @@ std::vector<SparkLight> ParticleSystem::getLightData() const {
 
 void ParticleSystem::createBuffers(const glm::vec3& spawnPos) {
     // Step 1: Generate initial particle state on the CPU
-    std::vector<Particle> particles(EngineConstants::PARTICLE_POOL_SIZE);
+    std::vector<Particle> particles(GE::EngineConstants::PARTICLE_POOL_SIZE);
     const auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     std::default_random_engine rndEngine(static_cast<unsigned>(seed));
     std::uniform_real_distribution<float> rndLife(0.0f, 1.0f);
@@ -190,7 +190,7 @@ void ParticleSystem::createBuffers(const glm::vec3& spawnPos) {
         p.color = glm::vec4(1.0f);
     }
 
-    const VkDeviceSize bufferSize = static_cast<VkDeviceSize>(sizeof(Particle)) * EngineConstants::PARTICLE_POOL_SIZE;
+    const VkDeviceSize bufferSize = static_cast<VkDeviceSize>(sizeof(Particle)) * GE::EngineConstants::PARTICLE_POOL_SIZE;
 
     // Step 2: Use a staging buffer to transfer particle data to Device Local memory
     VkBuffer stagingBuffer{ VK_NULL_HANDLE };

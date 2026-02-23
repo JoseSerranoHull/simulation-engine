@@ -43,7 +43,7 @@ VulkanResourceManager::~VulkanResourceManager() {
 /**
  * @brief Orchestrates the primary allocation sequence for global engine resources.
  */
-void VulkanResourceManager::init(const VulkanEngine* const engine, const uint32_t maxFrames) {
+void VulkanResourceManager::init(const VulkanDevice* const engine, const uint32_t maxFrames) {
     // Step 1: Establish Layouts and Infrastructure Pools
     createLayouts();
     createPools(engine);
@@ -74,12 +74,12 @@ void VulkanResourceManager::init(const VulkanEngine* const engine, const uint32_
 void VulkanResourceManager::createLayouts() const {
     // Step 1: Global Set (Set 0) - Shared across all shaders (UBOs, Shadows, Refraction)
     const VkDescriptorSetLayoutBinding uboBinding{
-        EngineConstants::BINDING_UBO, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1U,
+        GE::EngineConstants::BINDING_UBO, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1U,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr
     };
 
     const VkDescriptorSetLayoutBinding shadowBinding{
-        EngineConstants::BINDING_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1U,
+        GE::EngineConstants::BINDING_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1U,
         VK_SHADER_STAGE_FRAGMENT_BIT, nullptr
     };
 
@@ -117,7 +117,7 @@ void VulkanResourceManager::createLayouts() const {
 /**
  * @brief Reserves memory pools for command recording and descriptor allocation.
  */
-void VulkanResourceManager::createPools(const VulkanEngine* const engine) {
+void VulkanResourceManager::createPools(const VulkanDevice* const engine) {
     const uint32_t imageCount = engine->getSwapChainImageCount();
 
     // Step 1: Descriptor Pool for UBOs and Samplers
@@ -154,9 +154,9 @@ void VulkanResourceManager::createPools(const VulkanEngine* const engine) {
 /**
  * @brief Initializes the textures and render passes required for Shadow Mapping.
  */
-void VulkanResourceManager::createShadowResources(const VulkanEngine* const engine) {
+void VulkanResourceManager::createShadowResources(const VulkanDevice* const engine) {
     const VkFormat shadowFormat = engine->getDepthFormat();
-    const uint32_t res = EngineConstants::SHADOW_MAP_RES;
+    const uint32_t res = GE::EngineConstants::SHADOW_MAP_RES;
 
     VulkanContext* context = ServiceLocator::GetContext();
 
@@ -221,7 +221,7 @@ void VulkanResourceManager::createUniformBuffers(const uint32_t imageCount) {
 /**
  * @brief Links allocated UBOs and shadow maps to the GPU Descriptor Sets.
  */
-void VulkanResourceManager::updateDescriptorSets(const VulkanEngine* const engine, const PostProcessor* const postProcessor) {
+void VulkanResourceManager::updateDescriptorSets(const VulkanDevice* const engine, const PostProcessor* const postProcessor) {
     const uint32_t imageCount = engine->getSwapChainImageCount();
 
     VulkanContext* context = ServiceLocator::GetContext();

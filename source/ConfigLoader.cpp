@@ -34,8 +34,8 @@ std::map<std::string, ObjectTransform> ConfigLoader::loadConfig(const std::strin
             const size_t endPos = line.find(CHAR_SECTION_END);
 
             if (endPos != std::string::npos) {
-                const size_t length = static_cast<size_t>(endPos - EngineConstants::OFFSET_ONE);
-                currentObject = line.substr(EngineConstants::OFFSET_ONE, length);
+                const size_t length = static_cast<size_t>(endPos - GE::EngineConstants::OFFSET_ONE);
+                currentObject = line.substr(GE::EngineConstants::OFFSET_ONE, length);
             }
             continue;
         }
@@ -74,7 +74,7 @@ std::map<std::string, ObjectTransform> ConfigLoader::loadConfig(const std::strin
             float val{ 0.0f };
             ss >> val;
 
-            const size_t keyLen = static_cast<size_t>(key.size() - EngineConstants::OFFSET_ONE);
+            const size_t keyLen = static_cast<size_t>(key.size() - GE::EngineConstants::OFFSET_ONE);
             configs[currentObject].params[key.substr(INDEX_FIRST, keyLen)] = val;
         }
     }

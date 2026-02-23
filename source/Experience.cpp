@@ -22,7 +22,7 @@ Experience::Experience(const uint32_t width, const uint32_t height, char const* 
     initWindow(title);
     context = std::make_unique<VulkanContext>();
     ServiceLocator::Provide(context.get());
-    vulkanEngine = std::make_unique<VulkanEngine>(window);
+    vulkanEngine = std::make_unique<VulkanDevice>(window);
 
     context->graphicsCommandPool = vulkanEngine->getCommandPool();
     context->msaaSamples = vulkanEngine->getMsaaSamples();

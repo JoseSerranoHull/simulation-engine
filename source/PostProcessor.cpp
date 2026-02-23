@@ -24,24 +24,24 @@ PostProcessor::PostProcessor(const uint32_t inWidth, const uint32_t inHeight,
 
     // 3. Initialize Background Snapshot Image (Refraction Buffer)
     // Uses 64-bit HDR precision (R16G16B16A16_SFLOAT) to match offscreen targets
-    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, EngineConstants::COUNT_ONE,
+    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, GE::EngineConstants::COUNT_ONE,
         VK_SAMPLE_COUNT_1_BIT, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
         (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, backgroundImage, backgroundMemory);
 
     backgroundImageView = VulkanUtils::createImageView(context->device, backgroundImage, hdrFormat,
-        VK_IMAGE_ASPECT_COLOR_BIT, EngineConstants::COUNT_ONE);
+        VK_IMAGE_ASPECT_COLOR_BIT, GE::EngineConstants::COUNT_ONE);
 
     // Initial Layout Transition: Ensure background is ready for shader sampling
     const VkCommandBuffer transitionCmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
     VulkanUtils::recordImageBarrier(transitionCmd, backgroundImage,
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        static_cast<VkAccessFlags>(EngineConstants::OFFSET_ZERO), VK_ACCESS_SHADER_READ_BIT,
+        static_cast<VkAccessFlags>(GE::EngineConstants::OFFSET_ZERO), VK_ACCESS_SHADER_READ_BIT,
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        EngineConstants::COUNT_ONE);
+        GE::EngineConstants::COUNT_ONE);
     VulkanUtils::endSingleTimeCommands(context->device, context->graphicsCommandPool, context->graphicsQueue, transitionCmd);
 
-    VulkanUtils::createTextureSampler(context->device, backgroundSampler, EngineConstants::COUNT_ONE);
+    VulkanUtils::createTextureSampler(context->device, backgroundSampler, GE::EngineConstants::COUNT_ONE);
 
     // RAII Wrapper: Encapsulate the background handles for use in the material system
     backgroundTextureWrapper = std::make_unique<Texture>(context, backgroundImage, backgroundImageView, backgroundSampler);
@@ -134,7 +134,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        EngineConstants::COUNT_ONE);
+        GE::EngineConstants::COUNT_ONE);
 
     // 2. Execute GPU Copy
     // Source: resolveImage (MSAA flattened HDR)
@@ -153,7 +153,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        EngineConstants::COUNT_ONE);
+        GE::EngineConstants::COUNT_ONE);
 
     // 4. Transition Resolve Image: Transfer Source -> Shader Read
     // Synchronizes the HDR target for the following transparent pass
@@ -161,7 +161,7 @@ void PostProcessor::copyScene(const VkCommandBuffer cb) const {
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        EngineConstants::COUNT_ONE);
+        GE::EngineConstants::COUNT_ONE);
 }
 
 /**
@@ -207,17 +207,17 @@ void PostProcessor::draw(const VkCommandBuffer commandBuffer, const bool enableB
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     // 3. Bind Descriptors (Set 0: Resolved HDR Scene)
-    const VkDescriptorSet sets[EngineConstants::COUNT_ONE] = { descriptorSet };
+    const VkDescriptorSet sets[GE::EngineConstants::COUNT_ONE] = { descriptorSet };
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-        EngineConstants::INDEX_ZERO, EngineConstants::COUNT_ONE, sets, EngineConstants::OFFSET_ZERO, nullptr);
+        GE::EngineConstants::INDEX_ZERO, GE::EngineConstants::COUNT_ONE, sets, GE::EngineConstants::OFFSET_ZERO, nullptr);
 
     // 4. Push Bloom Toggle State
-    const int32_t enabled = enableBloom ? EngineConstants::SHADER_TRUE : EngineConstants::SHADER_FALSE;
+    const int32_t enabled = enableBloom ? GE::EngineConstants::SHADER_TRUE : GE::EngineConstants::SHADER_FALSE;
     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT,
-        EngineConstants::OFFSET_ZERO, static_cast<uint32_t>(sizeof(int32_t)), &enabled);
+        GE::EngineConstants::OFFSET_ZERO, static_cast<uint32_t>(sizeof(int32_t)), &enabled);
 
     // 5. Execute Fullscreen Triangle Draw (3 Vertices, Procedurally generated in shader)
-    vkCmdDraw(commandBuffer, FULLSCREEN_TRI_VERTS, EngineConstants::COUNT_ONE, EngineConstants::OFFSET_ZERO, EngineConstants::OFFSET_ZERO);
+    vkCmdDraw(commandBuffer, FULLSCREEN_TRI_VERTS, GE::EngineConstants::COUNT_ONE, GE::EngineConstants::OFFSET_ZERO, GE::EngineConstants::OFFSET_ZERO);
 }
 
 /**
@@ -303,31 +303,31 @@ void PostProcessor::createOffscreenResources() {
     VulkanContext* context = ServiceLocator::GetContext();
 
     // 1. Color Target (MSAA Enabled)
-    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, EngineConstants::COUNT_ONE,
+    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, GE::EngineConstants::COUNT_ONE,
         msaaSamples, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
         (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, offscreenImage, offscreenMemory);
 
     offscreenImageView = VulkanUtils::createImageView(context->device, offscreenImage, hdrFormat,
-        VK_IMAGE_ASPECT_COLOR_BIT, EngineConstants::COUNT_ONE);
+        VK_IMAGE_ASPECT_COLOR_BIT, GE::EngineConstants::COUNT_ONE);
 
     // 2. Depth Target (MSAA Enabled)
-    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, EngineConstants::COUNT_ONE,
+    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, GE::EngineConstants::COUNT_ONE,
         msaaSamples, depthFormat, VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         internalDepthImage, internalDepthMemory);
 
     internalDepthView = VulkanUtils::createImageView(context->device, internalDepthImage, depthFormat,
-        VK_IMAGE_ASPECT_DEPTH_BIT, EngineConstants::COUNT_ONE);
+        VK_IMAGE_ASPECT_DEPTH_BIT, GE::EngineConstants::COUNT_ONE);
 
     // 3. Resolve Target (1x, No MSAA)
-    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, EngineConstants::COUNT_ONE,
+    VulkanUtils::createImage(context->device, context->physicalDevice, width, height, GE::EngineConstants::COUNT_ONE,
         VK_SAMPLE_COUNT_1_BIT, hdrFormat, VK_IMAGE_TILING_OPTIMAL,
         (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, resolveImage, resolveMemory);
 
     resolveImageView = VulkanUtils::createImageView(context->device, resolveImage, hdrFormat,
-        VK_IMAGE_ASPECT_COLOR_BIT, EngineConstants::COUNT_ONE);
+        VK_IMAGE_ASPECT_COLOR_BIT, GE::EngineConstants::COUNT_ONE);
 
     // 4. Samplers for HDR textures
     if (offscreenSampler == VK_NULL_HANDLE) {

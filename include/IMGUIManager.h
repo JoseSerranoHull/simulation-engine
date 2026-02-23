@@ -43,7 +43,7 @@ public:
     /**
      * @brief Initializes the ImGui library for GLFW and Vulkan.
      */
-    void init(GLFWwindow* const window, const GE::Graphics::VulkanEngine* const engine);
+    void init(GLFWwindow* const window, const GE::Graphics::VulkanDevice* const engine);
 
     /**
      * @brief Records the UI widget state for the current frame.

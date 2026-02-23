@@ -10,18 +10,18 @@ namespace GE::Systems {
      * @class TransformSystem
      * @brief Agnostic system that resolves local and world matrices for the hierarchy.
      */
-    class TransformSystem : public ECS::IECSystem {
+    class TransformSystem : public ECS::ICpuSystem {
     public:
         TransformSystem() {
             m_typeID = ECS::IECSystem::GetUniqueISystemTypeID<TransformSystem>();
-            m_stage = ECS::ESystemStage::Transform; // High-priority stage for matrix resolution
+            m_stage = ECS::ESystemStage::Transform;
             m_state = SystemState::Running;
         }
 
         ~TransformSystem() override = default;
 
-        /** @brief Standard ECS update loop. */
-        void OnUpdate(float dt, VkCommandBuffer cb) override;
+        /** @brief CPU-only: resolves local and world matrices for the transform hierarchy. */
+        void OnUpdate(float dt) override;
 
         /** @brief Basic cleanup for the system. */
         ERROR_CODE Shutdown() override {

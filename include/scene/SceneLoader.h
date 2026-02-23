@@ -3,6 +3,8 @@
 /* parasoft-begin-suppress ALL */
 #include <string>
 #include <map>
+#include <unordered_map>
+#include <functional>
 #include <vector>
 #include <memory>
 #include <glm/glm.hpp>
@@ -12,11 +14,15 @@
 #include "assets/AssetManager.h"
 #include "scene/Scene.h"
 #include "components/Components.h"
+#include "graphics/GpuUploadContext.h"
 
 namespace GE::Scene {
 
     class SceneLoader {
     public:
+        /** @brief Handler signature: receives the section id and parsed key-value props. */
+        using SectionHandler = std::function<void(const std::string& id, const std::map<std::string, std::string>& props)>;
+
         SceneLoader() = default;
 
         /**
@@ -27,9 +33,7 @@ namespace GE::Scene {
             AssetManager* am,
             GE::Scene::Scene* scene,
             const std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>>& pipelines,
-            VkCommandBuffer setupCmd,
-            std::vector<VkBuffer>& stagingBufs,
-            std::vector<VkDeviceMemory>& stagingMems,
+            GE::Graphics::GpuUploadContext& ctx,
             std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels
         );
 
@@ -52,7 +56,7 @@ namespace GE::Scene {
         void handleMaterial(const std::string& id, const std::map<std::string, std::string>& properties, AssetManager* am, const std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>>& pipelines);
         void handleEntity(GE::ECS::EntityManager* em);
         void handleTransform(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
-        void handleMeshRenderer(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, AssetManager* am, VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm, std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels);
+        void handleMeshRenderer(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, AssetManager* am, GE::Graphics::GpuUploadContext& ctx, std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels);
         void handleTag(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, GE::Scene::Scene* scene);
         void handleLightComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);

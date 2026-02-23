@@ -5,8 +5,7 @@
 
 namespace GE::Systems {
 
-    void TransformSystem::OnUpdate(float dt, VkCommandBuffer cb) {
-        // Simply ignore 'cb', as this system is CPU-only
+    void TransformSystem::OnUpdate(float dt) {
         auto* em = ServiceLocator::GetEntityManager();
         auto& transformArray = em->GetCompArr<GE::Components::Transform>();
 

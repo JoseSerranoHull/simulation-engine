@@ -70,4 +70,25 @@ namespace GE::ECS {
 
 	// Provide a definition for the virtual destructor to satisfy the linker.
 	inline IECSystem::~IECSystem() = default;
+
+	/**
+	 * @struct ICpuSystem
+	 * @brief ISP sub-interface for CPU-only ECS systems (no GPU work).
+	 * Intercepts the 2-param dispatch from EntityManager and forwards to the
+	 * clean 1-param OnUpdate(float dt), keeping VkCommandBuffer out of CPU code.
+	 */
+	struct ICpuSystem : IECSystem {
+		/** @brief EntityManager calls this; strips the unused command buffer. */
+		void OnUpdate(float dt, VkCommandBuffer /*cb*/) final { OnUpdate(dt); }
+		/** @brief CPU systems implement this instead. */
+		virtual void OnUpdate(float dt) = 0;
+	};
+
+	/**
+	 * @struct IGpuSystem
+	 * @brief ISP sub-interface for GPU-dispatch ECS systems.
+	 * Subclasses override OnUpdate(float dt, VkCommandBuffer cb) directly,
+	 * making it explicit that they perform GPU work each frame.
+	 */
+	struct IGpuSystem : IECSystem {};
 }

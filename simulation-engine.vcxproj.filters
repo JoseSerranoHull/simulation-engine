@@ -504,6 +504,9 @@
     <ClInclude Include="include\graphics\GpuResourceManager.h">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="include\graphics\GpuUploadContext.h">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
     <ClInclude Include="include\graphics\VulkanUtils.h">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>

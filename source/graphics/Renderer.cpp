@@ -3,19 +3,11 @@
 #include "ecs/EntityManager.h"
 #include "components/Components.h"
 #include "components/ParticleComponent.h"
+#include "systems/ParticleEmitterSystem.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
 /* parasoft-end-suppress ALL */
-
-// ========================================================================
-// SECTION 1: MASTER ORCHESTRATION
-// ========================================================================
-
-namespace GE::Components
-{
-	struct ParticleComponent;
-}
 
 using namespace GE::Assets;
 
@@ -259,12 +251,14 @@ void Renderer::recordParticles(
 ) const {
     auto& particleComps = em->GetCompArr<GE::Components::ParticleComponent>();
 
+    auto* pes = ServiceLocator::GetParticleEmitterSystem();
+
     for (uint32_t i = 0; i < particleComps.GetCount(); ++i) {
         auto& pc = particleComps.Data()[i];
 
-        // Only draw if the entity is active and enabled
-        if (pc.enabled && pc.system) {
-            pc.system->draw(cb, globalSet);
+        if (pc.enabled && pc.emitterIndex != GE::Components::ParticleComponent::INVALID_EMITTER) {
+            GpuParticleBackend* backend = pes->GetBackend(pc.emitterIndex);
+            if (backend) backend->draw(cb, globalSet);
         }
     }
 }

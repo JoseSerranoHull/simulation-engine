@@ -16,13 +16,15 @@ using namespace GE::Assets;
 #include "components/SkyboxComponent.h"
 /* parasoft-end-suppress ALL */
 
-class GpuParticleBackend;
+#include "particles/GpuParticleBackend.h"
+#include "systems/ParticleEmitterSystem.h"
 
 namespace GE::Scene {
 
     void SceneLoader::load(const std::string& path, GE::ECS::EntityManager* em, AssetManager* am, GE::Scene::Scene* scene,
-        const std::vector<std::unique_ptr<GraphicsPipeline>>& pipelines, VkCommandBuffer setupCmd,
-        std::vector<VkBuffer>& stagingBufs, std::vector<VkDeviceMemory>& stagingMems, std::vector<std::unique_ptr<Model>>& outOwnedModels) {
+        const std::vector<std::unique_ptr<GraphicsPipeline>>& pipelines,
+        GE::Graphics::GpuUploadContext& ctx,
+        std::vector<std::unique_ptr<Model>>& outOwnedModels) {
 
         std::ifstream file(path);
         if (!file.is_open()) {
@@ -33,25 +35,32 @@ namespace GE::Scene {
         std::string line, currentSection, currentID;
         std::map<std::string, std::string> sectionProps;
 
-        // Internal lambda to dispatch section processing
+        // Handler map: section name -> handler. Add new component types here without touching the parse loop.
+        const std::unordered_map<std::string, SectionHandler> handlers = {
+            { "Texture",           [&](const std::string& id, const std::map<std::string, std::string>& p) { handleTexture(id, p, am); } },
+            { "Material",         [&](const std::string& id, const std::map<std::string, std::string>& p) { handleMaterial(id, p, am, pipelines); } },
+            { "Entity",           [&](const std::string&,    const std::map<std::string, std::string>&)   { handleEntity(em); } },
+            { "Transform",        [&](const std::string&,    const std::map<std::string, std::string>& p) { handleTransform(p, em); } },
+            { "MeshRenderer",     [&](const std::string&,    const std::map<std::string, std::string>& p) { handleMeshRenderer(p, em, am, ctx, outOwnedModels); } },
+            { "Tag",              [&](const std::string&,    const std::map<std::string, std::string>& p) { handleTag(p, em, scene); } },
+            { "LightComponent",   [&](const std::string&,    const std::map<std::string, std::string>& p) { handleLightComponent(p, em); } },
+            { "RigidBody",        [&](const std::string&,    const std::map<std::string, std::string>& p) { handleRigidBody(p, em); } },
+            { "SphereCollider",   [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSphereCollider(p, em); } },
+            { "PlaneCollider",    [&](const std::string&,    const std::map<std::string, std::string>& p) { handlePlaneCollider(p, em); } },
+            { "ParticleComponent",[&](const std::string&,    const std::map<std::string, std::string>& p) { handleParticleComponent(p, em); } },
+            { "SkyboxComponent",  [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSkyboxComponent(p, em); } },
+        };
+
         auto processSection = [&]() {
             if (currentSection.empty()) return;
-
-            if (currentSection == "Texture") handleTexture(currentID, sectionProps, am);
-            else if (currentSection == "Material") handleMaterial(currentID, sectionProps, am, pipelines);
-            else if (currentSection == "Entity") handleEntity(em);
-            else if (currentSection == "Transform") handleTransform(sectionProps, em);
-            else if (currentSection == "MeshRenderer") handleMeshRenderer(sectionProps, em, am, setupCmd, stagingBufs, stagingMems, outOwnedModels);
-            else if (currentSection == "Tag") handleTag(sectionProps, em, scene);
-            else if (currentSection == "LightComponent") handleLightComponent(sectionProps, em);
-            else if (currentSection == "RigidBody") handleRigidBody(sectionProps, em);
-            else if (currentSection == "SphereCollider") handleSphereCollider(sectionProps, em);
-            else if (currentSection == "PlaneCollider") handlePlaneCollider(sectionProps, em);
-            else if (currentSection == "ParticleComponent") handleParticleComponent(sectionProps, em);
-            else if (currentSection == "SkyboxComponent") handleSkyboxComponent(sectionProps, em);
-
+            const auto it = handlers.find(currentSection);
+            if (it != handlers.end()) {
+                it->second(currentID, sectionProps);
+            } else {
+                GE_LOG_WARN("SceneLoader: Unknown section '" + currentSection + "' — skipped.");
+            }
             sectionProps.clear();
-            };
+        };
 
         while (std::getline(file, line)) {
             line.erase(0, line.find_first_not_of(" \t\r\n"));
@@ -168,7 +177,7 @@ namespace GE::Scene {
         em->AddComponent(m_currentEntity, trans);
     }
 
-    void SceneLoader::handleMeshRenderer(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, AssetManager* am, VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm, std::vector<std::unique_ptr<Model>>& outOwnedModels) {
+    void SceneLoader::handleMeshRenderer(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em, AssetManager* am, GE::Graphics::GpuUploadContext& ctx, std::vector<std::unique_ptr<Model>>& outOwnedModels) {
         GE::Components::MeshRenderer mr;
 
         // Step 1: Resolve the default material for this renderer
@@ -202,7 +211,7 @@ namespace GE::Scene {
             }
 
             // Process data into a GPU Mesh using your AssetManager
-            auto meshPtr = am->processMeshData(data, defaultMat, cmd, sb, sm);
+            auto meshPtr = am->processMeshData(data, defaultMat, ctx.cmd, ctx.stagingBuffers, ctx.stagingMemories);
 
             if (meshPtr) {
                 // To maintain memory safety, we wrap the procedural mesh in a Model object
@@ -258,7 +267,7 @@ namespace GE::Scene {
                 };
 
             // 3. Load the complex model using the AssetManager pipeline
-            auto model = am->loadModel(props.at("Mesh"), selector, cmd, sb, sm);
+            auto model = am->loadModel(props.at("Mesh"), selector, ctx.cmd, ctx.stagingBuffers, ctx.stagingMemories);
 
             if (model) {
                 for (auto& meshPtr : model->getMeshes()) {
@@ -356,9 +365,12 @@ namespace GE::Scene {
             msaa
         );
 
-        // 5. Wrap in ECS Component
+        // 5. Register backend with system pool and store the index
+        auto* pes = ServiceLocator::GetParticleEmitterSystem();
+        const uint32_t emitterIdx = pes->RegisterBackend(std::move(system));
+
         GE::Components::ParticleComponent pc;
-        pc.system = std::move(system);
+        pc.emitterIndex = emitterIdx;
         pc.enabled = (props.count("Enabled") && props.at("Enabled") == "true");
 
         // localOffset is used by ParticleEmitterSystem to position particles relative to parent

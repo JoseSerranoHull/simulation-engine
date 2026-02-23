@@ -3,13 +3,14 @@
 #include "scene/SceneLoader.h"
 #include "components/Components.h"
 #include "services/InputService.h"
+#include "graphics/GpuUploadContext.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
 
 namespace GE {
 
-    void SnowGlobeScenario::OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) {
+    void SnowGlobeScenario::OnLoad(GE::Graphics::GpuUploadContext& /*ctx*/) {
         m_climate = std::make_unique<ClimateService>();
 
         auto* em = ServiceLocator::GetEntityManager();

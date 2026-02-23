@@ -13,7 +13,7 @@ class InputService;
 class EngineServiceRegistry;
 namespace GE::Graphics { struct VulkanContext; class GpuResourceManager; }
 class TimeService;
-class ParticleEmitterSystem;
+namespace GE::Systems { class ParticleEmitterSystem; }
 
 // NEW: Forward declaration for Scene
 namespace GE::Scene { class Scene; }
@@ -30,7 +30,7 @@ public:
     static void Provide(EngineOrchestrator* experience) { m_experience = experience; }
     static void Provide(GE::Scene::Scene* scene) { m_scene = scene; }
     static void Provide(TimeService* timeManager) { m_timeManager = timeManager; }
-	static void Provide(ParticleEmitterSystem* particleEmitterSystem) { m_particleEmitterSystem = particleEmitterSystem; }
+	static void Provide(GE::Systems::ParticleEmitterSystem* particleEmitterSystem) { m_particleEmitterSystem = particleEmitterSystem; }
 
     // --- Retrievers ---
     static GE::Graphics::VulkanContext* GetContext() {
@@ -78,7 +78,7 @@ public:
         return m_timeManager;
 	}
 
-    static ParticleEmitterSystem* GetParticleEmitterSystem() {
+    static GE::Systems::ParticleEmitterSystem* GetParticleEmitterSystem() {
         if (!m_particleEmitterSystem) throw std::runtime_error("ServiceLocator: ParticleEmitterSystem not provided!");
         return m_particleEmitterSystem;
 	}
@@ -93,5 +93,5 @@ private:
     static inline EngineOrchestrator* m_experience = nullptr;
     static inline GE::Scene::Scene* m_scene = nullptr;
 	static inline TimeService* m_timeManager = nullptr;
-	static inline ParticleEmitterSystem* m_particleEmitterSystem = nullptr;
+	static inline GE::Systems::ParticleEmitterSystem* m_particleEmitterSystem = nullptr;
 };

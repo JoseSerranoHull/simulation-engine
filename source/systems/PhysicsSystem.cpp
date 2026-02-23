@@ -7,7 +7,7 @@
 
 namespace GE::Systems {
 
-    void PhysicsSystem::OnUpdate(float dt, VkCommandBuffer cb) {
+    void PhysicsSystem::OnUpdate(float dt) {
         // Step 1: Predict movement based on forces
         Integrate(dt);
 

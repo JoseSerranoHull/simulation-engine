@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 /* parasoft-begin-suppress ALL */
-#include <vulkan/vulkan.h>
 #include <vector>
 #include <memory>
 #include <string>
@@ -11,6 +10,9 @@
 #include "assets/Model.h"
 #include "graphics/ShaderModule.h"
 #include "graphics/GraphicsPipeline.h"
+
+// Forward declaration — keeps Vulkan types out of the scenario interface header.
+namespace GE::Graphics { struct GpuUploadContext; }
 
 namespace GE {
     /**
@@ -23,7 +25,7 @@ namespace GE {
         virtual ~Scenario() = default;
 
         /** @brief Fulfills Requirement: Ability to load/initialize scenarios. */
-        virtual void OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) = 0;
+        virtual void OnLoad(GE::Graphics::GpuUploadContext& ctx) = 0;
 
         /** @brief Standard logic update for physics and simulation events. */
         virtual void OnUpdate(float dt, float totalTime) = 0;

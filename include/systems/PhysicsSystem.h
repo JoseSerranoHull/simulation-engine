@@ -8,7 +8,7 @@ namespace GE::Systems {
      * @brief ECS System responsible for Newtonian integration and collision resolution.
      * Fulfills Simulation Lab 3 Requirements Q2, Q3, and Q4.
      */
-    class PhysicsSystem : public ECS::IECSystem {
+    class PhysicsSystem : public ECS::ICpuSystem {
     public:
         PhysicsSystem() {
             m_typeID = ECS::IECSystem::GetUniqueISystemTypeID<PhysicsSystem>();
@@ -18,8 +18,8 @@ namespace GE::Systems {
 
         ~PhysicsSystem() override = default;
 
-        /** @brief Heartbeat logic: Orchestrates integration then collision resolution. */
-        void OnUpdate(float dt, VkCommandBuffer cb) override;
+        /** @brief CPU-only: orchestrates Newtonian integration then collision resolution. */
+        void OnUpdate(float dt) override;
 
         ERROR_CODE Shutdown() override {
             m_state = SystemState::ShuttingDown;

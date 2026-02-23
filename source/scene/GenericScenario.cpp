@@ -2,14 +2,16 @@
 #include "core/ServiceLocator.h"
 #include "scene/SceneLoader.h"
 #include "systems/PhysicsSystem.h"
+#include "systems/ParticleEmitterSystem.h"
 #include "core/EngineOrchestrator.h"
+#include "graphics/GpuUploadContext.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
 
 namespace GE {
 
-    void GenericScenario::OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) {
+    void GenericScenario::OnLoad(GE::Graphics::GpuUploadContext& ctx) {
         auto* em = ServiceLocator::GetEntityManager();
         auto* am = ServiceLocator::GetAssetManager();
         auto* scene = ServiceLocator::GetScene();
@@ -21,9 +23,7 @@ namespace GE {
         if (!m_configPath.empty()) {
             Scene::SceneLoader loader;
             // The loader populates the EntityManager and Scene registry
-            loader.load(m_configPath, em, am, scene,
-                m_pipelines,
-                cmd, sb, sm, m_ownedModels);
+            loader.load(m_configPath, em, am, scene, m_pipelines, ctx, m_ownedModels);
         }
 
         // 2. Agnostic System Registration
@@ -97,7 +97,10 @@ namespace GE {
         // 1. Cleanup Systems unique to this scenario
         em->UnregisterSystemByID(Systems::PhysicsSystem().GetID());
 
-        // 2. Memory Cleanup: release GPU resources owned by this scenario
+        // 2. Release GPU particle backends (owned by ParticleEmitterSystem pool)
+        ServiceLocator::GetParticleEmitterSystem()->ClearBackends();
+
+        // 3. Memory Cleanup: release GPU resources owned by this scenario
         m_ownedModels.clear();
         m_pipelines.clear();
         m_shaderModules.clear();

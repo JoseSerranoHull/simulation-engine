@@ -305,6 +305,7 @@
     <ClInclude Include="include\graphics\VulkanContext.h" />
     <ClInclude Include="include\graphics\VulkanDevice.h" />
     <ClInclude Include="include\graphics\GpuResourceManager.h" />
+    <ClInclude Include="include\graphics\GpuUploadContext.h" />
     <ClInclude Include="include\graphics\VulkanUtils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

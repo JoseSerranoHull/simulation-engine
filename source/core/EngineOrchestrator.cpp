@@ -5,6 +5,7 @@
 #include "systems/ParticleEmitterSystem.h"
 #include "components/SkyboxComponent.h"
 #include "components/ParticleComponent.h"
+#include "graphics/GpuUploadContext.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
@@ -50,7 +51,9 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
 
     // --- Step 3: Global Systems ---
     entityManager->RegisterSystem(new GE::Systems::TransformSystem());
-    entityManager->RegisterSystem(new GE::Systems::ParticleEmitterSystem());
+    auto* particleSystem = new GE::Systems::ParticleEmitterSystem();
+    entityManager->RegisterSystem(particleSystem);
+    ServiceLocator::Provide(particleSystem);
 
     // --- Step 4: Engine Infrastructure ---
     resources = std::make_unique<GpuResourceManager>();
@@ -393,18 +396,17 @@ void EngineOrchestrator::changeScenario(std::unique_ptr<GE::Scenario> newScenari
     activeScenario = std::move(newScenario);
 
     if (activeScenario) {
-        const VkCommandBuffer setupCmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
-        std::vector<VkBuffer> sb;
-        std::vector<VkDeviceMemory> sm;
+        GE::Graphics::GpuUploadContext ctx;
+        ctx.cmd = VulkanUtils::beginSingleTimeCommands(context->device, context->graphicsCommandPool);
 
         // Data-driven load: Populates ECS from the .ini path provided to the scenario
-        activeScenario->OnLoad(setupCmd, sb, sm);
+        activeScenario->OnLoad(ctx);
 
-        VulkanUtils::endSingleTimeCommands(context->device, context->graphicsCommandPool, context->graphicsQueue, setupCmd);
+        VulkanUtils::endSingleTimeCommands(context->device, context->graphicsCommandPool, context->graphicsQueue, ctx.cmd);
 
-        for (size_t i = 0U; i < sb.size(); ++i) {
-            vkDestroyBuffer(context->device, sb[i], nullptr);
-            vkFreeMemory(context->device, sm[i], nullptr);
+        for (size_t i = 0U; i < ctx.stagingBuffers.size(); ++i) {
+            vkDestroyBuffer(context->device, ctx.stagingBuffers[i], nullptr);
+            vkFreeMemory(context->device, ctx.stagingMemories[i], nullptr);
         }
     }
 }

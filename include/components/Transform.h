@@ -23,8 +23,7 @@ namespace GE::Components {
         glm::mat4 m_worldMatrix{ 1.0f };
 
         // --- Hierarchy (Agnostic GameObject Logic) ---
-        uint32_t m_parentEntityID = UINT32_MAX;
-        std::vector<uint32_t> m_children; // NEW: Top-down traversal for performance
+        uint32_t m_parentEntityID = UINT32_MAX; // Parent index; UINT32_MAX = root entity
 
         TransformState m_state = TransformState::Dirty;
     };

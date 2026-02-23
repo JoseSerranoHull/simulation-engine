@@ -8,7 +8,7 @@ namespace GE {
             m_configPath = std::move(configPath);
         }
 
-        void OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) override;
+        void OnLoad(GE::Graphics::GpuUploadContext& ctx) override;
         void OnUpdate(float dt, float totalTime) override;
         void OnUnload() override;
         void OnGUI() override;

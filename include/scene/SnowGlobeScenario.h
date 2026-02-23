@@ -16,7 +16,7 @@ namespace GE {
         ~SnowGlobeScenario() override = default;
 
         // --- Lifecycle Hooks ---
-        void OnLoad(VkCommandBuffer cmd, std::vector<VkBuffer>& sb, std::vector<VkDeviceMemory>& sm) override;
+        void OnLoad(GE::Graphics::GpuUploadContext& ctx) override;
         void OnUpdate(float dt, float totalTime) override;
         void OnUnload() override;
 

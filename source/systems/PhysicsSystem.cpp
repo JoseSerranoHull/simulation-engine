@@ -30,7 +30,7 @@ namespace GE::Systems {
         for (uint32_t i = 0; i < rbArray.GetCount(); ++i) {
             auto  id    = rbArray.Index()[i];
             auto& rb    = rbArray.Data()[i];
-            auto* trans = em->GetTIComponent<GE::Components::Transform>(id);
+            auto* trans = em->TryGetTIComponent<GE::Components::Transform>(id);
 
             if (!trans || rb.isStatic) continue;
 
@@ -120,8 +120,8 @@ namespace GE::Systems {
         for (uint32_t sIdx = 0; sIdx < sphereArray.GetCount(); ++sIdx) {
             const auto  sID   = sphereArray.Index()[sIdx];
             auto&       sCol  = sphereArray.Data()[sIdx];
-            auto* const sTrans = em->GetTIComponent<GE::Components::Transform>(sID);
-            auto* const sRB   = em->GetTIComponent<GE::Components::RigidBody>(sID);
+            auto* const sTrans = em->TryGetTIComponent<GE::Components::Transform>(sID);
+            auto* const sRB   = em->TryGetTIComponent<GE::Components::RigidBody>(sID);
 
             if (!sTrans || (sRB && sRB->isStatic)) continue;
 
@@ -159,16 +159,16 @@ namespace GE::Systems {
         for (uint32_t aIdx = 0; aIdx < sphereArray.GetCount(); ++aIdx) {
             const auto  aID    = sphereArray.Index()[aIdx];
             auto&       aCol   = sphereArray.Data()[aIdx];
-            auto* const aTrans = em->GetTIComponent<GE::Components::Transform>(aID);
-            auto* const aRB    = em->GetTIComponent<GE::Components::RigidBody>(aID);
+            auto* const aTrans = em->TryGetTIComponent<GE::Components::Transform>(aID);
+            auto* const aRB    = em->TryGetTIComponent<GE::Components::RigidBody>(aID);
 
             if (!aTrans) continue;
 
             for (uint32_t bIdx = aIdx + 1; bIdx < sphereArray.GetCount(); ++bIdx) {
                 const auto  bID    = sphereArray.Index()[bIdx];
                 auto&       bCol   = sphereArray.Data()[bIdx];
-                auto* const bTrans = em->GetTIComponent<GE::Components::Transform>(bID);
-                auto* const bRB    = em->GetTIComponent<GE::Components::RigidBody>(bID);
+                auto* const bTrans = em->TryGetTIComponent<GE::Components::Transform>(bID);
+                auto* const bRB    = em->TryGetTIComponent<GE::Components::RigidBody>(bID);
 
                 if (!bTrans) continue;
                 // Skip pairs where both are static

@@ -260,12 +260,6 @@
     <None Include="shaders\checkerboard.vert">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="shaders\checkerboard_frag.spv">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\checkerboard_vert.spv">
-      <Filter>Shader Files</Filter>
-    </None>
     <None Include="shaders\dust.comp">
       <Filter>Shader Files</Filter>
     </None>
@@ -415,7 +409,7 @@
     <None Include="markdown\SimulationLab4.md">
       <Filter>Mardown Files</Filter>
     </None>
-    <None Include="markdown\SimulationWorshops.md">
+    <None Include="markdown\SimulationWorkshops.md">
       <Filter>Mardown Files</Filter>
     </None>
   </ItemGroup>

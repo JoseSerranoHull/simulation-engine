@@ -5,12 +5,14 @@ namespace GE::Components {
 
     // --- 3D Physics ---
     struct RigidBody {
-        glm::vec3 velocity{ 0.0f };
+        glm::vec3 velocity    { 0.0f };
         glm::vec3 acceleration{ 0.0f };
-        float mass{ 1.0f };
-        float restitution{ 0.6f };
-        bool isStatic{ false };
-        bool useGravity{ true };
+        glm::vec3 forceAccum  { 0.0f };  // Accumulated forces; reset after each integration step
+        float     mass        { 1.0f };
+        float     inverseMass { 1.0f };  // Cached 1/mass; 0 for static bodies (infinite mass)
+        float     restitution { 0.6f };
+        bool      isStatic    { false };
+        bool      useGravity  { true };
     };
 
     struct SphereCollider {

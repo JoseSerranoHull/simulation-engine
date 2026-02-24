@@ -26,12 +26,12 @@ namespace GE {
             loader.load(m_configPath, em, am, scene, m_pipelines, ctx, m_ownedModels);
         }
 
-        // 2. Agnostic System Registration
-        // If the path contains "physics", we ensure the PhysicsSystem is active
-        if (m_configPath.find("physics") != std::string::npos) {
-            // Check if already registered to avoid duplicates
-            em->RegisterSystem(new Systems::PhysicsSystem());
-        }
+        // 2. Always register PhysicsSystem — it is a no-op when no RigidBody
+        // components exist, and required for all simulation lab scenarios.
+        // Store a non-owning pointer for ImGui integration method selection.
+        auto* ps = new Systems::PhysicsSystem();
+        m_physicsSystem = ps;
+        em->RegisterSystem(ps);
 
         GE_LOG_INFO("GenericScenario: Scenario loaded from " + m_configPath);
     }
@@ -42,6 +42,24 @@ namespace GE {
     }
 
     void GE::GenericScenario::OnGUI() {
+        // --- COLOUR MENU (Lab 2 Q1: background colour picker) ---
+        if (ImGui::BeginMenu("Colour")) {
+            ImGui::ColorEdit4("Background", &m_clearColor.r,
+                ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_PickerHueWheel);
+            ImGui::EndMenu();
+        }
+
+        // --- MATERIAL MENU (Lab 2 Q2: checkerboard colour picker) ---
+        if (ImGui::BeginMenu("Material")) {
+            ImGui::SeparatorText("Checkerboard");
+            ImGui::ColorEdit4("Light squares", &m_checkerConstants.colorA.r,
+                ImGuiColorEditFlags_NoAlpha);
+            ImGui::ColorEdit4("Dark squares",  &m_checkerConstants.colorB.r,
+                ImGuiColorEditFlags_NoAlpha);
+            ImGui::SliderFloat("Tile scale", &m_checkerConstants.scale, 0.5f, 10.0f, "%.1f");
+            ImGui::EndMenu();
+        }
+
         // Fulfills Requirement: Simulation menu in the Main Menu Bar
         if (ImGui::BeginMenu("Simulation")) {
 
@@ -66,25 +84,42 @@ namespace GE {
 
             ImGui::Separator();
 
-            // --- 3. Fixed Timestep (Time Scale) ---
-            // Fulfills Lab 3 Q2 Requirement: Adjust the size of the timestep
+            // --- 3. Time Scale Multiplier ---
             ImGui::Text("Time Scale");
-            ImGui::PushItemWidth(120);
-            // This modifies the multiplier applied to dt in Experience::drawFrame
-            if (ImGui::SliderFloat("##timescale", &m_timeScale, 0.0f, 5.0f, "%.2fx")) {
-                // Value is clamped between 0 (paused) and 5x speed
-            }
+            ImGui::PushItemWidth(150);
+            ImGui::SliderFloat("##timescale", &m_timeScale, 0.0f, 5.0f, "%.2fx");
+            ImGui::PopItemWidth();
+
+            // --- 4. Fixed Timestep Input ---
+            // Fulfills Lab 3 Q2: "Change the size of the fixed timestep from your application using ImGui"
+            ImGui::Text("Fixed Step (s)");
+            ImGui::PushItemWidth(150);
+            ImGui::InputFloat("##fixeddt", &m_fixedTimestep, 0.001f, 0.005f, "%.4f");
+            m_fixedTimestep = glm::clamp(m_fixedTimestep, 0.0001f, 0.1f);
             ImGui::PopItemWidth();
 
             ImGui::Separator();
 
-            // --- 4. Step One Timestep Forward ---
-            // Fulfills Lab Requirement: Debug simulation stepping
-            // Enabled only when the simulation is paused
+            // --- 5. Integration Method Selector ---
+            // Fulfills Lab 3 Q2: "Choose between at least two integration methods"
+            if (m_physicsSystem != nullptr) {
+                static const char* methodNames[] = { "Euler", "Semi-Implicit Euler", "RK4" };
+                int currentMethod = static_cast<int>(m_physicsSystem->m_integrationMethod);
+                ImGui::Text("Integration Method");
+                ImGui::PushItemWidth(200);
+                if (ImGui::Combo("##integration", &currentMethod, methodNames, 3)) {
+                    m_physicsSystem->m_integrationMethod =
+                        static_cast<Systems::IntegrationMethod>(currentMethod);
+                }
+                ImGui::PopItemWidth();
+            }
+
+            ImGui::Separator();
+
+            // --- 6. Step One Timestep Forward ---
+            // Fulfills Lab Requirement: Debug simulation stepping (enabled only while paused)
             if (ImGui::MenuItem("Step One Frame", "Space", false, m_isPaused)) {
-                // standard 60fps fixed delta for a single discrete step
-                const float fixedStep = 0.01667f;
-                ServiceLocator::GetExperience()->stepSimulation(fixedStep);
+                ServiceLocator::GetExperience()->stepSimulation(m_fixedTimestep);
             }
 
             ImGui::EndMenu();

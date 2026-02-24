@@ -27,15 +27,19 @@ void Renderer::recordFrame(
     const VkRenderPass shadowPass,
     const VkFramebuffer shadowFramebuffer,
     const std::vector<GraphicsPipeline*>& materialPipelines,
-    const GraphicsPipeline* shadowPipeline
+    const GraphicsPipeline* shadowPipeline,
+    const glm::vec4& clearColor,
+    const GraphicsPipeline* checkerboardPipeline,
+    const void*  checkerboardPushData,
+    uint32_t     checkerboardPushDataSize
 ) const {
     // Step 1: Shadow Mapping Pass (Depth-only)
-    // Pulls data from MeshRenderers with "CastsShadows" flag
     recordShadowPass(cb, shadowPass, shadowFramebuffer,
         shadowPipeline, globalDescriptorSet, em);
 
     // Step 2: Main Opaque Pass (Scene geometry + Skybox)
-    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, materialPipelines, em);
+    recordOpaquePass(cb, extent, skybox, postProcessor, globalDescriptorSet, materialPipelines, em,
+        clearColor, checkerboardPipeline, checkerboardPushData, checkerboardPushDataSize);
 
     // Step 3: Resolve Synchronization Barrier
     // Required before copying the scene for Refraction/Glass effects
@@ -136,7 +140,11 @@ void Renderer::recordOpaquePass(
     const PostProcessBackend* const postProcessor,
     const VkDescriptorSet globalSet,
     const std::vector<GraphicsPipeline*>& pipelines,
-    GE::ECS::EntityManager* const em
+    GE::ECS::EntityManager* const em,
+    const glm::vec4& clearColor,
+    const GraphicsPipeline* checkerboardPipeline,
+    const void*  checkerboardPushData,
+    uint32_t     checkerboardPushDataSize
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
 
@@ -146,9 +154,9 @@ void Renderer::recordOpaquePass(
     opaquePassInfo.renderArea.extent = extent;
 
     std::array<VkClearValue, 3U> clearValues{};
-    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clearValues[0].color = { { clearColor.r, clearColor.g, clearColor.b, clearColor.a } };
     clearValues[1].depthStencil = { DEPTH_CLEAR_VAL, 0U };
-    clearValues[2].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clearValues[2].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };  // Resolve attachment — overwritten by MSAA blit
 
     opaquePassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     opaquePassInfo.pClearValues = clearValues.data();
@@ -174,9 +182,25 @@ void Renderer::recordOpaquePass(
 
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
-                // Draw if the material is configured for the Opaque pass
                 if (sub.m_mesh && sub.m_material && sub.m_material->GetPassType() == RenderPassType::Opaque) {
-                    sub.m_mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix);
+                    // Detect checkerboard pipeline: inject colour push constants (offset 64, FRAG stage)
+                    // after the pipeline bind but before the draw (handled inside Mesh::draw via ExtraPushConstants).
+                    GE::Assets::Mesh::ExtraPushConstants checkerPush{};
+                    const GE::Assets::Mesh::ExtraPushConstants* extraPushPtr = nullptr;
+
+                    if ((checkerboardPipeline != nullptr)
+                        && (checkerboardPushData != nullptr)
+                        && (checkerboardPushDataSize > 0U)
+                        && (sub.m_material->getPipeline() == checkerboardPipeline))
+                    {
+                        checkerPush.data   = checkerboardPushData;
+                        checkerPush.offset = static_cast<uint32_t>(sizeof(glm::mat4));
+                        checkerPush.size   = checkerboardPushDataSize;
+                        checkerPush.stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+                        extraPushPtr = &checkerPush;
+                    }
+
+                    sub.m_mesh->draw(cb, globalSet, nullptr, transform->m_worldMatrix, extraPushPtr);
                 }
             }
         }

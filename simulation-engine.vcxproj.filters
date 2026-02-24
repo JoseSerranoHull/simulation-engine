@@ -254,6 +254,18 @@
     <None Include="shaders\base.frag">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\checkerboard.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\checkerboard.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\checkerboard_frag.spv">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\checkerboard_vert.spv">
+      <Filter>Shader Files</Filter>
+    </None>
     <None Include="shaders\dust.comp">
       <Filter>Shader Files</Filter>
     </None>

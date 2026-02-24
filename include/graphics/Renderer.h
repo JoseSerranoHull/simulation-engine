@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 /* parasoft-end-suppress ALL */
+#include <glm/glm.hpp>
 
 // Engine Includes
 #include "assets/Mesh.h"
@@ -49,7 +50,11 @@ public:
         const VkRenderPass shadowPass,
         const VkFramebuffer shadowFramebuffer,
         const std::vector<GraphicsPipeline*>& materialPipelines,
-        const GraphicsPipeline* shadowPipeline
+        const GraphicsPipeline* shadowPipeline,
+        const glm::vec4& clearColor                   = glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f },
+        const GraphicsPipeline* checkerboardPipeline  = nullptr,
+        const void*  checkerboardPushData             = nullptr,
+        uint32_t     checkerboardPushDataSize         = 0U
     ) const;
 
 private:
@@ -73,7 +78,11 @@ private:
         const PostProcessBackend* const postProcessor,
         const VkDescriptorSet globalSet,
         const std::vector<GraphicsPipeline*>& pipelines,
-        GE::ECS::EntityManager* const em
+        GE::ECS::EntityManager* const em,
+        const glm::vec4& clearColor,
+        const GraphicsPipeline* checkerboardPipeline,
+        const void*  checkerboardPushData,
+        uint32_t     checkerboardPushDataSize
     ) const;
 
     /** @brief Records alpha-blended geometry and dispatches particles. */

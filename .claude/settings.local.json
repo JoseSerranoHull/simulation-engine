@@ -15,7 +15,8 @@
       "Bash(ls:*)",
       "Bash(powershell:*)",
       "Bash(printf %s\\\\n:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(echo Shaders compiled successfully:*)"
     ]
   }
 }

@@ -53,7 +53,9 @@ public:
         const bool enableCulling = true,
         const bool enableBlending = false,
         const bool enableDepthWrite = true,
-        const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT
+        const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT,
+        const uint32_t pushConstantSize   = static_cast<uint32_t>(sizeof(glm::mat4)),
+        const VkShaderStageFlags pushConstantStages = VK_SHADER_STAGE_VERTEX_BIT
     ) :  materialLayout(inMaterialLayout)
     {
         // 1. Shader Stages Initialization
@@ -130,9 +132,9 @@ public:
 
         // 8. GraphicsPipeline Layout (Global UBO + Material Set + Push Constants)
         const VkPushConstantRange pushConstantRange{
-            VK_SHADER_STAGE_VERTEX_BIT,
+            pushConstantStages,
             PUSH_CONSTANT_OFFSET,
-            static_cast<uint32_t>(sizeof(glm::mat4))
+            pushConstantSize
         };
 
         VulkanContext* context = ServiceLocator::GetContext();

@@ -56,6 +56,18 @@ public:
     Mesh(const Mesh&) = delete;
     Mesh& operator=(const Mesh&) = delete;
 
+    /**
+     * @brief Optional extra push constant block to inject AFTER the model matrix push.
+     * Used by specialised pipelines (e.g. checkerboard) that declare additional
+     * fragment-stage push constant fields beyond the standard mat4 model matrix.
+     */
+    struct ExtraPushConstants {
+        const void*        data   = nullptr;
+        uint32_t           offset = 0U;
+        uint32_t           size   = 0U;
+        VkShaderStageFlags stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+    };
+
     // --- Interface ---
 
     void setModelMatrix(const glm::mat4& matrix);
@@ -63,12 +75,15 @@ public:
 
     /**
      * @brief Records draw commands for this specific mesh.
+     * @param extraPush  Optional extra push constant data injected after the model matrix.
+     *                   Set to nullptr (default) for standard phong/shadow pipelines.
      */
     void draw(
         VkCommandBuffer commandBuffer,
         VkDescriptorSet globalSet,
         const GE::Graphics::GraphicsPipeline* pipelineOverride = nullptr,
-        const glm::mat4& worldMatrix = glm::mat4(1.0f) // Pre-calculated matrix from ECS
+        const glm::mat4& worldMatrix = glm::mat4(1.0f),
+        const ExtraPushConstants* extraPush = nullptr
     ) const;
 
     // --- Logic Queries ---

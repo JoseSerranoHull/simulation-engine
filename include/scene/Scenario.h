@@ -10,6 +10,7 @@
 #include "assets/Model.h"
 #include "graphics/ShaderModule.h"
 #include "graphics/GraphicsPipeline.h"
+#include <glm/glm.hpp>
 
 // Forward declaration — keeps Vulkan types out of the scenario interface header.
 namespace GE::Graphics { struct GpuUploadContext; }
@@ -52,11 +53,28 @@ namespace GE {
             return m_pipelines;
         }
 
+        /** @brief Background colour used as the Vulkan clear value for the offscreen pass.
+         *  Editable at runtime via the scenario's OnGUI() colour picker. */
+        const glm::vec4& GetClearColor() const { return m_clearColor; }
+
+        // --- Checkerboard Pipeline Interface ---
+        // Allows the Renderer to push material colour data for checkerboard meshes
+        // without the Renderer needing to know about GenericScenario specifically.
+
+        /** @brief Returns the checkerboard GraphicsPipeline pointer, or nullptr if none. */
+        virtual const GE::Graphics::GraphicsPipeline* GetCheckerboardPipeline() const { return nullptr; }
+        /** @brief Returns a pointer to the checkerboard push constant struct, or nullptr. */
+        virtual const void* GetCheckerboardPushData() const { return nullptr; }
+        /** @brief Returns the size of the checkerboard push constant struct in bytes. */
+        virtual uint32_t GetCheckerboardPushDataSize() const { return 0U; }
+
     protected:
         /** @brief Builds the fixed set of material pipelines for this scenario. */
         void createMaterialPipelines();
-        bool  m_isPaused = false;
-        float m_timeScale = 1.0f;
+        bool      m_isPaused      = false;
+        float     m_timeScale     = 1.0f;
+        float     m_fixedTimestep = 0.01667f; // ~60 Hz fixed step; editable via ImGui
+        glm::vec4 m_clearColor    { 0.05f, 0.05f, 0.1f, 1.0f }; // Default: dark navy
 
         /** @brief Registry of models unique to this scenario for cleanup. */
         std::vector<std::unique_ptr<GE::Assets::Model>> m_ownedModels;

@@ -63,14 +63,19 @@ namespace GE {
         // Fulfills Requirement: Simulation menu in the Main Menu Bar
         if (ImGui::BeginMenu("Simulation")) {
 
-            // --- 1. Restart Logic (NEW) ---
-            // Allows for instantaneous reset of Lab 3 test cases
-            if (ImGui::MenuItem("Restart Simulation", "F5")) {
-                auto* exp = ServiceLocator::GetExperience();
-                // We use the stored config path to reload the same .ini file
-                exp->changeScenario(std::make_unique<GE::GenericScenario>(m_configPath));
-
+            // --- 1. Restart Logic ---
+            // Deferred via requestScenarioChange so the actual swap happens at the
+            // top of the next drawFrame(), after vkDeviceWaitIdle — never mid-frame.
+            auto doRestart = [&]() {
+                ServiceLocator::GetExperience()->requestScenarioChange(m_configPath);
                 GE_LOG_INFO("GenericScenario: Restarting simulation from " + m_configPath);
+            };
+
+            if (ImGui::MenuItem("Restart Simulation", "F5")) {
+                doRestart();
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_F5, /*repeat=*/false)) {
+                doRestart();
             }
 
             ImGui::Separator();
@@ -130,7 +135,12 @@ namespace GE {
         auto* em = ServiceLocator::GetEntityManager();
 
         // 1. Cleanup Systems unique to this scenario
-        em->UnregisterSystemByID(Systems::PhysicsSystem().GetID());
+        // Use the stored non-owning pointer — constructing a throwaway PhysicsSystem()
+        // to read its ID risks an ODR-split static counter returning a different value.
+        if (m_physicsSystem != nullptr) {
+            em->UnregisterSystemByID(m_physicsSystem->GetID());
+            m_physicsSystem = nullptr;
+        }
 
         // 2. Release GPU particle backends (owned by ParticleEmitterSystem pool)
         ServiceLocator::GetParticleEmitterSystem()->ClearBackends();

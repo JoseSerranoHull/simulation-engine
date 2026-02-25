@@ -50,7 +50,7 @@ bool Mesh::hasTransparency() const {
  * Orchestrates pipeline binding, descriptor mapping (Global/Material),
  * and indexed draw execution.
  */
-void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPipeline* pipelineOverride, const glm::mat4& worldMatrix) const {
+void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPipeline* pipelineOverride, const glm::mat4& worldMatrix, const ExtraPushConstants* extraPush) const {
     // 1. Resolve active pipeline using your existing logic
     const GraphicsPipeline* const activePipeline = (pipelineOverride != nullptr)
         ? pipelineOverride
@@ -70,10 +70,17 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPip
             activePipeline->getPipelineLayout(), SET_GLOBAL, SET_COUNT, sets, 0U, nullptr);
 
         // 4. Update World Matrix via Push Constants
-        // We now use the passed worldMatrix instead of the old internal modelMatrix
         vkCmdPushConstants(cb, activePipeline->getPipelineLayout(),
             VK_SHADER_STAGE_VERTEX_BIT, GE::EngineConstants::OFFSET_ZERO,
             static_cast<uint32_t>(sizeof(glm::mat4)), &worldMatrix);
+
+        // 4b. Optional extra push constants (e.g. checkerboard colours)
+        // These must be pushed AFTER the pipeline bind (which happens at step 2 above)
+        // and BEFORE the draw call to satisfy Vulkan's push constant validity rules.
+        if ((extraPush != nullptr) && (extraPush->data != nullptr) && (extraPush->size > 0U)) {
+            vkCmdPushConstants(cb, activePipeline->getPipelineLayout(),
+                extraPush->stages, extraPush->offset, extraPush->size, extraPush->data);
+        }
 
         // 5. Bind Geometry Buffers
         const VkDeviceSize offsets[BUFFER_COUNT_ONE] = { 0ULL };

@@ -248,12 +248,25 @@ void EngineOrchestrator::drawFrame() {
         }
     }
 
+    // Extract per-scenario rendering overrides.
+    const glm::vec4 clearColor = activeScenario
+        ? activeScenario->GetClearColor()
+        : glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
+
+    const GE::Graphics::GraphicsPipeline* checkerPipeline = activeScenario
+        ? activeScenario->GetCheckerboardPipeline() : nullptr;
+    const void*  checkerPushData = activeScenario
+        ? activeScenario->GetCheckerboardPushData() : nullptr;
+    const uint32_t checkerPushSize = activeScenario
+        ? activeScenario->GetCheckerboardPushDataSize() : 0U;
+
     // Record Draw Calls: Renderer queries ECS for meshes/particles
     renderer->recordFrame(
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
         em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
         resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
-        rawPipelines, m_shadowPipeline.get()
+        rawPipelines, m_shadowPipeline.get(),
+        clearColor, checkerPipeline, checkerPushData, checkerPushSize
     );
 
     // --- Step 5: UI & Final Render Pass ---

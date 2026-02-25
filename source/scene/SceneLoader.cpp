@@ -125,7 +125,7 @@ namespace GE::Scene {
             };
 
         // Determine which pipeline index to use (0 = Opaque, 1 = Checkerboard)
-        int pipeIdx = props.count("GraphicsPipeline") ? std::stoi(props.at("GraphicsPipeline")) : 0;
+        int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 0;
 
         // UNIFIED CREATION: Procedural materials no longer ignore custom textures
         auto mat = am->createMaterial(
@@ -304,11 +304,14 @@ namespace GE::Scene {
 
     void SceneLoader::handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
         GE::Components::RigidBody rb;
-        if (props.count("Mass")) rb.mass = parseFloat(props.at("Mass"));
-        if (props.count("Static")) rb.isStatic = (props.at("Static") == "true");
-        if (props.count("Velocity")) rb.velocity = parseVec3(props.at("Velocity"));
-        if (props.count("UseGravity")) rb.useGravity = (props.at("UseGravity") == "true");
+        if (props.count("Mass"))        rb.mass        = parseFloat(props.at("Mass"));
+        if (props.count("Static"))      rb.isStatic    = (props.at("Static") == "true");
+        if (props.count("Velocity"))    rb.velocity    = parseVec3(props.at("Velocity"));
+        if (props.count("UseGravity"))  rb.useGravity  = (props.at("UseGravity") == "true");
         if (props.count("Restitution")) rb.restitution = parseFloat(props.at("Restitution"));
+
+        // Compute cached inverse mass. Static bodies have infinite effective mass (inverseMass = 0).
+        rb.inverseMass = (rb.isStatic || rb.mass <= 0.0f) ? 0.0f : 1.0f / rb.mass;
 
         em->AddComponent(m_currentEntity, rb);
     }

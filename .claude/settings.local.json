@@ -15,7 +15,9 @@
       "Bash(ls:*)",
       "Bash(powershell:*)",
       "Bash(printf %s\\\\n:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(echo Shaders compiled successfully:*)",
+      "Bash(wait_for_background b166b1a:*)"
     ]
   }
 }

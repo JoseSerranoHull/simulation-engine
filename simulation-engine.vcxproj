@@ -194,9 +194,11 @@
     <None Include="markdown\SimulationLab2.md" />
     <None Include="markdown\SimulationLab3.md" />
     <None Include="markdown\SimulationLab4.md" />
-    <None Include="markdown\SimulationWorshops.md" />
+    <None Include="markdown\SimulationWorkshops.md" />
     <None Include="README.md" />
     <None Include="shaders\base.frag" />
+    <None Include="shaders\checkerboard.frag" />
+    <None Include="shaders\checkerboard.vert" />
     <None Include="shaders\dust.comp" />
     <None Include="shaders\dust.frag" />
     <None Include="shaders\dust.vert" />

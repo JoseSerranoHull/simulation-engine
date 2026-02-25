@@ -125,7 +125,7 @@ namespace GE::Scene {
             };
 
         // Determine which pipeline index to use (0 = Opaque, 1 = Checkerboard)
-        int pipeIdx = props.count("GraphicsPipeline") ? std::stoi(props.at("GraphicsPipeline")) : 0;
+        int pipeIdx = props.count("Pipeline") ? std::stoi(props.at("Pipeline")) : 0;
 
         // UNIFIED CREATION: Procedural materials no longer ignore custom textures
         auto mat = am->createMaterial(

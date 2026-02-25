@@ -11,12 +11,14 @@ namespace GE {
      * Sent via vkCmdPushConstants before each checkerboard mesh draw call.
      */
     struct CheckerboardPushConstants {
-        alignas(16) glm::vec4 colorA{ 1.0f, 1.0f, 1.0f, 1.0f }; // Light squares
-        alignas(16) glm::vec4 colorB{ 0.1f, 0.1f, 0.1f, 1.0f }; // Dark squares
-        float scale{ 2.0f };                                       // Tiling density
+        glm::vec4 colorA{ 1.0f, 1.0f, 1.0f, 1.0f }; // Light squares  (offset 0, 16 bytes)
+        glm::vec4 colorB{ 0.1f, 0.1f, 0.1f, 1.0f }; // Dark squares   (offset 16, 16 bytes)
+        float scale{ 2.0f };                           // Tiling density (offset 32, 4 bytes)
     };
-    static_assert(sizeof(CheckerboardPushConstants) <= 128U,
-        "CheckerboardPushConstants exceeds guaranteed minimum push constant size");
+    // Total = 36 bytes — matches the pipeline layout's checker push constant range.
+    // glm::vec4 is already 16-byte aligned; alignas(16) was causing struct padding to 48.
+    static_assert(sizeof(CheckerboardPushConstants) == 36U,
+        "CheckerboardPushConstants must be exactly 36 bytes to match the pipeline layout");
 
     class GenericScenario final : public Scenario {
     public:

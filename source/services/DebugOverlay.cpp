@@ -1,6 +1,8 @@
 ﻿#include "services/DebugOverlay.h"
 #include "scene/GenericScenario.h"
 #include "core/EngineOrchestrator.h"
+#include "components/Tag.h"
+#include "components/Transform.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
@@ -104,13 +106,12 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
     ImGui::NewFrame();
 
     // --- 1. Top-Level Main Menu Bar (Agnostic Orchestration) ---
-    DrawMainMenuBar(input);
+    DrawMainMenuBar(input, light, climate);
 
-    // --- 2. Central Diagnostics Window ---
-    // We keep your existing logic here, but wrap it in a window.
-    if (ImGui::Begin("Engine Diagnostics", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    // --- 2. Hierarchy Window ---
+    if (ImGui::Begin("Hierarchy", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 
-        // Show Telemetry
+        // Performance (at top)
         if (ImGui::CollapsingHeader("Performance")) {
             ImGui::Text("FPS: %.1f", static_cast<double>(ImGui::GetIO().Framerate));
             if (stats != nullptr) {
@@ -120,118 +121,21 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
             }
         }
 
-        // --- 2. Camera Settings (Step 3 Implementation) ---
-        if (ImGui::CollapsingHeader("Camera Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-            Camera* activeCam = input->getActiveCamera();
+        ImGui::Separator();
 
-            ImGui::Text("Active View: %s", input->getActiveCameraLabel());
-
-            // Fulfills Lab Requirement: Orthographic Camera Toggle
-            bool isOrtho = (activeCam->getProjectionMode() == Camera::ProjectionMode::ORTHOGRAPHIC);
-            if (ImGui::Checkbox("Orthographic Projection", &isOrtho)) {
-                activeCam->setProjectionMode(isOrtho ?
-                    Camera::ProjectionMode::ORTHOGRAPHIC :
-                    Camera::ProjectionMode::PERSPECTIVE);
-            }
-
-            // Fulfills Lab Requirement: View from different positions/aligned to axis
-            if (isOrtho) {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
-                ImGui::TextWrapped("Debug Axis Alignment:");
-                ImGui::PopStyleColor();
-
-                if (ImGui::Button("Top (Y-Axis)")) {
-                    activeCam->setPosition(glm::vec3(0.0f, 10.0f, 0.0f));
-                    activeCam->setPitch(-89.9f); // Looking straight down
-                    activeCam->setYaw(-90.0f);
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Side (X-Axis)")) {
-                    activeCam->setPosition(glm::vec3(10.0f, 0.0f, 0.0f));
-                    activeCam->setPitch(0.0f);
-                    activeCam->setYaw(180.0f); // Looking toward origin from +X
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Front (Z-Axis)")) {
-                    activeCam->setPosition(glm::vec3(0.0f, 0.0f, 10.0f));
-                    activeCam->setPitch(0.0f);
-                    activeCam->setYaw(-90.0f); // Looking toward origin from +Z
+        // Entity Hierarchy
+        try {
+            GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+            auto& transforms = em->GetCompArr<GE::Components::Transform>();
+            for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
+                const GE::ECS::EntityID id = transforms.Index()[i];
+                if (transforms.Data()[i].m_parentEntityID == UINT32_MAX) {
+                    DrawEntityNode(id, em);
                 }
             }
         }
-
-        // --- 3. Performance Telemetry ---
-        if (ImGui::CollapsingHeader("Telemetry")) {
-            ImGui::Text("Performance: %.1f FPS", static_cast<double>(ImGui::GetIO().Framerate));
-            if (stats != nullptr) {
-                ImGui::PlotLines("FPS History", stats->getHistoryData(),
-                    static_cast<int>(stats->getCount()),
-                    static_cast<int>(stats->getOffset()), nullptr, 0.0f, 165.0f, ImVec2(0, 80));
-            }
-        }
-
-        // --- 4. Simulation Control (Lab Requirement: Start/Stop/Pause/Timestep) ---
-        if (ImGui::CollapsingHeader("Simulation Logic")) {
-            if (time != nullptr) {
-                ImGui::Text("Global Timestep: %.2fx", static_cast<double>(time->getScale()));
-                if (ImGui::Button("Reset Clock")) { /* Logic handled via InputService 'r' */ }
-            }
-
-            // Note: Once the activeScenario is fully integrated, 
-            // we can add a Scenario::Pause toggle here.
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.5f, 1.0f), "Status: Running");
-        }
-
-        // --- 5. Scenario-Specific UI (Climate/Weather) ---
-        // This section will eventually move into a virtual method within the Scenario class
-        if (climate != nullptr) {
-            if (ImGui::CollapsingHeader("Environment (Snow Globe)")) {
-                static const char* modeNames[] = { "Normal (Auto)", "Summer (Lock)", "Rain (Lock)", "Snow (Lock)" };
-                int currentModeIdx = static_cast<int>(climate->getWeatherMode());
-
-                if (ImGui::Combo("Season Mode", &currentModeIdx, modeNames, static_cast<int>(IM_ARRAYSIZE(modeNames)))) {
-                    climate->setWeatherMode(static_cast<WeatherMode>(currentModeIdx));
-                }
-
-                ImVec4 seasonColor{ 1.0f, 1.0f, 1.0f, 1.0f };
-                switch (climate->getWeatherState()) {
-                case WeatherState::RAIN:   seasonColor = ImVec4(0.2f, 0.5f, 1.0f, 1.0f); break;
-                case WeatherState::SNOW:   seasonColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f); break;
-                default:                   seasonColor = ImVec4(1.0f, 0.4f, 0.1f, 1.0f); break;
-                }
-                ImGui::TextColored(seasonColor, "Current Season: %s", climate->getSeasonLabel());
-
-                ImGui::Separator();
-
-                bool orbit = input->getAutoOrbit();
-                if (ImGui::Checkbox("Auto-Orbit Sun", &orbit)) { input->setAutoOrbit(orbit); }
-
-                if (light != nullptr && !input->getAutoOrbit()) {
-                    glm::vec3 pos = light->getPosition();
-                    if (ImGui::SliderFloat3("Manual Sun", &pos.x, -5.0f, 5.0f)) {
-                        light->setPosition(pos);
-                    }
-                }
-            }
-        }
-
-        // --- 6. Global Rendering Overrides ---
-        if (ImGui::CollapsingHeader("Visual Overrides")) {
-            bool bloom = input->getBloomEnabled();
-            if (ImGui::Checkbox("Post-Process Bloom", &bloom)) { input->setBloomEnabled(bloom); }
-
-            bool gouraud = input->getGouraudEnabled();
-            if (ImGui::Checkbox("Gouraud Shading", &gouraud)) { input->setGouraudEnabled(gouraud); }
-
-            float intensity = input->getIntensityMod();
-            if (ImGui::SliderFloat("Global Intensity", &intensity, 0.0f, 5.0f)) {
-                input->setIntensityMod(intensity);
-            }
-
-            glm::vec3 currentColor = input->getColorMod();
-            if (ImGui::ColorEdit3("Scene Color Tint", &currentColor[0])) {
-                input->setColorMod(currentColor);
-            }
+        catch (...) {
+            ImGui::TextDisabled("No entities");
         }
     }
 
@@ -242,7 +146,7 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
 /**
  * @brief Implementation of the top-level Menu Bar.
  */
-void DebugOverlay::DrawMainMenuBar(InputService* const input) const {
+void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* const light, ClimateService* const climate) const {
     auto* experience = ServiceLocator::GetExperience();
 
     // Fulfills Requirement: ImGui Main Menu Bar
@@ -299,6 +203,63 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input) const {
             ImGui::EndMenu();
         }
 
+        // --- ENVIRONMENT ---
+        if (climate != nullptr && ImGui::BeginMenu("Environment")) {
+            static const char* modeNames[] = { "Normal (Auto)", "Summer (Lock)", "Rain (Lock)", "Snow (Lock)" };
+            int currentModeIdx = static_cast<int>(climate->getWeatherMode());
+            if (ImGui::Combo("Season Mode", &currentModeIdx, modeNames, static_cast<int>(IM_ARRAYSIZE(modeNames)))) {
+                climate->setWeatherMode(static_cast<WeatherMode>(currentModeIdx));
+            }
+
+            ImVec4 seasonColor{ 1.0f, 0.4f, 0.1f, 1.0f };
+            switch (climate->getWeatherState()) {
+            case WeatherState::RAIN: seasonColor = ImVec4(0.2f, 0.5f, 1.0f, 1.0f); break;
+            case WeatherState::SNOW: seasonColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f); break;
+            default: break;
+            }
+            ImGui::TextColored(seasonColor, "Season: %s", climate->getSeasonLabel());
+
+            ImGui::Separator();
+
+            bool orbit = input->getAutoOrbit();
+            if (ImGui::MenuItem("Auto-Orbit Sun", nullptr, &orbit)) { input->setAutoOrbit(orbit); }
+
+            if (light != nullptr && !input->getAutoOrbit()) {
+                glm::vec3 pos = light->getPosition();
+                if (ImGui::SliderFloat3("Manual Sun", &pos.x, -5.0f, 5.0f)) { light->setPosition(pos); }
+            }
+
+            ImGui::EndMenu();
+        }
+
+        // --- VISUAL OVERRIDE ---
+        if (ImGui::BeginMenu("Visual Override")) {
+            bool bloom = input->getBloomEnabled();
+            if (ImGui::MenuItem("Post-Process Bloom", nullptr, &bloom)) { input->setBloomEnabled(bloom); }
+
+            bool gouraud = input->getGouraudEnabled();
+            if (ImGui::MenuItem("Gouraud Shading", nullptr, &gouraud)) { input->setGouraudEnabled(gouraud); }
+
+            ImGui::Separator();
+
+            float intensity = input->getIntensityMod();
+            if (ImGui::SliderFloat("Global Intensity", &intensity, 0.0f, 5.0f)) {
+                input->setIntensityMod(intensity);
+            }
+
+            glm::vec3 tint = input->getColorMod();
+            if (ImGui::ColorEdit3("Scene Color Tint", &tint[0])) { input->setColorMod(tint); }
+
+            ImGui::Separator();
+
+            bool castShadows = input->getGlobalShadowsEnabled();
+            if (ImGui::MenuItem("Cast Shadows (Global)", nullptr, &castShadows)) {
+                input->setGlobalShadowsEnabled(castShadows);
+            }
+
+            ImGui::EndMenu();
+        }
+
         // --- SCENARIO-SPECIFIC UI HOOK ---
         // Fulfills Requirement: Scenarios add UI controls unique to them
         if (experience->GetCurrentScenario()) {
@@ -306,6 +267,46 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input) const {
         }
 
         ImGui::EndMainMenuBar();
+    }
+}
+
+/**
+ * @brief Recursively draws an entity and its children in the hierarchy tree.
+ */
+void DebugOverlay::DrawEntityNode(const GE::ECS::EntityID entityID, GE::ECS::EntityManager* const em) const {
+    using namespace GE::Components;
+
+    auto* tag = em->TryGetTIComponent<Tag>(entityID);
+    const char* name = (tag != nullptr) ? tag->m_name.c_str() : "Entity";
+
+    // Scan for children
+    auto& transforms = em->GetCompArr<Transform>();
+    bool hasChildren = false;
+    for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
+        if (transforms.Data()[i].m_parentEntityID == entityID) {
+            hasChildren = true;
+            break;
+        }
+    }
+
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+    if (!hasChildren) {
+        // Leaf + NoTreePushOnOpen: node is always visible but does NOT push to the ID stack,
+        // so no matching TreePop() is needed.
+        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    }
+
+    const bool open = ImGui::TreeNodeEx(
+        reinterpret_cast<void*>(static_cast<uintptr_t>(entityID)),
+        flags, "%s  [%u]", name, entityID);
+
+    if (open && hasChildren) {
+        for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
+            if (transforms.Data()[i].m_parentEntityID == entityID) {
+                DrawEntityNode(transforms.Index()[i], em);
+            }
+        }
+        ImGui::TreePop();
     }
 }
 

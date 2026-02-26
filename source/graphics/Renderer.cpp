@@ -106,6 +106,9 @@ void Renderer::recordShadowPass(
     const VkRect2D ss{ {0, 0}, {GE::EngineConstants::SHADOW_MAP_RES, GE::EngineConstants::SHADOW_MAP_RES} };
     vkCmdSetScissor(cb, 0U, 1U, &ss);
 
+    // Global shadow toggle: read from InputService via ServiceLocator
+    const bool globalShadowsEnabled = ServiceLocator::GetInput()->getGlobalShadowsEnabled();
+
     // Agnostic Iteration: Draw only entities that cast shadows
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
@@ -116,7 +119,7 @@ void Renderer::recordShadowPass(
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
                 // Logic: Does the material permit shadows? (Defined in .ini)
-                if (sub.m_mesh && sub.m_material && sub.m_material->GetCastsShadows()) {
+                if (sub.m_mesh && sub.m_material && globalShadowsEnabled && sub.m_material->GetCastsShadows()) {
                     sub.m_mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
                 }
             }

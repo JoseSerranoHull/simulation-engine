@@ -320,6 +320,16 @@ namespace GE::Scene {
         GE::Components::SphereCollider sc;
         if (props.count("Radius")) sc.radius = parseFloat(props.at("Radius"));
         em->AddComponent(m_currentEntity, sc);
+
+        // Set invInertiaTensor on any sibling RigidBody now that radius is known.
+        // Solid-sphere formula: I = (2/5)·m·r²·Identity  =>  I⁻¹ = (5/(2·m·r²))·Identity
+        // Static bodies keep the default identity (angular integration is skipped for them).
+        if (auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_currentEntity)) {
+            if (!rb->isStatic && rb->mass > 0.0f && sc.radius > 0.0f) {
+                const float I = (2.0f / 5.0f) * rb->mass * sc.radius * sc.radius;
+                rb->invInertiaTensor = glm::mat3(1.0f / I);
+            }
+        }
     }
 
     void SceneLoader::handlePlaneCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {

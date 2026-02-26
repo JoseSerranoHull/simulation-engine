@@ -19,6 +19,7 @@ InputService::InputService(GLFWwindow* const inWindow, TimeService* const inTime
     snowEnabled(false),
     bloomEnabled(false),
     autoOrbit(true),
+    m_globalShadowsEnabled(true),
     t_pressedLast(false),
     T_pressedLast(false),
     intensityMod(DEFAULT_INTENSITY),
@@ -209,6 +210,7 @@ void InputService::resetDefaults() {
     useGouraud = false;
     bloomEnabled = false;
     autoOrbit = true;
+    m_globalShadowsEnabled = true;
     intensityMod = DEFAULT_INTENSITY;
     colorMod = glm::vec3(1.0f, 1.0f, 1.0f);
 

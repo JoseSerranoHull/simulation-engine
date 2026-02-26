@@ -69,9 +69,14 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPip
         vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS,
             activePipeline->getPipelineLayout(), SET_GLOBAL, SET_COUNT, sets, 0U, nullptr);
 
-        // 4. Update World Matrix via Push Constants
+        // 4. Update World Matrix via Push Constants.
+        // Use the caller-supplied modelStages when present (e.g. the checkerboard pipeline
+        // declares a single VERT|FRAG range over [0,100), so both pushes must use VERT|FRAG).
+        const VkShaderStageFlags matrixStages = (extraPush != nullptr)
+            ? extraPush->modelStages
+            : VK_SHADER_STAGE_VERTEX_BIT;
         vkCmdPushConstants(cb, activePipeline->getPipelineLayout(),
-            VK_SHADER_STAGE_VERTEX_BIT, GE::EngineConstants::OFFSET_ZERO,
+            matrixStages, GE::EngineConstants::OFFSET_ZERO,
             static_cast<uint32_t>(sizeof(glm::mat4)), &worldMatrix);
 
         // 4b. Optional extra push constants (e.g. checkerboard colours)

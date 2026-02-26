@@ -193,10 +193,14 @@ void Renderer::recordOpaquePass(
                         && (checkerboardPushDataSize > 0U)
                         && (sub.m_material->getPipeline() == checkerboardPipeline))
                     {
-                        checkerPush.data   = checkerboardPushData;
-                        checkerPush.offset = static_cast<uint32_t>(sizeof(glm::mat4));
-                        checkerPush.size   = checkerboardPushDataSize;
-                        checkerPush.stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+                        checkerPush.data        = checkerboardPushData;
+                        checkerPush.offset      = static_cast<uint32_t>(sizeof(glm::mat4));
+                        checkerPush.size        = checkerboardPushDataSize;
+                        // The checkerboard pipeline layout declares ONE range [0,100) VERT|FRAG.
+                        // Every vkCmdPushConstants call that touches any byte in [0,100) must
+                        // include both stages (VUID-vkCmdPushConstants-offset-01796).
+                        checkerPush.stages      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                        checkerPush.modelStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
                         extraPushPtr = &checkerPush;
                     }
 

@@ -412,6 +412,9 @@
     <None Include="markdown\SimulationWorkshops.md">
       <Filter>Mardown Files</Filter>
     </None>
+    <None Include="markdown\Lab-3.md">
+      <Filter>Mardown Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <!-- core headers -->

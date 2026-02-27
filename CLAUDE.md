@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Hard Rules
+
+- **Never modify ImGui library files.** Files under the Visual Studio filter "IMGUI Files" (`external-libraries/imgui/`) are read-only. You may read them to look up APIs, flags, and struct layouts, but must never edit them.
+
 ## Build System
 
 **Platform:** Windows only. Build via Visual Studio 2022 or MSBuild — no CMake or Makefile.

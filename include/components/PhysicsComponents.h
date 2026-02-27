@@ -5,6 +5,7 @@ namespace GE::Components {
 
     // --- 3D Physics ---
     struct RigidBody {
+        // ---- Linear dynamics ------------------------------------------------
         glm::vec3 velocity    { 0.0f };
         glm::vec3 acceleration{ 0.0f };
         glm::vec3 forceAccum  { 0.0f };  // Accumulated forces; reset after each integration step
@@ -13,6 +14,25 @@ namespace GE::Components {
         float     restitution { 0.6f };
         bool      isStatic    { false };
         bool      useGravity  { true };
+
+        // ---- Angular dynamics (PhysicsObject workshop pattern) ---------------
+        // Orientation represented as a 3x3 rotation matrix (columns = local axes).
+        // Integrated each tick via  dR/dt = Skew(ω) · R  then re-orthogonalised.
+        glm::mat3 orientation     { glm::mat3(1.0f) };
+
+        // Angular velocity ω in world space (rad/s).
+        glm::vec3 angularVelocity { 0.0f };
+
+        // Accumulated torque τ for the current frame (N·m, world space).
+        // Cleared to zero after each Integrate() call.
+        glm::vec3 torqueAccum     { 0.0f };
+
+        // Inverse inertia tensor I⁻¹.
+        // For a uniform solid sphere: I = (2/5)·m·r²·Identity
+        //                            I⁻¹ = (5/(2·m·r²))·Identity
+        // Computed at load time by SceneLoader when a SphereCollider is present.
+        // Static bodies keep the identity (angular dynamics are skipped for them).
+        glm::mat3 invInertiaTensor{ glm::mat3(1.0f) };
     };
 
     struct SphereCollider {

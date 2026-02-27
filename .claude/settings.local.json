@@ -17,7 +17,10 @@
       "Bash(printf %s\\\\n:*)",
       "Bash(rm:*)",
       "Bash(echo Shaders compiled successfully:*)",
-      "Bash(wait_for_background b166b1a:*)"
+      "Bash(wait_for_background b166b1a:*)",
+      "Bash(msbuild:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(cmd:*)"
     ]
   }
 }

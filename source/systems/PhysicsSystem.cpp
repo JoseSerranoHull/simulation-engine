@@ -5,9 +5,42 @@
 #include "physics/Plane.h"
 #include "components/Transform.h"
 
+/* parasoft-begin-suppress ALL */
+#include <glm/gtc/matrix_transform.hpp>  // translate, scale
+/* parasoft-end-suppress ALL */
+
 namespace GE::Systems {
 
     static constexpr glm::vec3 GRAVITY{ 0.0f, -9.81f, 0.0f };
+
+    // ---- Angular dynamics helpers (PhysicsObject workshop pattern) ----------
+
+    /**
+     * @brief Builds the 3x3 skew-symmetric cross-product matrix for vector ω.
+     * SkewSymmetric(ω) · v  ==  cross(ω, v).
+     * Used to integrate orientation: dR/dt = Skew(ω) · R.
+     */
+    static glm::mat3 SkewSymmetric(const glm::vec3& w) {
+        // GLM mat3 constructor fills column-by-column.
+        return glm::mat3(
+             0.0f,  w.z, -w.y,   // col 0
+            -w.z,  0.0f,  w.x,   // col 1
+             w.y,  -w.x, 0.0f    // col 2
+        );
+    }
+
+    /**
+     * @brief Re-orthogonalises a rotation matrix using Gram-Schmidt to prevent
+     * floating-point drift accumulating over many integration steps.
+     * Mirrors PhysicsObject::Orthogonalise().
+     */
+    static void Orthogonalise(glm::mat3& R) {
+        const glm::vec3 x = glm::normalize(R[0]);
+        const glm::vec3 y = glm::normalize(R[1] - glm::dot(R[1], x) * x);
+        R[0] = x;
+        R[1] = y;
+        R[2] = glm::cross(x, y);
+    }
 
     void PhysicsSystem::OnUpdate(float dt) {
         Integrate(dt);
@@ -67,10 +100,32 @@ namespace GE::Systems {
                 break;
             }
 
-            // --- 3. Clear accumulator for next frame ---
+            // --- 3. Clear linear force accumulator ---
             rb.forceAccum = glm::vec3(0.0f);
 
-            trans->m_state = GE::Components::Transform::TransformState::Dirty;
+            // --- 4. Angular integration (PhysicsObject::Integrate() pattern) ---
+            // α = I⁻¹ · τ
+            const glm::vec3 angularAccel = rb.invInertiaTensor * rb.torqueAccum;
+            rb.angularVelocity += angularAccel * dt;
+
+            // dR/dt = Skew(ω) · R  →  R_new = R + dt · Skew(ω) · R
+            if (glm::dot(rb.angularVelocity, rb.angularVelocity) > 1e-12f) {
+                rb.orientation = rb.orientation + dt * SkewSymmetric(rb.angularVelocity) * rb.orientation;
+                Orthogonalise(rb.orientation);  // prevent floating-point drift
+            }
+
+            // Clear torque accumulator for next frame
+            rb.torqueAccum = glm::vec3(0.0f);
+
+            // --- 5. Write TRS matrix directly from physics state ---
+            // Bypasses TransformSystem's Euler-angle reconstruction so that
+            // the orientation matrix (not Euler angles) drives the render transform.
+            // Setting state = Clean prevents TransformSystem from overwriting it.
+            const glm::mat4 tMat = glm::translate(glm::mat4(1.0f), trans->m_position);
+            const glm::mat4 rMat = glm::mat4(rb.orientation);
+            const glm::mat4 sMat = glm::scale(glm::mat4(1.0f), trans->m_scale);
+            trans->m_localMatrix = tMat * rMat * sMat;
+            trans->m_state = GE::Components::Transform::TransformState::Clean;
         }
     }
 

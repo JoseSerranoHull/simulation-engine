@@ -75,6 +75,7 @@ public:
     bool getSnowEnabled() const { return snowEnabled; }
     bool getBloomEnabled() const { return bloomEnabled; }
     bool getAutoOrbit() const { return autoOrbit; }
+    bool getGlobalShadowsEnabled() const { return m_globalShadowsEnabled; }
     float getIntensityMod() const { return intensityMod; }
     const glm::vec3& getColorMod() const { return colorMod; }
 
@@ -87,6 +88,7 @@ public:
     void setSnowEnabled(const bool v) { snowEnabled = v; }
     void setBloomEnabled(const bool v) { bloomEnabled = v; }
     void setAutoOrbit(const bool v) { autoOrbit = v; }
+    void setGlobalShadowsEnabled(const bool v) { m_globalShadowsEnabled = v; }
     void setIntensityMod(const float v) { intensityMod = v; }
     void setColorMod(const glm::vec3& v) { colorMod = v; }
 
@@ -114,6 +116,7 @@ private:
     bool snowEnabled;
     bool bloomEnabled;
     bool autoOrbit;
+    bool m_globalShadowsEnabled;
 
     // Edge-detection for specific keys
     bool t_pressedLast;

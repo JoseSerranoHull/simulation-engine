@@ -106,6 +106,9 @@ void Renderer::recordShadowPass(
     const VkRect2D ss{ {0, 0}, {GE::EngineConstants::SHADOW_MAP_RES, GE::EngineConstants::SHADOW_MAP_RES} };
     vkCmdSetScissor(cb, 0U, 1U, &ss);
 
+    // Global shadow toggle: read from InputService via ServiceLocator
+    const bool globalShadowsEnabled = ServiceLocator::GetInput()->getGlobalShadowsEnabled();
+
     // Agnostic Iteration: Draw only entities that cast shadows
     for (uint32_t i = 0; i < meshRenderers.GetCount(); ++i) {
         const auto& mr = meshRenderers.Data()[i];
@@ -116,7 +119,7 @@ void Renderer::recordShadowPass(
         if (transform != nullptr) {
             for (const auto& sub : mr.subMeshes) {
                 // Logic: Does the material permit shadows? (Defined in .ini)
-                if (sub.m_mesh && sub.m_material && sub.m_material->GetCastsShadows()) {
+                if (sub.m_mesh && sub.m_material && globalShadowsEnabled && sub.m_material->GetCastsShadows()) {
                     sub.m_mesh->draw(cb, globalSet, shadowPipeline, transform->m_worldMatrix);
                 }
             }
@@ -193,10 +196,14 @@ void Renderer::recordOpaquePass(
                         && (checkerboardPushDataSize > 0U)
                         && (sub.m_material->getPipeline() == checkerboardPipeline))
                     {
-                        checkerPush.data   = checkerboardPushData;
-                        checkerPush.offset = static_cast<uint32_t>(sizeof(glm::mat4));
-                        checkerPush.size   = checkerboardPushDataSize;
-                        checkerPush.stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+                        checkerPush.data        = checkerboardPushData;
+                        checkerPush.offset      = static_cast<uint32_t>(sizeof(glm::mat4));
+                        checkerPush.size        = checkerboardPushDataSize;
+                        // The checkerboard pipeline layout declares ONE range [0,100) VERT|FRAG.
+                        // Every vkCmdPushConstants call that touches any byte in [0,100) must
+                        // include both stages (VUID-vkCmdPushConstants-offset-01796).
+                        checkerPush.stages      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                        checkerPush.modelStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
                         extraPushPtr = &checkerPush;
                     }
 

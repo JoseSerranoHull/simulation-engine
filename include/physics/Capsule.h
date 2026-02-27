@@ -9,6 +9,10 @@ namespace GE::Physics {
             SetPosition((m_start + m_end) * 0.5f);
         }
 
+        const glm::vec3& GetStart()  const { return m_start; }
+        const glm::vec3& GetEnd()    const { return m_end; }
+        float            GetRadius() const { return m_radius; }
+
         bool IsInside(const glm::vec3& point) const override {
             glm::vec3 ab = m_end - m_start;
             float abLen2 = glm::dot(ab, ab);

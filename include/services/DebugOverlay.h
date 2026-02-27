@@ -15,6 +15,7 @@
 #include "lighting/PointLightSource.h"
 #include "core/ServiceLocator.h"
 #include "scene/Scenario.h"
+#include "ecs/EntityManager.h"
 
 /**
  * @class DebugOverlay
@@ -72,5 +73,6 @@ private:
     VkDescriptorPool imguiPool;  /**< Dedicated descriptor pool for ImGui textures. */
 
 	// --- Internal Helper Methods ---
-    void DrawMainMenuBar(InputService* const input) const;
+    void DrawMainMenuBar(InputService* const input, PointLightSource* const light, ClimateService* const climate) const;
+    void DrawEntityNode(GE::ECS::EntityID entityID, GE::ECS::EntityManager* em) const;
 };

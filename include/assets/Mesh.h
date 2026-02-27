@@ -62,10 +62,15 @@ public:
      * fragment-stage push constant fields beyond the standard mat4 model matrix.
      */
     struct ExtraPushConstants {
-        const void*        data   = nullptr;
-        uint32_t           offset = 0U;
-        uint32_t           size   = 0U;
-        VkShaderStageFlags stages = VK_SHADER_STAGE_FRAGMENT_BIT;
+        const void*        data        = nullptr;
+        uint32_t           offset      = 0U;
+        uint32_t           size        = 0U;
+        VkShaderStageFlags stages      = VK_SHADER_STAGE_FRAGMENT_BIT;
+        // Stages to use for the model matrix push (step 4).
+        // Must cover ALL stages in any overlapping pipeline layout range.
+        // For the checkerboard pipeline (single VERT|FRAG range over [0,100))
+        // this must be VERT|FRAG; for all other pipelines VERT_BIT is correct.
+        VkShaderStageFlags modelStages = VK_SHADER_STAGE_VERTEX_BIT;
     };
 
     // --- Interface ---

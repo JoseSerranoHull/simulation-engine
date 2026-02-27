@@ -3,6 +3,7 @@
 #include "components/PhysicsComponents.h"
 #include "systems/TransformSystem.h"
 #include "systems/ParticleEmitterSystem.h"
+#include "systems/ColliderVisualizerSystem.h"
 #include "components/SkyboxComponent.h"
 #include "components/ParticleComponent.h"
 #include "graphics/GpuUploadContext.h"
@@ -260,13 +261,19 @@ void EngineOrchestrator::drawFrame() {
     const uint32_t checkerPushSize = activeScenario
         ? activeScenario->GetCheckerboardPushDataSize() : 0U;
 
+    const GE::Graphics::GraphicsPipeline* wirePipeline = activeScenario
+        ? activeScenario->GetWirePipeline() : nullptr;
+    GE::Systems::ColliderVisualizerSystem* visualizer = activeScenario
+        ? activeScenario->GetVisualizerSystem() : nullptr;
+
     // Record Draw Calls: Renderer queries ECS for meshes/particles
     renderer->recordFrame(
         cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
         em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
         resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
         rawPipelines, m_shadowPipeline.get(),
-        clearColor, checkerPipeline, checkerPushData, checkerPushSize
+        clearColor, checkerPipeline, checkerPushData, checkerPushSize,
+        wirePipeline, visualizer
     );
 
     // --- Step 5: UI & Final Render Pass ---

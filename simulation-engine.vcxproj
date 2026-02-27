@@ -151,6 +151,7 @@
     <ClCompile Include="source\core\EngineOrchestrator.cpp" />
     <ClCompile Include="source\scene\GenericScenario.cpp" />
     <ClCompile Include="source\assets\GeometryUtils.cpp" />
+    <ClCompile Include="source\assets\WireGeometryUtils.cpp" />
     <ClCompile Include="source\graphics\GpuImage.cpp" />
     <ClCompile Include="source\services\DebugOverlay.cpp" />
     <ClCompile Include="source\services\Inspector.cpp" />
@@ -161,6 +162,7 @@
     <ClCompile Include="source\assets\Mesh.cpp" />
     <ClCompile Include="source\assets\Model.cpp" />
     <ClCompile Include="source\particles\GpuParticleBackend.cpp" />
+    <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp" />
     <ClCompile Include="source\systems\PhysicsSystem.cpp" />
     <ClCompile Include="source\lighting\PointLightSource.cpp" />
     <ClCompile Include="source\graphics\PostProcessBackend.cpp" />
@@ -279,6 +281,7 @@
     <ClInclude Include="include\physics\Physics.h" />
     <ClInclude Include="include\physics\Physics2D.h" />
     <ClInclude Include="include\components\PhysicsComponents.h" />
+    <ClInclude Include="include\systems\ColliderVisualizerSystem.h" />
     <ClInclude Include="include\systems\PhysicsSystem.h" />
     <ClInclude Include="include\graphics\GraphicsPipeline.h" />
     <ClInclude Include="include\physics\Plane.h" />

@@ -4,6 +4,7 @@
 #include "components/Components.h"
 #include "components/ParticleComponent.h"
 #include "systems/ParticleEmitterSystem.h"
+#include "systems/ColliderVisualizerSystem.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
@@ -31,7 +32,9 @@ void Renderer::recordFrame(
     const glm::vec4& clearColor,
     const GraphicsPipeline* checkerboardPipeline,
     const void*  checkerboardPushData,
-    uint32_t     checkerboardPushDataSize
+    uint32_t     checkerboardPushDataSize,
+    const GraphicsPipeline* wirePipeline,
+    GE::Systems::ColliderVisualizerSystem* visualizer
 ) const {
     // Step 1: Shadow Mapping Pass (Depth-only)
     recordShadowPass(cb, shadowPass, shadowFramebuffer,
@@ -68,6 +71,13 @@ void Renderer::recordFrame(
     // Step 5: Transparent Pass
     // Records alpha-blended objects and generic Particle entities
     recordTransparentPass(cb, extent, postProcessor, globalDescriptorSet, materialPipelines, em);
+
+    // Step 6: Collider Wireframe Pass (optional)
+    // Fires after the transparent pass, reusing the same framebuffer with LOAD_OP_LOAD.
+    // Depth buffer from the opaque pass persists — wire lines are correctly occluded.
+    if ((wirePipeline != nullptr) && (visualizer != nullptr) && visualizer->m_enabled) {
+        recordWirePass(cb, extent, postProcessor, globalDescriptorSet, wirePipeline, visualizer);
+    }
 }
 
 // ========================================================================
@@ -271,6 +281,49 @@ void Renderer::recordTransparentPass(
 
     vkCmdEndRenderPass(cb);
 }
+
+// ========================================================================
+// SECTION 5: WIRE PASS
+// ========================================================================
+
+/**
+ * @brief Records collider wireframe overlays after the transparent pass.
+ * Reuses transparentRenderPass (LOAD_OP_LOAD on colour and depth), so the depth
+ * buffer from the opaque pass persists and correctly occludes wire lines.
+ */
+void Renderer::recordWirePass(
+    const VkCommandBuffer cb,
+    const VkExtent2D& extent,
+    const PostProcessBackend* const postProcessor,
+    const VkDescriptorSet globalSet,
+    const GraphicsPipeline* wirePipeline,
+    GE::Systems::ColliderVisualizerSystem* visualizer
+) const {
+    VkRenderPassBeginInfo wirePassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+    wirePassInfo.renderPass  = postProcessor->getTransparentRenderPass();
+    wirePassInfo.framebuffer = postProcessor->getOffscreenFramebuffer();
+    wirePassInfo.renderArea.extent = extent;
+    // LOAD_OP_LOAD: both colour and depth attachments preserve their current contents.
+    wirePassInfo.clearValueCount = 0U;
+    wirePassInfo.pClearValues    = nullptr;
+
+    vkCmdBeginRenderPass(cb, &wirePassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    const VkViewport vp{ 0.0f, 0.0f,
+        static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f };
+    vkCmdSetViewport(cb, 0U, 1U, &vp);
+
+    const VkRect2D sc{ {0, 0}, extent };
+    vkCmdSetScissor(cb, 0U, 1U, &sc);
+
+    visualizer->RecordPass(cb, globalSet, wirePipeline);
+
+    vkCmdEndRenderPass(cb);
+}
+
+// ========================================================================
+// SECTION 6: PARTICLES
+// ========================================================================
 
 /**
  * @brief Generic Particle Dispatcher: Iterates over all entities with ParticleComponents.

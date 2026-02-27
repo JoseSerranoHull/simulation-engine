@@ -55,7 +55,9 @@ public:
         const bool enableDepthWrite = true,
         const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT,
         const uint32_t pushConstantSize   = static_cast<uint32_t>(sizeof(glm::mat4)),
-        const VkShaderStageFlags pushConstantStages = VK_SHADER_STAGE_VERTEX_BIT
+        const VkShaderStageFlags pushConstantStages = VK_SHADER_STAGE_VERTEX_BIT,
+        const VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        const bool includeMaterialSet = true
     ) :  materialLayout(inMaterialLayout)
     {
         // 1. Shader Stages Initialization
@@ -78,7 +80,7 @@ public:
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.topology = topology;
 
         // 3. Viewport & Dynamic State setup
         VkPipelineViewportStateCreateInfo viewportState{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -139,10 +141,11 @@ public:
 
         VulkanContext* context = ServiceLocator::GetContext();
 
-        const std::array<VkDescriptorSetLayout, LAYOUT_SET_COUNT> layouts = {
-            context->globalSetLayout,
-            materialLayout
-        };
+        std::vector<VkDescriptorSetLayout> layouts;
+        layouts.push_back(context->globalSetLayout);
+        if (includeMaterialSet) {
+            layouts.push_back(materialLayout);
+        }
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
         pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());

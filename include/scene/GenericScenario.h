@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "scene/Scenario.h"
 #include "systems/PhysicsSystem.h"
+#include "systems/ColliderVisualizerSystem.h"
 #include <glm/glm.hpp>
 
 namespace GE {
@@ -41,10 +42,22 @@ namespace GE {
             return static_cast<uint32_t>(sizeof(m_checkerConstants));
         }
 
+        // --- Collider Wireframe Visualizer Interface ---
+        const GE::Graphics::GraphicsPipeline* GetWirePipeline() const override {
+            return (m_pipelines.size() > 7U) ? m_pipelines[7U].get() : nullptr;
+        }
+        GE::Systems::ColliderVisualizerSystem* GetVisualizerSystem() const override {
+            return m_visualizerSystem;
+        }
+
     private:
         /** @brief Non-owning pointer to the registered PhysicsSystem; used to expose
          *  integration method selection in OnGUI(). EntityManager owns the lifetime. */
         Systems::PhysicsSystem* m_physicsSystem{ nullptr };
+
+        /** @brief Non-owning pointer to the registered ColliderVisualizerSystem.
+         *  EntityManager owns the lifetime; pointer is nulled on OnUnload(). */
+        Systems::ColliderVisualizerSystem* m_visualizerSystem{ nullptr };
 
         /** @brief Per-scenario checkerboard material colours, editable via ImGui. */
         CheckerboardPushConstants m_checkerConstants{};

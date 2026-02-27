@@ -16,6 +16,9 @@
 #include "graphics/VulkanContext.h"
 #include "ecs/EntityManager.h"
 
+// Forward declaration — avoids pulling system headers into the renderer interface.
+namespace GE::Systems { class ColliderVisualizerSystem; }
+
 namespace GE::Graphics {
 
 /**
@@ -54,7 +57,9 @@ public:
         const glm::vec4& clearColor                   = glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f },
         const GraphicsPipeline* checkerboardPipeline  = nullptr,
         const void*  checkerboardPushData             = nullptr,
-        uint32_t     checkerboardPushDataSize         = 0U
+        uint32_t     checkerboardPushDataSize         = 0U,
+        const GraphicsPipeline* wirePipeline          = nullptr,
+        GE::Systems::ColliderVisualizerSystem* visualizer = nullptr
     ) const;
 
 private:
@@ -100,6 +105,16 @@ private:
         const VkCommandBuffer cb,
         const VkDescriptorSet globalSet,
         GE::ECS::EntityManager* const em
+    ) const;
+
+    /** @brief Records green collider wireframe overlays after the transparent pass. */
+    void recordWirePass(
+        const VkCommandBuffer cb,
+        const VkExtent2D& extent,
+        const PostProcessBackend* const postProcessor,
+        const VkDescriptorSet globalSet,
+        const GraphicsPipeline* wirePipeline,
+        GE::Systems::ColliderVisualizerSystem* visualizer
     ) const;
 };
 

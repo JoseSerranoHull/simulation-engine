@@ -175,8 +175,7 @@ void GpuResourceManager::createShadowResources(const VulkanDevice* const engine)
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    samplerInfo.compareEnable = VK_TRUE;
-    samplerInfo.compareOp = VK_COMPARE_OP_LESS;
+    samplerInfo.compareEnable = VK_FALSE;
 
     if (vkCreateSampler(context->device, &samplerInfo, nullptr, &shadowSampler) != VK_SUCCESS) {
         throw std::runtime_error("GpuResourceManager: Failed to create shadow sampler!");

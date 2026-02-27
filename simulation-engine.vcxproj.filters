@@ -248,6 +248,9 @@
     <ClCompile Include="source\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\services\Inspector.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <!-- Shaders -->
@@ -644,6 +647,9 @@
     </ClInclude>
     <ClInclude Include="include\memory\MemoryUtilities.h">
       <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\Inspector.h">
+      <Filter>Header Files\services</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -16,6 +16,7 @@
 #include "core/ServiceLocator.h"
 #include "scene/Scenario.h"
 #include "ecs/EntityManager.h"
+#include "services/Inspector.h"
 
 /**
  * @class DebugOverlay
@@ -71,6 +72,10 @@ public:
 private:
     // --- Internal State & GPU Resources ---
     VkDescriptorPool imguiPool;  /**< Dedicated descriptor pool for ImGui textures. */
+
+    // --- Selection State (mutable: written from const update/draw helpers) ---
+    mutable GE::ECS::EntityID m_selectedEntity{ UINT32_MAX };
+    Inspector m_inspector{};
 
 	// --- Internal Helper Methods ---
     void DrawMainMenuBar(InputService* const input, PointLightSource* const light, ClimateService* const climate) const;

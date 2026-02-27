@@ -109,9 +109,9 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
     DrawMainMenuBar(input, light, climate);
 
     // --- 2. Hierarchy Window ---
-    if (ImGui::Begin("Hierarchy", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::Begin("Hierarchy")) {
 
-        // Performance (at top)
+        // Performance — full-width, above the split
         if (ImGui::CollapsingHeader("Performance")) {
             ImGui::Text("FPS: %.1f", static_cast<double>(ImGui::GetIO().Framerate));
             if (stats != nullptr) {
@@ -121,21 +121,49 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
             }
         }
 
-        ImGui::Separator();
+        // Two-column split: Hierarchy (left) | Inspector (right)
+        constexpr ImGuiTableFlags kTableFlags =
+            ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV;
 
-        // Entity Hierarchy
-        try {
-            GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
-            auto& transforms = em->GetCompArr<GE::Components::Transform>();
-            for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
-                const GE::ECS::EntityID id = transforms.Index()[i];
-                if (transforms.Data()[i].m_parentEntityID == UINT32_MAX) {
-                    DrawEntityNode(id, em);
+        if (ImGui::BeginTable("hier_inspector", 2, kTableFlags)) {
+
+            ImGui::TableSetupColumn("Entities",  ImGuiTableColumnFlags_WidthFixed,   200.0f);
+            ImGui::TableSetupColumn("Inspector", ImGuiTableColumnFlags_WidthStretch);
+
+            ImGui::TableNextRow();
+
+            // ── LEFT: entity tree ──────────────────────────────────────────────
+            ImGui::TableSetColumnIndex(0);
+            try {
+                GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+                auto& transforms = em->GetCompArr<GE::Components::Transform>();
+                for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
+                    const GE::ECS::EntityID id = transforms.Index()[i];
+                    if (transforms.Data()[i].m_parentEntityID == UINT32_MAX) {
+                        DrawEntityNode(id, em);
+                    }
                 }
             }
-        }
-        catch (...) {
-            ImGui::TextDisabled("No entities");
+            catch (...) {
+                ImGui::TextDisabled("No entities");
+            }
+
+            // ── RIGHT: inspector ───────────────────────────────────────────────
+            ImGui::TableSetColumnIndex(1);
+            if (m_selectedEntity != UINT32_MAX) {
+                try {
+                    GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+                    m_inspector.Draw(m_selectedEntity, em);
+                }
+                catch (...) {
+                    ImGui::TextDisabled("Inspector unavailable");
+                }
+            }
+            else {
+                ImGui::TextDisabled("Select an entity\nto inspect");
+            }
+
+            ImGui::EndTable();
         }
     }
 
@@ -299,6 +327,11 @@ void DebugOverlay::DrawEntityNode(const GE::ECS::EntityID entityID, GE::ECS::Ent
     const bool open = ImGui::TreeNodeEx(
         reinterpret_cast<void*>(static_cast<uintptr_t>(entityID)),
         flags, "%s  [%u]", name, entityID);
+
+    // Selection: click the label (not the arrow) to select
+    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+        m_selectedEntity = entityID;
+    }
 
     if (open && hasChildren) {
         for (uint32_t i = 0; i < transforms.GetCount(); ++i) {

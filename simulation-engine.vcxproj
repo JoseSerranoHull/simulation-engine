@@ -153,6 +153,7 @@
     <ClCompile Include="source\assets\GeometryUtils.cpp" />
     <ClCompile Include="source\graphics\GpuImage.cpp" />
     <ClCompile Include="source\services\DebugOverlay.cpp" />
+    <ClCompile Include="source\services\Inspector.cpp" />
     <ClCompile Include="source\services\InputService.cpp" />
     <ClCompile Include="source\lighting\LightSource.cpp" />
     <ClCompile Include="source\core\Logger.cpp" />
@@ -260,6 +261,7 @@
     <ClInclude Include="include\ecs\IECSystem.h" />
     <ClInclude Include="include\graphics\GpuImage.h" />
     <ClInclude Include="include\services\DebugOverlay.h" />
+    <ClInclude Include="include\services\Inspector.h" />
     <ClInclude Include="include\services\InputService.h" />
     <ClInclude Include="include\core\libs.h" />
     <ClInclude Include="include\lighting\LightSource.h" />

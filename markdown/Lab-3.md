@@ -6,7 +6,7 @@
 
 ---
 
-n this lab you will build upon your sandbox application, using  your simulation library to achieve some basic simulation functionality.
+In this lab you will build upon your sandbox application, using  your simulation library to achieve some basic simulation functionality.
 
 So far in your **physics engine** you have created Collider classes that allow you to tell if one object is colliding with another.
 This can be used for all sorts of things in games, such as a trigger to trigger to open a door when a character enters an area.

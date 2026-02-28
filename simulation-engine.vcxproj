@@ -194,6 +194,7 @@
     <None Include="markdown\Final Lab README.md" />
     <None Include="markdown\Gemini - Refactor Plan.md" />
     <None Include="markdown\Lab-3.md" />
+    <None Include="markdown\Lab-4.md" />
     <None Include="markdown\Licenses.md" />
     <None Include="markdown\SimulationLab2.md" />
     <None Include="markdown\SimulationLab3.md" />

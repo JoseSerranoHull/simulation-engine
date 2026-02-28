@@ -23,9 +23,6 @@
     <Filter Include="Shader Files">
       <UniqueIdentifier>{cc9a7c29-0572-4866-85e1-c9d42120ec9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Mardown Files">
-      <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
-    </Filter>
     <!-- Source subfolder filters -->
     <Filter Include="Source Files\core">
       <UniqueIdentifier>{a1b2c3d4-0001-0001-0001-000000000001}</UniqueIdentifier>
@@ -93,6 +90,9 @@
     </Filter>
     <Filter Include="Header Files\memory">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-000c-00000000001c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Markdown Files">
+      <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -251,6 +251,12 @@
     <ClCompile Include="source\services\Inspector.cpp">
       <Filter>Source Files\services</Filter>
     </ClCompile>
+    <ClCompile Include="source\assets\WireGeometryUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <!-- Shaders -->
@@ -373,20 +379,20 @@
     </None>
     <!-- Markdown / config / misc -->
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Licenses.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\SimulationLab2.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="README.md" />
     <None Include="CLAUDE.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="config\snow_globe.ini">
       <Filter>Config Files</Filter>
@@ -398,25 +404,28 @@
       <Filter>Config Files</Filter>
     </None>
     <None Include="markdown\Claude - Refactor Plan.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Final Lab README.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Gemini - Refactor Plan.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\SimulationLab3.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\SimulationLab4.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\SimulationWorkshops.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Lab-3.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-4.md">
+      <Filter>Markdown Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -650,6 +659,9 @@
     </ClInclude>
     <ClInclude Include="include\services\Inspector.h">
       <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\ColliderVisualizerSystem.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

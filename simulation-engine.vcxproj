@@ -151,6 +151,7 @@
     <ClCompile Include="source\core\EngineOrchestrator.cpp" />
     <ClCompile Include="source\scene\GenericScenario.cpp" />
     <ClCompile Include="source\assets\GeometryUtils.cpp" />
+    <ClCompile Include="source\assets\WireGeometryUtils.cpp" />
     <ClCompile Include="source\graphics\GpuImage.cpp" />
     <ClCompile Include="source\services\DebugOverlay.cpp" />
     <ClCompile Include="source\services\Inspector.cpp" />
@@ -161,6 +162,7 @@
     <ClCompile Include="source\assets\Mesh.cpp" />
     <ClCompile Include="source\assets\Model.cpp" />
     <ClCompile Include="source\particles\GpuParticleBackend.cpp" />
+    <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp" />
     <ClCompile Include="source\systems\PhysicsSystem.cpp" />
     <ClCompile Include="source\lighting\PointLightSource.cpp" />
     <ClCompile Include="source\graphics\PostProcessBackend.cpp" />
@@ -185,6 +187,9 @@
     <None Include="CLAUDE.md" />
     <None Include="config\simulation_lab2.ini" />
     <None Include="config\simulation_lab3.ini" />
+    <None Include="config\simulation_lab4.ini" />
+    <None Include="config\simulation_lab4_SameMass.ini" />
+    <None Include="config\simulation_lab4_DiffMass.ini" />
     <None Include="config\snow_globe.ini" />
     <None Include="markdown\Claude - Refactor Plan.md" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
@@ -192,6 +197,7 @@
     <None Include="markdown\Final Lab README.md" />
     <None Include="markdown\Gemini - Refactor Plan.md" />
     <None Include="markdown\Lab-3.md" />
+    <None Include="markdown\Lab-4.md" />
     <None Include="markdown\Licenses.md" />
     <None Include="markdown\SimulationLab2.md" />
     <None Include="markdown\SimulationLab3.md" />
@@ -279,6 +285,7 @@
     <ClInclude Include="include\physics\Physics.h" />
     <ClInclude Include="include\physics\Physics2D.h" />
     <ClInclude Include="include\components\PhysicsComponents.h" />
+    <ClInclude Include="include\systems\ColliderVisualizerSystem.h" />
     <ClInclude Include="include\systems\PhysicsSystem.h" />
     <ClInclude Include="include\graphics\GraphicsPipeline.h" />
     <ClInclude Include="include\physics\Plane.h" />

@@ -36,6 +36,8 @@ void Scenario::createMaterialPipelines() {
     m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_frag.spv",           VK_SHADER_STAGE_FRAGMENT_BIT)); // [7]
     m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checkerboard_vert.spv",    VK_SHADER_STAGE_VERTEX_BIT));   // [8]
     m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checkerboard_frag.spv",    VK_SHADER_STAGE_FRAGMENT_BIT)); // [9]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/collider_wire_vert.spv",   VK_SHADER_STAGE_VERTEX_BIT));   // [10]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/collider_wire_frag.spv",   VK_SHADER_STAGE_FRAGMENT_BIT)); // [11]
 
     // Checkerboard push constant size: mat4 (64) + vec4 (16) + vec4 (16) + float (4) = 100 bytes
     // Both VERTEX and FRAGMENT stages read from this range (vert: model, frag: colorA/B/scale).
@@ -55,6 +57,13 @@ void Scenario::createMaterialPipelines() {
     m_pipelines.push_back(std::make_unique<GraphicsPipeline>(transPass,     ctx->materialSetLayout, m_shaderModules[6].get(), m_shaderModules[7].get(), true,  false, false, msaa)); // [5] Water
     // Checkerboard (index 6) — culling disabled so plane is visible from both sides
     m_pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, m_shaderModules[8].get(), m_shaderModules[9].get(), false, false, true,  msaa, CHECKER_PC_SIZE, CHECKER_PC_STAGES)); // [6] Checkerboard
+    // Wire (index 7) — LINE_LIST, depth test ON / write OFF, no material set
+    m_pipelines.push_back(std::make_unique<GraphicsPipeline>(
+        offscreenPass, VK_NULL_HANDLE,
+        m_shaderModules[10].get(), m_shaderModules[11].get(),
+        false, false, false, msaa,
+        static_cast<uint32_t>(sizeof(glm::mat4)), VK_SHADER_STAGE_VERTEX_BIT,
+        VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false)); // [7] Wire
 }
 
 } // namespace GE

@@ -42,7 +42,15 @@ namespace GE::Systems {
         /** @brief Integration method selected at runtime via ImGui. Public for OnGUI access. */
         IntegrationMethod m_integrationMethod{ IntegrationMethod::SemiImplicit };
 
+        /** Q4: When true, collision impulse is applied as a force over dt instead of directly to velocity. */
+        bool  m_useForceBasedImpulse{ false };
+
+        /** Q5: When >= 0.0f, overrides every body's restitution during collision resolution. -1 = disabled. */
+        float m_restitutionOverride{ -1.0f };
+
     private:
+        /** Cached dt from Integrate(); used by force-based impulse branch in ResolveCollisions(). */
+        float m_lastDt{ 0.016f };
         /** @brief Internal derivative state used by the RK4 integrator. */
         struct Derivative { glm::vec3 dPos{ 0.0f }; glm::vec3 dVel{ 0.0f }; };
 

@@ -57,6 +57,7 @@ namespace GE::Systems {
      * force accumulator with inverseMass).
      */
     void PhysicsSystem::Integrate(float dt) {
+        m_lastDt = dt;
         auto* em = ServiceLocator::GetEntityManager();
         auto& rbArray = em->GetCompArr<GE::Components::RigidBody>();
 
@@ -194,10 +195,11 @@ namespace GE::Systems {
                     // 1. Positional correction — push out of the plane
                     sTrans->m_position += plane.GetNormal() * penetration;
 
-                    // 2. Velocity reflection with restitution
+                    // 2. Velocity reflection with restitution (Q5: override if active)
                     if (sRB) {
+                        const float e = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : sRB->restitution;
                         sRB->velocity = glm::reflect(sRB->velocity, plane.GetNormal());
-                        sRB->velocity *= sRB->restitution;
+                        sRB->velocity *= e;
 
                         // Kill micro-velocities to prevent jitter at rest
                         if (glm::length(sRB->velocity) < 0.05f) {
@@ -250,14 +252,26 @@ namespace GE::Systems {
                 }
 
                 // 2. Impulse response — general formula:  j = -(1+e)*vRel / (1/mA + 1/mB)
+                // Q5: restitutionOverride replaces per-body values when active.
+                // Q4: force-based mode converts impulse J to force F=J/dt for next Integrate().
                 if (aRB && bRB && totalInvMass > 0.0f) {
                     const float vRel = glm::dot(aRB->velocity - bRB->velocity, n);
                     if (vRel < 0.0f) {  // Only resolve if objects are approaching
-                        const float e = glm::min(aRB->restitution, bRB->restitution);
-                        const float j = -(1.0f + e) * vRel / totalInvMass;
+                        const float eA = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : aRB->restitution;
+                        const float eB = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : bRB->restitution;
+                        const float e  = glm::min(eA, eB);
+                        const float j  = -(1.0f + e) * vRel / totalInvMass;
 
-                        if (!aRB->isStatic) aRB->velocity += j * invMassA * n;
-                        if (!bRB->isStatic) bRB->velocity -= j * invMassB * n;
+                        if (m_useForceBasedImpulse && m_lastDt > 1e-6f) {
+                            // Q4: convert impulse to force F = J/dt; applied on the next Integrate() call.
+                            // One-frame delay is the intended observable consequence of this approach.
+                            if (!aRB->isStatic) aRB->forceAccum += (j * invMassA / m_lastDt) * n;
+                            if (!bRB->isStatic) bRB->forceAccum -= (j * invMassB / m_lastDt) * n;
+                        } else {
+                            // Default: apply velocity change directly this frame.
+                            if (!aRB->isStatic) aRB->velocity += j * invMassA * n;
+                            if (!bRB->isStatic) bRB->velocity -= j * invMassB * n;
+                        }
                     }
                 }
             }

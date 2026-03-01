@@ -33,6 +33,12 @@ namespace GE {
         m_physicsSystem = ps;
         em->RegisterSystem(ps);
 
+        // 3. Register ColliderVisualizerSystem — uploads wire geometry and draws
+        // green wireframe overlays for SphereCollider and PlaneCollider entities.
+        auto* vs = new Systems::ColliderVisualizerSystem(ctx);
+        m_visualizerSystem = vs;
+        em->RegisterSystem(vs);
+
         GE_LOG_INFO("GenericScenario: Scenario loaded from " + m_configPath);
     }
 
@@ -127,6 +133,34 @@ namespace GE {
                 ServiceLocator::GetExperience()->stepSimulation(m_fixedTimestep);
             }
 
+            ImGui::Separator();
+
+            // --- 7. Collider Wireframe Toggle ---
+            if (m_visualizerSystem != nullptr) {
+                ImGui::Checkbox("Show Collider Wireframes", &m_visualizerSystem->m_enabled);
+            }
+
+            // --- 8. Lab 4: Collision Response Controls ---
+            if (m_physicsSystem != nullptr) {
+                ImGui::Separator();
+                ImGui::SeparatorText("Lab 4 - Collision Response");
+
+                // Q4: Force-based vs direct impulse
+                ImGui::Checkbox("Force-based Impulse (Q4)", &m_physicsSystem->m_useForceBasedImpulse);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Off: delta-v applied directly this frame\nOn: F = J/dt added to forceAccum (applied next frame — 1-frame delay)");
+
+                // Q5: Live restitution override
+                bool overrideOn = m_physicsSystem->m_restitutionOverride >= 0.0f;
+                if (ImGui::Checkbox("Override Restitution (Q5)", &overrideOn)) {
+                    m_physicsSystem->m_restitutionOverride = overrideOn ? 0.5f : -1.0f;
+                }
+                if (overrideOn) {
+                    ImGui::SliderFloat("Elasticity##q5", &m_physicsSystem->m_restitutionOverride,
+                                       0.0f, 1.0f, "e = %.2f");
+                }
+            }
+
             ImGui::EndMenu();
         }
     }
@@ -135,11 +169,16 @@ namespace GE {
         auto* em = ServiceLocator::GetEntityManager();
 
         // 1. Cleanup Systems unique to this scenario
-        // Use the stored non-owning pointer — constructing a throwaway PhysicsSystem()
-        // to read its ID risks an ODR-split static counter returning a different value.
+        // Use the stored non-owning pointer — constructing a throwaway system to read its ID
+        // risks an ODR-split static counter returning a different value.
         if (m_physicsSystem != nullptr) {
             em->UnregisterSystemByID(m_physicsSystem->GetID());
             m_physicsSystem = nullptr;
+        }
+
+        if (m_visualizerSystem != nullptr) {
+            em->UnregisterSystemByID(m_visualizerSystem->GetID());
+            m_visualizerSystem = nullptr;
         }
 
         // 2. Release GPU particle backends (owned by ParticleEmitterSystem pool)

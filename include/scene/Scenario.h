@@ -12,8 +12,9 @@
 #include "graphics/GraphicsPipeline.h"
 #include <glm/glm.hpp>
 
-// Forward declaration — keeps Vulkan types out of the scenario interface header.
+// Forward declarations — keeps Vulkan types and system headers out of the scenario interface.
 namespace GE::Graphics { struct GpuUploadContext; }
+namespace GE::Systems  { class ColliderVisualizerSystem; }
 
 namespace GE {
     /**
@@ -67,6 +68,13 @@ namespace GE {
         virtual const void* GetCheckerboardPushData() const { return nullptr; }
         /** @brief Returns the size of the checkerboard push constant struct in bytes. */
         virtual uint32_t GetCheckerboardPushDataSize() const { return 0U; }
+
+        // --- Collider Wireframe Visualizer Interface ---
+
+        /** @brief Returns the LINE_LIST wire pipeline (index 7), or nullptr if unavailable. */
+        virtual const GE::Graphics::GraphicsPipeline* GetWirePipeline() const { return nullptr; }
+        /** @brief Returns the ColliderVisualizerSystem for this scenario, or nullptr. */
+        virtual GE::Systems::ColliderVisualizerSystem* GetVisualizerSystem() const { return nullptr; }
 
     protected:
         /** @brief Builds the fixed set of material pipelines for this scenario. */

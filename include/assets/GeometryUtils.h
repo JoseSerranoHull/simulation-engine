@@ -60,6 +60,30 @@ public:
      * @brief Generates a capsule mesh by combining hemispherical ends with a cylindrical body.
 	 */
 	static GE::Assets::OBJLoader::MeshData generateCapsule(float radius, float height, int segments, int stacks);
+
+    // --- Wire / Collider Visualizer Geometry ---
+
+    /**
+     * @brief Generates three great-circle rings (XY, XZ, YZ) as LINE_LIST pairs.
+     * Vertex color is baked in. Radius = 1.0; caller scales via model matrix.
+     * @param segments Number of segments per ring (default 32).
+     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     */
+    static GE::Assets::OBJLoader::MeshData generateWireSphere(
+        uint32_t segments = 32U,
+        const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f)
+    );
+
+    /**
+     * @brief Generates a border quad + cross center in the local XZ plane as LINE_LIST pairs.
+     * Intended as a visual indicator for PlaneColliders; caller applies orientation via model matrix.
+     * @param halfSize Half-extent of the quad in world units (default 5.0).
+     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     */
+    static GE::Assets::OBJLoader::MeshData generateWirePlane(
+        float halfSize = 5.0f,
+        const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f)
+    );
 };
 
 } // namespace GE::Assets

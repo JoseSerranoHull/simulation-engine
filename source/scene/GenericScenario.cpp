@@ -140,6 +140,27 @@ namespace GE {
                 ImGui::Checkbox("Show Collider Wireframes", &m_visualizerSystem->m_enabled);
             }
 
+            // --- 8. Lab 4: Collision Response Controls ---
+            if (m_physicsSystem != nullptr) {
+                ImGui::Separator();
+                ImGui::SeparatorText("Lab 4 - Collision Response");
+
+                // Q4: Force-based vs direct impulse
+                ImGui::Checkbox("Force-based Impulse (Q4)", &m_physicsSystem->m_useForceBasedImpulse);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Off: delta-v applied directly this frame\nOn: F = J/dt added to forceAccum (applied next frame — 1-frame delay)");
+
+                // Q5: Live restitution override
+                bool overrideOn = m_physicsSystem->m_restitutionOverride >= 0.0f;
+                if (ImGui::Checkbox("Override Restitution (Q5)", &overrideOn)) {
+                    m_physicsSystem->m_restitutionOverride = overrideOn ? 0.5f : -1.0f;
+                }
+                if (overrideOn) {
+                    ImGui::SliderFloat("Elasticity##q5", &m_physicsSystem->m_restitutionOverride,
+                                       0.0f, 1.0f, "e = %.2f");
+                }
+            }
+
             ImGui::EndMenu();
         }
     }

@@ -403,6 +403,15 @@
     <None Include="config\simulation_lab3.ini">
       <Filter>Config Files</Filter>
     </None>
+    <None Include="config\simulation_lab4.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab4_SameMass.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab4_DiffMass.ini">
+      <Filter>Config Files</Filter>
+    </None>
     <None Include="markdown\Claude - Refactor Plan.md">
       <Filter>Markdown Files</Filter>
     </None>

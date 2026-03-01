@@ -187,6 +187,9 @@
     <None Include="CLAUDE.md" />
     <None Include="config\simulation_lab2.ini" />
     <None Include="config\simulation_lab3.ini" />
+    <None Include="config\simulation_lab4.ini" />
+    <None Include="config\simulation_lab4_SameMass.ini" />
+    <None Include="config\simulation_lab4_DiffMass.ini" />
     <None Include="config\snow_globe.ini" />
     <None Include="markdown\Claude - Refactor Plan.md" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />

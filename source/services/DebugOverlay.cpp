@@ -205,6 +205,16 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
             if (ImGui::MenuItem("Simulation Lab 3 Scenario")) {
                 experience->requestScenarioChange("./config/simulation_lab3.ini");
             }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Lab 4: Q1 + Q5")) {
+                experience->requestScenarioChange("./config/simulation_lab4.ini");
+            }
+            if (ImGui::MenuItem("Lab 4: Q2 Same Mass")) {
+                experience->requestScenarioChange("./config/simulation_lab4_SameMass.ini");
+            }
+            if (ImGui::MenuItem("Lab 4: Q3 Different Mass")) {
+                experience->requestScenarioChange("./config/simulation_lab4_DiffMass.ini");
+            }
             ImGui::EndMenu();
         }
 

@@ -207,12 +207,12 @@ namespace GE::Scene {
                 float    height = props.count("Height")       ? std::stof(props.at("Height"))       : 2.0f;
                 data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f));
             }
-            else if (shape == "SandPlug") {
+            else if (shape == "Plug") {
                 uint32_t segs  = props.count("Segments")   ? static_cast<uint32_t>(std::stoi(props.at("Segments")))  : 64U;
                 float    rimR  = props.count("RimRadius")  ? std::stof(props.at("RimRadius"))  : 1.0f;
                 float    bowlR = props.count("BowlRadius") ? std::stof(props.at("BowlRadius")) : 0.9f;
                 float    depth = props.count("Depth")      ? std::stof(props.at("Depth"))      : 0.5f;
-                data = GeometryUtils::generateSandPlug(segs, rimR, bowlR, depth, glm::vec3(1.0f));
+                data = GeometryUtils::generatePlug(segs, rimR, bowlR, depth, glm::vec3(1.0f));
             }
             else if (shape == "Capsule") {
                 data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);

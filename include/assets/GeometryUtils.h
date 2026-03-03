@@ -44,7 +44,7 @@ public:
     /**
      * @brief Generates a displaced circular mesh representing the internal sand terrain.
      */
-    static GE::Assets::OBJLoader::MeshData generateSandPlug(const uint32_t segments, const float rimRadius, const float bowlRadius, const float depth, const glm::vec3& color = glm::vec3(0.85f, 0.75f, 0.5f));
+    static GE::Assets::OBJLoader::MeshData generatePlug(const uint32_t segments, const float rimRadius, const float bowlRadius, const float depth, const glm::vec3& color = glm::vec3(0.85f, 0.75f, 0.5f));
 
     /**
      * @brief Generates a cylinder with independent top and bottom radii.

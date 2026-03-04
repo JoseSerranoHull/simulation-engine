@@ -64,7 +64,7 @@ namespace GE::Systems {
 
                 GE::ECS::EntityID id = particles.Index()[i];
                 auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
-                glm::vec3 worldPos = transform ? (transform->m_position + pc.localOffset) : pc.localOffset;
+                glm::vec3 worldPos = transform ? glm::vec3(transform->m_worldMatrix[3]) + pc.localOffset : pc.localOffset;
 
                 backend->update(
                     cb,

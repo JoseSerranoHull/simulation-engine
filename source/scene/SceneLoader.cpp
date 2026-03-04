@@ -195,16 +195,24 @@ namespace GE::Scene {
                 data = GeometryUtils::generatePlane(parseFloat(props.at("Width")), parseFloat(props.at("Depth")));
             }
             else if (shape == "Sphere") {
-                // Standard Sphere: 32 segments, radius 1.0, full sphere (cutoff -1.0)
-                data = GeometryUtils::generateSphere(32U, 1.0f, -1.0f, glm::vec3(1.0f));
+                uint32_t segs    = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 32U;
+                float    radius  = props.count("Radius")   ? std::stof(props.at("Radius"))   : 1.0f;
+                float    cutoffY = props.count("CutoffY")  ? std::stof(props.at("CutoffY"))  : -1.0f;
+                data = GeometryUtils::generateSphere(segs, radius, cutoffY, glm::vec3(1.0f));
             }
             else if (shape == "Cylinder") {
-                // Standard Cylinder: 32 segments, bottom/top radius 1.0, height 2.0
-                data = GeometryUtils::generateCylinder(32U, 1.0f, 1.0f, 2.0f, glm::vec3(1.0f));
+                uint32_t segs   = props.count("Segments")     ? static_cast<uint32_t>(std::stoi(props.at("Segments")))    : 32U;
+                float    botR   = props.count("BottomRadius") ? std::stof(props.at("BottomRadius")) : 1.0f;
+                float    topR   = props.count("TopRadius")    ? std::stof(props.at("TopRadius"))    : 1.0f;
+                float    height = props.count("Height")       ? std::stof(props.at("Height"))       : 2.0f;
+                data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f));
             }
-            else if (shape == "SandPlug") {
-                // Specialized Snow Globe Terrain: 64 segments for high-res dunes
-                data = GeometryUtils::generateSandPlug(64U, 1.0f, 0.9f, 0.5f, glm::vec3(1.0f));
+            else if (shape == "Plug") {
+                uint32_t segs  = props.count("Segments")   ? static_cast<uint32_t>(std::stoi(props.at("Segments")))  : 64U;
+                float    rimR  = props.count("RimRadius")  ? std::stof(props.at("RimRadius"))  : 1.0f;
+                float    bowlR = props.count("BowlRadius") ? std::stof(props.at("BowlRadius")) : 0.9f;
+                float    depth = props.count("Depth")      ? std::stof(props.at("Depth"))      : 0.5f;
+                data = GeometryUtils::generatePlug(segs, rimR, bowlR, depth, glm::vec3(1.0f));
             }
             else if (shape == "Capsule") {
                 data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);
@@ -260,6 +268,7 @@ namespace GE::Scene {
                     std::transform(lowerKey.begin(), lowerKey.end(), lowerKey.begin(), ::tolower);
 
                     if (lowerMesh.find(lowerKey) != std::string::npos) {
+                        if (matID == "EXCLUDE") return nullptr;
                         return m_materials.count(matID) ? m_materials.at(matID) : defaultMat;
                     }
                 }

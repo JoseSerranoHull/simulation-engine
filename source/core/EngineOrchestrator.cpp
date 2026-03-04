@@ -384,7 +384,7 @@ void EngineOrchestrator::updateUniformBuffer(const uint32_t currentImage) {
                 ? glm::vec3(0.0f, 0.0f, 1.0f)
                 : glm::vec3(0.0f, 1.0f, 0.0f);
             const glm::mat4 lightView = glm::lookAt(trans->m_position, shadowTarget, up);
-            glm::mat4 lightProj = glm::ortho(-30.0f, 30.0f, -30.0f, 30.0f, 1.0f, 100.0f);
+            glm::mat4 lightProj = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 20.0f);
             lightProj[1][1] *= -1.0f; // Vulkan NDC Y-flip
             ubo.lightSpaceMatrix = lightProj * lightView;
         }

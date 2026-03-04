@@ -31,7 +31,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     SparkLight sparks[4]; // Must match C++ exactly
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler2D shadowMap;
+layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 // --- Set 1: Material Textures ---
 layout(set = 1, binding = 0) uniform sampler2D texSampler;

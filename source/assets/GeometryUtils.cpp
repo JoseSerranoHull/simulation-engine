@@ -63,7 +63,7 @@ OBJLoader::MeshData GeometryUtils::generateSphere(const uint32_t segments, const
 /**
  * @brief Generates the interior sand terrain with a bowl-shaped underside.
  */
-OBJLoader::MeshData GeometryUtils::generateSandPlug(const uint32_t segments, const float rimRadius, const float bowlRadius, const float depth, const glm::vec3& color) {
+OBJLoader::MeshData GeometryUtils::generatePlug(const uint32_t segments, const float rimRadius, const float bowlRadius, const float depth, const glm::vec3& color) {
     OBJLoader::MeshData data{};
     data.name = "Procedural_Sand_Plug";
 

@@ -35,7 +35,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     SparkLight sparks[4]; 
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler2D shadowMap;
+layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 // --- Set 1: Material Textures ---
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -53,16 +53,15 @@ layout(location = 0) out vec4 outColor;
 float calculateShadow(vec4 posLightSpace) {
     // 1. Perspective divide
     vec3 projCoords = posLightSpace.xyz / posLightSpace.w;
-    
+
     // 2. Transform ONLY X and Y from [-1,1] to [0,1] for UV sampling
-    projCoords.xy = projCoords.xy * 0.5 + 0.5; 
-    
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    float currentDepth = projCoords.z;
-    
-    // 3. Simple bias to prevent shadow acne
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
+
     float bias = 0.002;
-    return (currentDepth - bias > closestDepth) ? 0.4 : 1.0;
+    // Hardware bilinear PCF: pass (uv, compareDepth) to sampler2DShadow.
+    // Returns 1.0 = fully lit, 0.0 = fully in shadow, with smooth blending at edges.
+    float shadow = texture(shadowMap, vec3(projCoords.xy, projCoords.z - bias));
+    return mix(0.4, 1.0, shadow);
 }
 
 /**

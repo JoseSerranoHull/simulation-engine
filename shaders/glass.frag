@@ -33,7 +33,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     SparkLight sparks[4]; 
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler2D shadowMap;
+layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 /** * @brief Scene Sampler
  * Set 0 Binding 2: Matches global layout where the resolved opaque scene 

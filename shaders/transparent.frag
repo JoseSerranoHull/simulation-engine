@@ -35,7 +35,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     SparkLight sparks[4]; // Must match C++ exactly
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler2D shadowMap;
+layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 // --- Set 1: Material Textures ---
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -91,10 +91,8 @@ void main() {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5; 
     
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
     float bias = 0.002;
-    float shadow = (currentDepth - bias > closestDepth) ? 0.4 : 1.0;
+    float shadow = mix(0.4, 1.0, texture(shadowMap, vec3(projCoords.xy, projCoords.z - bias)));
 
     // 4. DYNAMIC DAY/NIGHT LIGHTING
     // Dims based on lightColor (purple/black at night) provided by ClimateManager.

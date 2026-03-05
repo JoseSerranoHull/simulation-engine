@@ -22,7 +22,9 @@
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
       "Bash(cmd:*)",
       "Bash(C:/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)",
-      "Bash(\"$GLSLC\":*)"
+      "Bash(\"$GLSLC\":*)",
+      "Bash(C:/VulkanSDK/1.4.328.1/Bin/glslc.exe:*)",
+      "Bash(/c/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)"
     ]
   }
 }

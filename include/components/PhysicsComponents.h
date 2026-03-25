@@ -33,6 +33,15 @@ namespace GE::Components {
         // Computed at load time by SceneLoader when a SphereCollider is present.
         // Static bodies keep the identity (angular dynamics are skipped for them).
         glm::mat3 invInertiaTensor{ glm::mat3(1.0f) };
+
+        // Angular displacement (Lab 5 Q1):
+        // Encodes a target finite rotation as axis * totalAngle (radians).
+        // The body rotates at angularDisplacementSpeed (rad/s) until
+        // angularDisplacementApplied reaches the total angle, then stops.
+        // Zero vector = disabled (no displacement applied).
+        glm::vec3 angularDisplacementVec    { 0.0f };   // axis * totalAngle (rad)
+        float     angularDisplacementSpeed  { 1.5708f }; // rad/s (default π/2 ≈ 90°/s)
+        float     angularDisplacementApplied{ 0.0f };   // accumulated radians so far
     };
 
     struct SphereCollider {

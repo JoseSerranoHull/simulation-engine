@@ -19,6 +19,10 @@ using namespace GE::Assets;
 #include "particles/GpuParticleBackend.h"
 #include "systems/ParticleEmitterSystem.h"
 
+/* parasoft-begin-suppress ALL */
+#include <glm/gtc/matrix_transform.hpp>
+/* parasoft-end-suppress ALL */
+
 namespace GE::Scene {
 
     void SceneLoader::load(const std::string& path, GE::ECS::EntityManager* em, AssetManager* am, GE::Scene::Scene* scene,
@@ -318,6 +322,28 @@ namespace GE::Scene {
         if (props.count("Velocity"))    rb.velocity    = parseVec3(props.at("Velocity"));
         if (props.count("UseGravity"))  rb.useGravity  = (props.at("UseGravity") == "true");
         if (props.count("Restitution")) rb.restitution = parseFloat(props.at("Restitution"));
+
+        // Lab 5 Q2: initial angular velocity (rad/s, world space)
+        if (props.count("AngularVelocity"))
+            rb.angularVelocity = parseVec3(props.at("AngularVelocity"));
+
+        // Lab 5 Q1: initial static orientation as Euler angles in degrees (X then Y then Z).
+        // Use this when you want the body to start already rotated (no animation).
+        if (props.count("InitialRotation")) {
+            const glm::vec3 eulerRad = glm::radians(parseVec3(props.at("InitialRotation")));
+            const glm::mat4 rot = glm::rotate(glm::mat4(1.0f), eulerRad.x, glm::vec3(1,0,0))
+                                * glm::rotate(glm::mat4(1.0f), eulerRad.y, glm::vec3(0,1,0))
+                                * glm::rotate(glm::mat4(1.0f), eulerRad.z, glm::vec3(0,0,1));
+            rb.orientation = glm::mat3(rot);
+        }
+
+        // Lab 5 Q1: animated angular displacement — body rotates from its current orientation
+        // by the given degrees about each axis (stored as axis * totalAngle in radians), then stops.
+        // AngularDisplacementSpeed (deg/s) controls how fast the rotation is applied.
+        if (props.count("AngularDisplacement"))
+            rb.angularDisplacementVec = glm::radians(parseVec3(props.at("AngularDisplacement")));
+        if (props.count("AngularDisplacementSpeed"))
+            rb.angularDisplacementSpeed = glm::radians(parseFloat(props.at("AngularDisplacementSpeed")));
 
         // Compute cached inverse mass. Static bodies have infinite effective mass (inverseMass = 0).
         rb.inverseMass = (rb.isStatic || rb.mass <= 0.0f) ? 0.0f : 1.0f / rb.mass;

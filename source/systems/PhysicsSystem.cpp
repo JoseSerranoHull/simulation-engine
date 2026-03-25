@@ -42,6 +42,14 @@ namespace GE::Systems {
         R[2] = glm::cross(x, y);
     }
 
+    void PhysicsSystem::ApplyForceAtPoint(GE::Components::RigidBody& rb,
+                                           const glm::vec3& force,
+                                           const glm::vec3& pointRelCoM)
+    {
+        rb.forceAccum  += force;
+        rb.torqueAccum += glm::cross(pointRelCoM, force);  // τ = r × F
+    }
+
     void PhysicsSystem::OnUpdate(float dt) {
         Integrate(dt);
         ResolveCollisions();
@@ -117,6 +125,22 @@ namespace GE::Systems {
 
             // Clear torque accumulator for next frame
             rb.torqueAccum = glm::vec3(0.0f);
+
+            // --- 4b. Angular displacement (Lab 5 Q1) ---
+            // Rotates from current orientation by a finite target angle then stops.
+            // angularDisplacementVec encodes axis * totalAngle (radians).
+            {
+                const float dispTotal = glm::length(rb.angularDisplacementVec);
+                if (dispTotal > 1e-6f && rb.angularDisplacementApplied < dispTotal) {
+                    const float remaining = dispTotal - rb.angularDisplacementApplied;
+                    const float step      = glm::min(rb.angularDisplacementSpeed * dt, remaining);
+                    const glm::vec3 axis  = rb.angularDisplacementVec / dispTotal;
+                    const glm::mat3 R     = glm::mat3(glm::rotate(glm::mat4(1.0f), step, axis));
+                    rb.orientation = R * rb.orientation;
+                    Orthogonalise(rb.orientation);
+                    rb.angularDisplacementApplied += step;
+                }
+            }
 
             // --- 5. Write TRS matrix directly from physics state ---
             // Bypasses TransformSystem's Euler-angle reconstruction so that
@@ -198,8 +222,8 @@ namespace GE::Systems {
                     // 2. Velocity reflection with restitution (Q5: override if active)
                     if (sRB) {
                         const float e = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : sRB->restitution;
-                        sRB->velocity = glm::reflect(sRB->velocity, plane.GetNormal());
-                        sRB->velocity *= e;
+                        const glm::vec3& pn = plane.GetNormal();
+                        sRB->velocity -= (1.0f + e) * glm::dot(sRB->velocity, pn) * pn;
 
                         // Kill micro-velocities to prevent jitter at rest
                         if (glm::length(sRB->velocity) < 0.05f) {

@@ -448,6 +448,18 @@
     <None Include="markdown\SimulationLab5.md">
       <Filter>Markdown Files</Filter>
     </None>
+    <None Include="markdown\Lab-6.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-7.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab6.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab7.md">
+      <Filter>Markdown Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <!-- core headers -->

@@ -191,3 +191,31 @@ In this workshop you will apply torque to your objects. Initially you will not c
 
 - Add a representation of the inertia tensor I that represents the distribution of mass around an object. This is typically stored as a 3x3 matrix and will be different for different shapes. You can calculate the inertia tensor mathematically, but I recommend looking up the formula for different shapes.
 - Using τ=ⅆL/ⅆt and L=Iω (L is angular momentum – ω is angular acceleration and I is the inertia tensor) calculate ω and use that in your PhysicsObject
+
+---
+
+## Workshop 6.1 Add a springy thing
+
+In this workshop you will apply forces to objects using springs. You probably want to create a new scenario for this.
+
+### Adding A Spring
+
+- Add a spring using Hooke's law F=-kx where x = L - Lr
+- Make the resting length of the spring 0
+- Use the spring to connect a sphere to an imaginary point in a scenario. What happens to the movement with different values of k? What happens when you apply a temporary force to the sphere?
+
+### Make  a Rope
+
+- Make a spring rope using spheres as the masses, with one fixed sphere attaching each sphere to the next with a spring (remember a spring force acts on both spheres towards each other)
+- - What happens to the movement with different values of k and Lr? What happens when you apply a temporary force to one of the sphere?
+
+### Add Damping (Dashpots)
+
+- Add a damping force to you springs F=−kx−bv where v is the relative velocity of the two spheres
+- What happens with different values for k and b?
+
+### Experiment with Seperation
+
+- When you detect two objects (like spheres) are penetrating one another instead of resetting to the previous position
+- Experiment resting one sphere on top of another, so they aren't moving quickly
+- Experiment with different spring stiffnesses and damping coefficients

@@ -49,7 +49,7 @@ public:
     /**
      * @brief Generates a cylinder with independent top and bottom radii.
      */
-    static GE::Assets::OBJLoader::MeshData generateCylinder(const uint32_t segments, const float bottomRadius, const float topRadius, const float height, const glm::vec3& color = glm::vec3(0.25f, 0.15f, 0.1f));
+    static GE::Assets::OBJLoader::MeshData generateCylinder(const uint32_t segments, const float bottomRadius, const float topRadius, const float height, const glm::vec3& color = glm::vec3(0.25f, 0.15f, 0.1f), bool generateTopCap = true, bool generateBottomCap = true);
 
     /**
      * @brief Generates a simple plane mesh for the base of the snow globe.
@@ -62,6 +62,23 @@ public:
 	static GE::Assets::OBJLoader::MeshData generateCapsule(float radius, float height, int segments, int stacks);
 
     // --- Wire / Collider Visualizer Geometry ---
+
+    /**
+     * @brief Generates a six-faced box mesh (24 vertices, 36 indices).
+     * Each face has its own vertices for correct flat normals.
+     * @param sizeX/Y/Z  Full extents along local X, Y, Z axes.
+     */
+    static GE::Assets::OBJLoader::MeshData generateBox(
+        float sizeX, float sizeY, float sizeZ,
+        const glm::vec3& color = glm::vec3(1.0f));
+
+    /**
+     * @brief Generates a wire box as LINE_LIST pairs (8 vertices, 24 indices).
+     * Half-extents are all 1.0; caller scales via model matrix.
+     * @param color  RGB color baked into every vertex (default: #83d42b green).
+     */
+    static GE::Assets::OBJLoader::MeshData generateWireBox(
+        const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f));
 
     /**
      * @brief Generates three great-circle rings (XY, XZ, YZ) as LINE_LIST pairs.

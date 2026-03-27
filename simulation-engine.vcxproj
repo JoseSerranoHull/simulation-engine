@@ -192,6 +192,10 @@
     <None Include="config\simulation_lab4_DiffMass.ini" />
     <None Include="config\simulation_lab5_orientation.ini" />
     <None Include="config\simulation_lab5_angular_velocity.ini" />
+    <None Include="config\simulation_lab6_q1_torque.ini" />
+    <None Include="config\simulation_lab6_q3_cylinder.ini" />
+    <None Include="config\simulation_lab6_q5_worldspace.ini" />
+    <None Include="config\simulation_lab6_q6_cuboid.ini" />
     <None Include="config\snow_globe.ini" />
     <None Include="markdown\Claude - Refactor Plan.md" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />

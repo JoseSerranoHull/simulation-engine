@@ -203,7 +203,7 @@ namespace GE::Scene {
             else if (shape == "Sphere") {
                 uint32_t segs    = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 32U;
                 float    radius  = props.count("Radius")   ? std::stof(props.at("Radius"))   : 1.0f;
-                float    cutoffY = props.count("CutoffY")  ? std::stof(props.at("CutoffY"))  : -1.0f;
+                float    cutoffY = props.count("CutoffY")  ? std::stof(props.at("CutoffY"))  : -radius;
                 data = GeometryUtils::generateSphere(segs, radius, cutoffY, glm::vec3(1.0f));
             }
             else if (shape == "Cylinder") {
@@ -211,7 +211,9 @@ namespace GE::Scene {
                 float    botR   = props.count("BottomRadius") ? std::stof(props.at("BottomRadius")) : 1.0f;
                 float    topR   = props.count("TopRadius")    ? std::stof(props.at("TopRadius"))    : 1.0f;
                 float    height = props.count("Height")       ? std::stof(props.at("Height"))       : 2.0f;
-                data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f));
+                bool     topCap = !props.count("TopCap")    || props.at("TopCap")    != "false";
+                bool     botCap = !props.count("BottomCap") || props.at("BottomCap") != "false";
+                data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f), topCap, botCap);
             }
             else if (shape == "Plug") {
                 uint32_t segs  = props.count("Segments")   ? static_cast<uint32_t>(std::stoi(props.at("Segments")))  : 64U;
@@ -222,6 +224,12 @@ namespace GE::Scene {
             }
             else if (shape == "Capsule") {
                 data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);
+            }
+            else if (shape == "Box") {
+                const float bw = props.count("Width")  ? std::stof(props.at("Width"))  : 1.0f;
+                const float bh = props.count("Height") ? std::stof(props.at("Height")) : 1.0f;
+                const float bd = props.count("Depth")  ? std::stof(props.at("Depth"))  : 1.0f;
+                data = GeometryUtils::generateBox(bw, bh, bd, glm::vec3(1.0f));
             }
 
             // Process data into a GPU Mesh using your AssetManager

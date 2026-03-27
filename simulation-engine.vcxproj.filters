@@ -460,6 +460,18 @@
     <None Include="markdown\SimulationLab7.md">
       <Filter>Markdown Files</Filter>
     </None>
+    <None Include="config\simulation_lab6_q1_torque.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q3_cylinder.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q5_worldspace.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q6_cuboid.ini">
+      <Filter>Config Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <!-- core headers -->

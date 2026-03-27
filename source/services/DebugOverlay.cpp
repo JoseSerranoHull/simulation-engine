@@ -222,6 +222,19 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
             if (ImGui::MenuItem("Lab 5: Q2 Angular Velocity")) {
                 experience->requestScenarioChange("./config/simulation_lab5_angular_velocity.ini");
             }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Lab 6: Q1+Q2 Torque & Sphere Inertia")) {
+                experience->requestScenarioChange("./config/simulation_lab6_q1_torque.ini");
+            }
+            if (ImGui::MenuItem("Lab 6: Q3 Cylinder Inertia Tensor")) {
+                experience->requestScenarioChange("./config/simulation_lab6_q3_cylinder.ini");
+            }
+            if (ImGui::MenuItem("Lab 6: Q5 World-Space Inertia")) {
+                experience->requestScenarioChange("./config/simulation_lab6_q5_worldspace.ini");
+            }
+            if (ImGui::MenuItem("Lab 6: Q6 Cuboid Inertia Tensor")) {
+                experience->requestScenarioChange("./config/simulation_lab6_q6_cuboid.ini");
+            }
             ImGui::EndMenu();
         }
 

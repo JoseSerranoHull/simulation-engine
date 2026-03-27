@@ -62,6 +62,8 @@ namespace GE::Scene {
         void handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleSphereCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handlePlaneCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleCylinderCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
+        void handleBoxCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleSkyboxComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
     };

@@ -5,6 +5,7 @@
 #include "systems/ParticleEmitterSystem.h"
 #include "core/EngineOrchestrator.h"
 #include "graphics/GpuUploadContext.h"
+#include "components/PhysicsComponents.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
@@ -158,6 +159,21 @@ namespace GE {
                 if (overrideOn) {
                     ImGui::SliderFloat("Elasticity##q5", &m_physicsSystem->m_restitutionOverride,
                                        0.0f, 1.0f, "e = %.2f");
+                }
+            }
+
+            // --- 9. Lab 6: Inertia & Torque Controls ---
+            if (m_physicsSystem != nullptr) {
+                ImGui::Separator();
+                ImGui::SeparatorText("Lab 6 - Inertia & Torque");
+                ImGui::TextWrapped("Observe spin-up from rest. Reset to watch angular acceleration again.");
+                if (ImGui::Button("Reset Angular Velocities")) {
+                    auto* em = ServiceLocator::GetEntityManager();
+                    auto& rbArray = em->GetCompArr<GE::Components::RigidBody>();
+                    for (uint32_t i = 0; i < rbArray.GetCount(); ++i) {
+                        rbArray.Data()[i].angularVelocity = glm::vec3(0.0f);
+                        rbArray.Data()[i].torqueAccum     = glm::vec3(0.0f);
+                    }
                 }
             }
 

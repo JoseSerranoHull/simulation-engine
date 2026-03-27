@@ -51,6 +51,8 @@ namespace GE::Scene {
             { "RigidBody",        [&](const std::string&,    const std::map<std::string, std::string>& p) { handleRigidBody(p, em); } },
             { "SphereCollider",   [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSphereCollider(p, em); } },
             { "PlaneCollider",    [&](const std::string&,    const std::map<std::string, std::string>& p) { handlePlaneCollider(p, em); } },
+            { "CylinderCollider", [&](const std::string&,    const std::map<std::string, std::string>& p) { handleCylinderCollider(p, em); } },
+            { "BoxCollider",      [&](const std::string&,    const std::map<std::string, std::string>& p) { handleBoxCollider(p, em); } },
             { "ParticleComponent",[&](const std::string&,    const std::map<std::string, std::string>& p) { handleParticleComponent(p, em); } },
             { "SkyboxComponent",  [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSkyboxComponent(p, em); } },
         };
@@ -345,6 +347,11 @@ namespace GE::Scene {
         if (props.count("AngularDisplacementSpeed"))
             rb.angularDisplacementSpeed = glm::radians(parseFloat(props.at("AngularDisplacementSpeed")));
 
+        // Lab 6: constant per-frame torque (N·m, world space).
+        // Re-injected into torqueAccum each Integrate() step to spin bodies up from rest.
+        if (props.count("ConstantTorque"))
+            rb.constantTorque = parseVec3(props.at("ConstantTorque"));
+
         // Compute cached inverse mass. Static bodies have infinite effective mass (inverseMass = 0).
         rb.inverseMass = (rb.isStatic || rb.mass <= 0.0f) ? 0.0f : 1.0f / rb.mass;
 
@@ -373,6 +380,59 @@ namespace GE::Scene {
         if (props.count("Normal")) pc.normal = parseVec3(props.at("Normal"));
         if (props.count("Offset")) pc.offset = parseFloat(props.at("Offset"));
         em->AddComponent(m_currentEntity, pc);
+    }
+
+    void SceneLoader::handleCylinderCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::CylinderCollider cc;
+        if (props.count("Radius")) cc.radius = parseFloat(props.at("Radius"));
+        if (props.count("Height")) cc.height = parseFloat(props.at("Height"));
+        em->AddComponent(m_currentEntity, cc);
+
+        // Lab 6 Q3: compute non-isotropic inertia tensor on any sibling RigidBody.
+        // Cylinder spin axis = local Y (matches the procedural mesh generator).
+        // Iy  = (1/2)·m·r²              (spin axis — low inertia, fast rotation)
+        // Ixz = (1/12)·m·(3r² + h²)    (transverse axes — higher inertia, slow rotation)
+        if (auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_currentEntity)) {
+            if (!rb->isStatic && rb->mass > 0.0f && cc.radius > 0.0f) {
+                const float r   = cc.radius;
+                const float h   = cc.height;
+                const float Iy  = 0.5f          * rb->mass * r * r;
+                const float Ixz = (1.0f / 12.0f) * rb->mass * (3.0f * r * r + h * h);
+                rb->invInertiaTensor = glm::mat3(
+                    1.0f / Ixz, 0.0f,      0.0f,
+                    0.0f,       1.0f / Iy, 0.0f,
+                    0.0f,       0.0f,      1.0f / Ixz
+                );
+            }
+        }
+    }
+
+    void SceneLoader::handleBoxCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::BoxCollider bc;
+        if (props.count("Size")) {
+            const glm::vec3 sz = parseVec3(props.at("Size"));
+            bc.sizeX = sz.x;
+            bc.sizeY = sz.y;
+            bc.sizeZ = sz.z;
+        }
+        em->AddComponent(m_currentEntity, bc);
+
+        // Lab 6 Q6: compute axis-aligned cuboid inertia tensor on any sibling RigidBody.
+        // Ix = (1/12)·m·(b²+c²),  Iy = (1/12)·m·(a²+c²),  Iz = (1/12)·m·(a²+b²)
+        // where a=sizeX, b=sizeY, c=sizeZ (full extents).
+        if (auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_currentEntity)) {
+            if (!rb->isStatic && rb->mass > 0.0f) {
+                const float a  = bc.sizeX, b = bc.sizeY, c = bc.sizeZ;
+                const float Ix = (1.0f / 12.0f) * rb->mass * (b * b + c * c);
+                const float Iy = (1.0f / 12.0f) * rb->mass * (a * a + c * c);
+                const float Iz = (1.0f / 12.0f) * rb->mass * (a * a + b * b);
+                rb->invInertiaTensor = glm::mat3(
+                    1.0f / Ix, 0.0f,      0.0f,
+                    0.0f,      1.0f / Iy, 0.0f,
+                    0.0f,      0.0f,      1.0f / Iz
+                );
+            }
+        }
     }
 
     void SceneLoader::handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {

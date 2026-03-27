@@ -113,8 +113,16 @@ namespace GE::Systems {
             rb.forceAccum = glm::vec3(0.0f);
 
             // --- 4. Angular integration (PhysicsObject::Integrate() pattern) ---
-            // α = I⁻¹ · τ
-            const glm::vec3 angularAccel = rb.invInertiaTensor * rb.torqueAccum;
+            // Re-inject constant per-frame torque (Lab 6: drives spin-up demos via ini).
+            rb.torqueAccum += rb.constantTorque;
+
+            // Q5: refresh world-space inverse inertia tensor each frame.
+            // I_world⁻¹ = R · I_body⁻¹ · R^T
+            // Correct for non-isotropic bodies (cylinders, cuboids); identity for spheres.
+            rb.invInertiaTensorWorld = rb.orientation * rb.invInertiaTensor * glm::transpose(rb.orientation);
+
+            // α = I_world⁻¹ · τ_world  (Q3/Q5: object-space inertia correctly mapped to world)
+            const glm::vec3 angularAccel = rb.invInertiaTensorWorld * rb.torqueAccum;
             rb.angularVelocity += angularAccel * dt;
 
             // dR/dt = Skew(ω) · R  →  R_new = R + dt · Skew(ω) · R

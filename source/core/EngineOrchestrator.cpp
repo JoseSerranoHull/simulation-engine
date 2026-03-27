@@ -43,6 +43,8 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     entityManager->RegisterComponent<GE::Components::RigidBody>();
     entityManager->RegisterComponent<GE::Components::SphereCollider>();
     entityManager->RegisterComponent<GE::Components::PlaneCollider>();
+    entityManager->RegisterComponent<GE::Components::CylinderCollider>();
+    entityManager->RegisterComponent<GE::Components::BoxCollider>();
 
     entityManager->RegisterComponent<GE::Components::RigidBody2D>();
     entityManager->RegisterComponent<GE::Components::CircleCollider2D>();

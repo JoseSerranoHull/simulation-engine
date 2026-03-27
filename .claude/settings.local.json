@@ -24,7 +24,8 @@
       "Bash(C:/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)",
       "Bash(\"$GLSLC\":*)",
       "Bash(C:/VulkanSDK/1.4.328.1/Bin/glslc.exe:*)",
-      "Bash(/c/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)"
+      "Bash(/c/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)",
+      "Bash(find /c/Users/javie/GitHub/simulation-engine/markdown -name *Lab*6* -o -name *lab*6*)"
     ]
   }
 }

@@ -42,6 +42,31 @@ namespace GE::Components {
         glm::vec3 angularDisplacementVec    { 0.0f };   // axis * totalAngle (rad)
         float     angularDisplacementSpeed  { 1.5708f }; // rad/s (default π/2 ≈ 90°/s)
         float     angularDisplacementApplied{ 0.0f };   // accumulated radians so far
+
+        // Lab 6: persistent per-frame torque (N·m, world space).
+        // Re-injected into torqueAccum every Integrate() step before clearing.
+        // Drives spin-up demos via .ini without needing per-frame scripting.
+        // Zero vector = disabled.
+        glm::vec3 constantTorque{ 0.0f };
+
+        // Lab 6 Q5: world-space inverse inertia tensor, refreshed each frame.
+        // Caches  R · I_body⁻¹ · R^T  so torque can be applied directly in world space.
+        // Correct for non-isotropic bodies (cylinders, cuboids) unlike the body-space tensor.
+        glm::mat3 invInertiaTensorWorld{ glm::mat3(1.0f) };
+    };
+
+    // --- 3D Colliders (Lab 6) ---
+
+    struct CylinderCollider {
+        float radius{ 1.0f };
+        float height{ 2.0f };
+    };
+
+    struct BoxCollider {
+        // Full extents (not half-extents): width × height × depth along local X, Y, Z.
+        float sizeX{ 1.0f };
+        float sizeY{ 1.0f };
+        float sizeZ{ 1.0f };
     };
 
     struct SphereCollider {

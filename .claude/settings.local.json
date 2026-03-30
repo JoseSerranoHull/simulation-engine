@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tail:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(grep:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\":*)",
+      "Bash(cygpath:*)",
+      "Bash(cat:*)",
+      "Bash(cd:*)",
+      "Bash(python3.exe --version 2>/dev/null || python.exe --version 2>/dev/null || py --version 2>/dev/null || where python 2>/dev/null)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(powershell:*)",
+      "Bash(printf %s\\\\n:*)",
+      "Bash(rm:*)",
+      "Bash(echo Shaders compiled successfully:*)",
+      "Bash(wait_for_background b166b1a:*)",
+      "Bash(msbuild:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(cmd:*)",
+      "Bash(C:/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)",
+      "Bash(\"$GLSLC\":*)",
+      "Bash(C:/VulkanSDK/1.4.328.1/Bin/glslc.exe:*)",
+      "Bash(/c/VulkanSDK/1.4.321.1/Bin/glslc.exe:*)",
+      "Bash(find /c/Users/javie/GitHub/simulation-engine/markdown -name *Lab*6* -o -name *lab*6*)"
+    ]
+  }
+}

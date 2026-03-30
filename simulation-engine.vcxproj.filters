@@ -1,6 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <!-- Top-level filters -->
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
@@ -22,7 +23,75 @@
     <Filter Include="Shader Files">
       <UniqueIdentifier>{cc9a7c29-0572-4866-85e1-c9d42120ec9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Mardown Files">
+    <!-- Source subfolder filters -->
+    <Filter Include="Source Files\core">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0001-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ecs">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0002-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\scene">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0003-000000000003}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\graphics">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0004-000000000004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\particles">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0005-000000000005}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\assets">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0006-000000000006}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\systems">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0007-000000000007}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\lighting">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0008-000000000008}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\services">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-0009-000000000009}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\memory">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-000a-00000000000a}</UniqueIdentifier>
+    </Filter>
+    <!-- Header subfolder filters -->
+    <Filter Include="Header Files\core">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0001-000000000011}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ecs">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0002-000000000012}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\components">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0003-000000000013}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\systems">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0004-000000000014}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\scene">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0005-000000000015}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\graphics">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0006-000000000016}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\particles">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0007-000000000017}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\assets">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0008-000000000018}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\physics">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-0009-000000000019}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\lighting">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-000a-00000000001a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\services">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-000b-00000000001b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\memory">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-000c-00000000001c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Markdown Files">
       <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -32,6 +101,7 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
+    <!-- IMGUI external sources -->
     <ClCompile Include="external-libraries\imgui\imgui-1.92.5\imgui.cpp">
       <Filter>IMGUI Files</Filter>
     </ClCompile>
@@ -53,93 +123,150 @@
     <ClCompile Include="external-libraries\imgui\imgui-1.92.5\backends\imgui_impl_vulkan.cpp">
       <Filter>IMGUI Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\AssetManager.cpp">
-      <Filter>Source Files</Filter>
+    <!-- core -->
+    <ClCompile Include="source\core\EngineOrchestrator.cpp">
+      <Filter>Source Files\core</Filter>
     </ClCompile>
-    <ClCompile Include="source\ClimateManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\core\Logger.cpp">
+      <Filter>Source Files\core</Filter>
     </ClCompile>
-    <ClCompile Include="source\ConfigLoader.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\core\stb_impl.cpp">
+      <Filter>Source Files\core</Filter>
     </ClCompile>
-    <ClCompile Include="source\Cubemap.cpp">
-      <Filter>Source Files</Filter>
+    <!-- ecs -->
+    <ClCompile Include="source\ecs\Entity.cpp">
+      <Filter>Source Files\ecs</Filter>
     </ClCompile>
-    <ClCompile Include="source\Experience.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\ecs\EntityManager.cpp">
+      <Filter>Source Files\ecs</Filter>
     </ClCompile>
-    <ClCompile Include="source\GeometryUtils.cpp">
-      <Filter>Source Files</Filter>
+    <!-- scene -->
+    <ClCompile Include="source\scene\Scene.cpp">
+      <Filter>Source Files\scene</Filter>
     </ClCompile>
-    <ClCompile Include="source\Image.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\scene\Scenario.cpp">
+      <Filter>Source Files\scene</Filter>
     </ClCompile>
-    <ClCompile Include="source\IMGUIManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\scene\SceneLoader.cpp">
+      <Filter>Source Files\scene</Filter>
     </ClCompile>
-    <ClCompile Include="source\InputManager.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\scene\EntityFactory.cpp">
+      <Filter>Source Files\scene</Filter>
     </ClCompile>
-    <ClCompile Include="source\Light.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\scene\GenericScenario.cpp">
+      <Filter>Source Files\scene</Filter>
     </ClCompile>
+    <ClCompile Include="source\scene\SnowGlobeScenario.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <!-- graphics -->
+    <ClCompile Include="source\graphics\VulkanDevice.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\GpuResourceManager.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\VulkanUtils.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\RenderPass.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\SwapChain.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\FrameSyncManager.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\Renderer.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\GpuImage.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\Cubemap.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\Skybox.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="source\graphics\PostProcessBackend.cpp">
+      <Filter>Source Files\graphics</Filter>
+    </ClCompile>
+    <!-- particles -->
+    <ClCompile Include="source\particles\GpuParticleBackend.cpp">
+      <Filter>Source Files\particles</Filter>
+    </ClCompile>
+    <!-- assets -->
+    <ClCompile Include="source\assets\AssetManager.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
+    <ClCompile Include="source\assets\ConfigLoader.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
+    <ClCompile Include="source\assets\GeometryUtils.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
+    <ClCompile Include="source\assets\Mesh.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
+    <ClCompile Include="source\assets\Model.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
+    <!-- systems -->
+    <ClCompile Include="source\systems\PhysicsSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\TransformSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\EngineServiceRegistry.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <!-- lighting -->
+    <ClCompile Include="source\lighting\LightSource.cpp">
+      <Filter>Source Files\lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="source\lighting\PointLightSource.cpp">
+      <Filter>Source Files\lighting</Filter>
+    </ClCompile>
+    <!-- services -->
+    <ClCompile Include="source\services\ClimateService.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
+    <ClCompile Include="source\services\DebugOverlay.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
+    <ClCompile Include="source\services\InputService.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
+    <!-- memory -->
+    <ClCompile Include="source\memory\SimpleAllocator.cpp">
+      <Filter>Source Files\memory</Filter>
+    </ClCompile>
+    <!-- entry point -->
     <ClCompile Include="source\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Mesh.cpp">
+    <ClCompile Include="source\services\Inspector.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
+    <ClCompile Include="source\assets\WireGeometryUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Model.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\ParticleSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\PointLight.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\PostProcessor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Renderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\RenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\SimpleAllocator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Skybox.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\stb_impl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\SwapChain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\SyncManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\SystemFactory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\VulkanEngine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\VulkanResourceManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\VulkanUtils.cpp">
+    <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <!-- Shaders -->
     <None Include="shaders\base.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\checkerboard.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\checkerboard.vert">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\dust.comp">
@@ -250,142 +377,335 @@
     <None Include="shaders\water.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <!-- Markdown / config / misc -->
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\Licenses.md">
-      <Filter>Mardown Files</Filter>
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab2.md">
+      <Filter>Markdown Files</Filter>
     </None>
     <None Include="README.md" />
-    <None Include="markdown\MasterPlan.md">
-      <Filter>Mardown Files</Filter>
+    <None Include="CLAUDE.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="config\snow_globe.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab2.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab3.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab4.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab4_SameMass.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab4_DiffMass.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab5_orientation.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab5_angular_velocity.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="markdown\Claude - Refactor Plan.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Final Lab README.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Gemini - Refactor Plan.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab3.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab4.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationWorkshops.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-3.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-4.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-5.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab5.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-6.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\Lab-7.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab6.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="markdown\SimulationLab7.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q1_torque.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q3_cylinder.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q5_worldspace.ini">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\simulation_lab6_q6_cuboid.ini">
+      <Filter>Config Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\AssetManager.h">
-      <Filter>Header Files</Filter>
+    <!-- core headers -->
+    <ClInclude Include="include\core\Common.h">
+      <Filter>Header Files\core</Filter>
     </ClInclude>
-    <ClInclude Include="source\Camera.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\core\libs.h">
+      <Filter>Header Files\core</Filter>
     </ClInclude>
-    <ClInclude Include="source\ClimateManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\core\Logger.h">
+      <Filter>Header Files\core</Filter>
     </ClInclude>
-    <ClInclude Include="source\CommonStructs.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\core\ServiceLocator.h">
+      <Filter>Header Files\core</Filter>
     </ClInclude>
-    <ClInclude Include="source\ConfigLoader.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\core\EngineOrchestrator.h">
+      <Filter>Header Files\core</Filter>
     </ClInclude>
-    <ClInclude Include="source\Cubemap.h">
-      <Filter>Header Files</Filter>
+    <!-- ecs headers -->
+    <ClInclude Include="include\ecs\Entity.h">
+      <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\Experience.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\ecs\EntityManager.h">
+      <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\GeometryUtils.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\ecs\ComponentArray.h">
+      <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\Image.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\ecs\IComponentArray.h">
+      <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\IMGUIManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\ecs\ComponentType.h">
+      <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\InputManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\ecs\IECSystem.h">
+      <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <ClInclude Include="source\libs.h">
-      <Filter>Header Files</Filter>
+    <!-- components headers -->
+    <ClInclude Include="include\components\Transform.h">
+      <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="source\Light.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\components\Tag.h">
+      <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="source\Material.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\components\Components.h">
+      <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="source\Mesh.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\components\PhysicsComponents.h">
+      <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="source\Model.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\components\ParticleComponent.h">
+      <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="source\OBJLoader.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\components\SkyboxComponent.h">
+      <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="source\Particle.h">
-      <Filter>Header Files</Filter>
+    <!-- systems headers -->
+    <ClInclude Include="include\systems\TransformSystem.h">
+      <Filter>Header Files\systems</Filter>
     </ClInclude>
-    <ClInclude Include="source\ParticleSystem.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\systems\PhysicsSystem.h">
+      <Filter>Header Files\systems</Filter>
     </ClInclude>
-    <ClInclude Include="source\Pipeline.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\systems\ParticleEmitterSystem.h">
+      <Filter>Header Files\systems</Filter>
     </ClInclude>
-    <ClInclude Include="source\PointLight.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\systems\EngineServiceRegistry.h">
+      <Filter>Header Files\systems</Filter>
     </ClInclude>
-    <ClInclude Include="source\PostProcessor.h">
-      <Filter>Header Files</Filter>
+    <!-- scene headers -->
+    <ClInclude Include="include\scene\Scene.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="source\Renderer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\scene\SceneLoader.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="source\RenderPass.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\scene\EntityFactory.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="source\Scene.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\scene\Scenario.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="source\ShaderModule.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\scene\GenericScenario.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="source\SimpleAllocator.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\scene\SnowGlobeScenario.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
-    <ClInclude Include="source\Skybox.h">
-      <Filter>Header Files</Filter>
+    <!-- graphics headers -->
+    <ClInclude Include="include\graphics\VulkanContext.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\StatsManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\VulkanDevice.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\SwapChain.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\GpuResourceManager.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\SyncManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\GpuUploadContext.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\SystemFactory.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\VulkanUtils.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\Texture.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\SwapChain.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\TimeManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\FrameSyncManager.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\Vertex.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\RenderPass.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanContext.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\GraphicsPipeline.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanEngine.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\Renderer.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanResourceManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\PostProcessBackend.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\VulkanUtils.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\ShaderModule.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\ServiceLocator.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\graphics\GpuImage.h">
+      <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="source\ISystem.h">
+    <ClInclude Include="include\graphics\Texture.h">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\Skybox.h">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\Cubemap.h">
+      <Filter>Header Files\graphics</Filter>
+    </ClInclude>
+    <!-- particles headers -->
+    <ClInclude Include="include\particles\GpuParticleBackend.h">
+      <Filter>Header Files\particles</Filter>
+    </ClInclude>
+    <ClInclude Include="include\particles\Particle.h">
+      <Filter>Header Files\particles</Filter>
+    </ClInclude>
+    <!-- assets headers -->
+    <ClInclude Include="include\assets\AssetManager.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\Model.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\Mesh.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\Material.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\OBJLoader.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\Vertex.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\GeometryUtils.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="include\assets\ConfigLoader.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <!-- physics headers -->
+    <ClInclude Include="include\physics\Physics.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Physics2D.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Ray.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Sphere.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Plane.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Capsule.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Cylinder.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Line.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="include\physics\Collider.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
+    <!-- lighting headers -->
+    <ClInclude Include="include\lighting\LightSource.h">
+      <Filter>Header Files\lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="include\lighting\PointLightSource.h">
+      <Filter>Header Files\lighting</Filter>
+    </ClInclude>
+    <!-- services headers -->
+    <ClInclude Include="include\services\TimeService.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\InputService.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\PerformanceTracker.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\DebugOverlay.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\ClimateService.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\Camera.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <!-- memory headers -->
+    <ClInclude Include="include\memory\SimpleAllocator.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\memory\MemoryUtilities.h">
+      <Filter>Header Files\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="include\services\Inspector.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\ColliderVisualizerSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,0 +1,1 @@
+@echo off\r\n"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" "C:\Users\javie\GitHub\simulation-engine\simulation-engine.sln" /p:Configuration=Debug /p:Platform=x64 /t:Build /m /nologo /v:quiet > "C:\Users\javie\GitHub\simulation-engine\build_summary.txt" 2>&1

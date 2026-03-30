@@ -35,7 +35,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     SparkLight sparks[4]; // Must match C++ exactly
 } ubo;
 
-layout(set = 0, binding = 1) uniform sampler2D shadowMap;
+layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 // --- Set 1: Material Textures ---
 layout(set = 1, binding = 0) uniform sampler2D texSampler;    // Base Color
@@ -58,12 +58,9 @@ float calculateShadow(vec4 posLightSpace) {
     // Z remains [0,1] due to Vulkan's depth convention
     projCoords.xy = projCoords.xy * 0.5 + 0.5; 
     
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    float currentDepth = projCoords.z;
-    
-    // 3. Shadow Acne Prevention
+    // 3. Shadow Acne Prevention + Hardware bilinear PCF
     float bias = 0.002;
-    return (currentDepth - bias > closestDepth) ? 0.4 : 1.0;
+    return mix(0.4, 1.0, texture(shadowMap, vec3(projCoords.xy, projCoords.z - bias)));
 }
 
 /**

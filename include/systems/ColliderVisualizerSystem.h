@@ -88,6 +88,13 @@ private:
     VkBuffer       m_planeIdxBuf { VK_NULL_HANDLE };
     VkDeviceMemory m_planeIdxMem { VK_NULL_HANDLE };
     uint32_t       m_planeIdxCount{ 0U };
+
+    // --- Wire box GPU buffers (unit box half-extents=1, scaled at draw time by BoxCollider.size/2) ---
+    VkBuffer       m_boxVertBuf{ VK_NULL_HANDLE };
+    VkDeviceMemory m_boxVertMem{ VK_NULL_HANDLE };
+    VkBuffer       m_boxIdxBuf { VK_NULL_HANDLE };
+    VkDeviceMemory m_boxIdxMem { VK_NULL_HANDLE };
+    uint32_t       m_boxIdxCount{ 0U };
 };
 
 } // namespace GE::Systems

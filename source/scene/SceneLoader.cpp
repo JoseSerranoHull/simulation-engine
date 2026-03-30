@@ -19,6 +19,10 @@ using namespace GE::Assets;
 #include "particles/GpuParticleBackend.h"
 #include "systems/ParticleEmitterSystem.h"
 
+/* parasoft-begin-suppress ALL */
+#include <glm/gtc/matrix_transform.hpp>
+/* parasoft-end-suppress ALL */
+
 namespace GE::Scene {
 
     void SceneLoader::load(const std::string& path, GE::ECS::EntityManager* em, AssetManager* am, GE::Scene::Scene* scene,
@@ -47,6 +51,8 @@ namespace GE::Scene {
             { "RigidBody",        [&](const std::string&,    const std::map<std::string, std::string>& p) { handleRigidBody(p, em); } },
             { "SphereCollider",   [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSphereCollider(p, em); } },
             { "PlaneCollider",    [&](const std::string&,    const std::map<std::string, std::string>& p) { handlePlaneCollider(p, em); } },
+            { "CylinderCollider", [&](const std::string&,    const std::map<std::string, std::string>& p) { handleCylinderCollider(p, em); } },
+            { "BoxCollider",      [&](const std::string&,    const std::map<std::string, std::string>& p) { handleBoxCollider(p, em); } },
             { "ParticleComponent",[&](const std::string&,    const std::map<std::string, std::string>& p) { handleParticleComponent(p, em); } },
             { "SkyboxComponent",  [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSkyboxComponent(p, em); } },
         };
@@ -197,7 +203,7 @@ namespace GE::Scene {
             else if (shape == "Sphere") {
                 uint32_t segs    = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 32U;
                 float    radius  = props.count("Radius")   ? std::stof(props.at("Radius"))   : 1.0f;
-                float    cutoffY = props.count("CutoffY")  ? std::stof(props.at("CutoffY"))  : -1.0f;
+                float    cutoffY = props.count("CutoffY")  ? std::stof(props.at("CutoffY"))  : -radius;
                 data = GeometryUtils::generateSphere(segs, radius, cutoffY, glm::vec3(1.0f));
             }
             else if (shape == "Cylinder") {
@@ -205,7 +211,9 @@ namespace GE::Scene {
                 float    botR   = props.count("BottomRadius") ? std::stof(props.at("BottomRadius")) : 1.0f;
                 float    topR   = props.count("TopRadius")    ? std::stof(props.at("TopRadius"))    : 1.0f;
                 float    height = props.count("Height")       ? std::stof(props.at("Height"))       : 2.0f;
-                data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f));
+                bool     topCap = !props.count("TopCap")    || props.at("TopCap")    != "false";
+                bool     botCap = !props.count("BottomCap") || props.at("BottomCap") != "false";
+                data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f), topCap, botCap);
             }
             else if (shape == "Plug") {
                 uint32_t segs  = props.count("Segments")   ? static_cast<uint32_t>(std::stoi(props.at("Segments")))  : 64U;
@@ -216,6 +224,12 @@ namespace GE::Scene {
             }
             else if (shape == "Capsule") {
                 data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);
+            }
+            else if (shape == "Box") {
+                const float bw = props.count("Width")  ? std::stof(props.at("Width"))  : 1.0f;
+                const float bh = props.count("Height") ? std::stof(props.at("Height")) : 1.0f;
+                const float bd = props.count("Depth")  ? std::stof(props.at("Depth"))  : 1.0f;
+                data = GeometryUtils::generateBox(bw, bh, bd, glm::vec3(1.0f));
             }
 
             // Process data into a GPU Mesh using your AssetManager
@@ -319,6 +333,33 @@ namespace GE::Scene {
         if (props.count("UseGravity"))  rb.useGravity  = (props.at("UseGravity") == "true");
         if (props.count("Restitution")) rb.restitution = parseFloat(props.at("Restitution"));
 
+        // Lab 5 Q2: initial angular velocity (rad/s, world space)
+        if (props.count("AngularVelocity"))
+            rb.angularVelocity = parseVec3(props.at("AngularVelocity"));
+
+        // Lab 5 Q1: initial static orientation as Euler angles in degrees (X then Y then Z).
+        // Use this when you want the body to start already rotated (no animation).
+        if (props.count("InitialRotation")) {
+            const glm::vec3 eulerRad = glm::radians(parseVec3(props.at("InitialRotation")));
+            const glm::mat4 rot = glm::rotate(glm::mat4(1.0f), eulerRad.x, glm::vec3(1,0,0))
+                                * glm::rotate(glm::mat4(1.0f), eulerRad.y, glm::vec3(0,1,0))
+                                * glm::rotate(glm::mat4(1.0f), eulerRad.z, glm::vec3(0,0,1));
+            rb.orientation = glm::mat3(rot);
+        }
+
+        // Lab 5 Q1: animated angular displacement — body rotates from its current orientation
+        // by the given degrees about each axis (stored as axis * totalAngle in radians), then stops.
+        // AngularDisplacementSpeed (deg/s) controls how fast the rotation is applied.
+        if (props.count("AngularDisplacement"))
+            rb.angularDisplacementVec = glm::radians(parseVec3(props.at("AngularDisplacement")));
+        if (props.count("AngularDisplacementSpeed"))
+            rb.angularDisplacementSpeed = glm::radians(parseFloat(props.at("AngularDisplacementSpeed")));
+
+        // Lab 6: constant per-frame torque (N·m, world space).
+        // Re-injected into torqueAccum each Integrate() step to spin bodies up from rest.
+        if (props.count("ConstantTorque"))
+            rb.constantTorque = parseVec3(props.at("ConstantTorque"));
+
         // Compute cached inverse mass. Static bodies have infinite effective mass (inverseMass = 0).
         rb.inverseMass = (rb.isStatic || rb.mass <= 0.0f) ? 0.0f : 1.0f / rb.mass;
 
@@ -347,6 +388,59 @@ namespace GE::Scene {
         if (props.count("Normal")) pc.normal = parseVec3(props.at("Normal"));
         if (props.count("Offset")) pc.offset = parseFloat(props.at("Offset"));
         em->AddComponent(m_currentEntity, pc);
+    }
+
+    void SceneLoader::handleCylinderCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::CylinderCollider cc;
+        if (props.count("Radius")) cc.radius = parseFloat(props.at("Radius"));
+        if (props.count("Height")) cc.height = parseFloat(props.at("Height"));
+        em->AddComponent(m_currentEntity, cc);
+
+        // Lab 6 Q3: compute non-isotropic inertia tensor on any sibling RigidBody.
+        // Cylinder spin axis = local Y (matches the procedural mesh generator).
+        // Iy  = (1/2)·m·r²              (spin axis — low inertia, fast rotation)
+        // Ixz = (1/12)·m·(3r² + h²)    (transverse axes — higher inertia, slow rotation)
+        if (auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_currentEntity)) {
+            if (!rb->isStatic && rb->mass > 0.0f && cc.radius > 0.0f) {
+                const float r   = cc.radius;
+                const float h   = cc.height;
+                const float Iy  = 0.5f          * rb->mass * r * r;
+                const float Ixz = (1.0f / 12.0f) * rb->mass * (3.0f * r * r + h * h);
+                rb->invInertiaTensor = glm::mat3(
+                    1.0f / Ixz, 0.0f,      0.0f,
+                    0.0f,       1.0f / Iy, 0.0f,
+                    0.0f,       0.0f,      1.0f / Ixz
+                );
+            }
+        }
+    }
+
+    void SceneLoader::handleBoxCollider(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
+        GE::Components::BoxCollider bc;
+        if (props.count("Size")) {
+            const glm::vec3 sz = parseVec3(props.at("Size"));
+            bc.sizeX = sz.x;
+            bc.sizeY = sz.y;
+            bc.sizeZ = sz.z;
+        }
+        em->AddComponent(m_currentEntity, bc);
+
+        // Lab 6 Q6: compute axis-aligned cuboid inertia tensor on any sibling RigidBody.
+        // Ix = (1/12)·m·(b²+c²),  Iy = (1/12)·m·(a²+c²),  Iz = (1/12)·m·(a²+b²)
+        // where a=sizeX, b=sizeY, c=sizeZ (full extents).
+        if (auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_currentEntity)) {
+            if (!rb->isStatic && rb->mass > 0.0f) {
+                const float a  = bc.sizeX, b = bc.sizeY, c = bc.sizeZ;
+                const float Ix = (1.0f / 12.0f) * rb->mass * (b * b + c * c);
+                const float Iy = (1.0f / 12.0f) * rb->mass * (a * a + c * c);
+                const float Iz = (1.0f / 12.0f) * rb->mass * (a * a + b * b);
+                rb->invInertiaTensor = glm::mat3(
+                    1.0f / Ix, 0.0f,      0.0f,
+                    0.0f,      1.0f / Iy, 0.0f,
+                    0.0f,      0.0f,      1.0f / Iz
+                );
+            }
+        }
     }
 
     void SceneLoader::handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {

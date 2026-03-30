@@ -57,32 +57,38 @@ void main() {
     vec3 V = normalize(ubo.viewPos - fragPos);
 
     // 3. REFRACTION DISTORTION
-    float distortionStrength = 0.03; 
+    float distortionStrength = 0.015; // Halved: subtle lens effect, not jarring
     vec2 offset = N.xy * distortionStrength;
-    
+
     // 4. SCENE SAMPLING
     vec2 finalUV = clamp(screenUV + offset, 0.001, 0.999);
     vec3 sceneColor = texture(sceneSampler, finalUV).rgb;
 
     // 5. LIGHTING & FRESNEL EFFECTS
     // Use the virtual light position to calculate height-based intensity.
-    vec3 reflectionColor = ubo.lightColor * 0.4; 
+    vec3 reflectionColor = ubo.lightColor * 0.4;
 
     // Use virtualLightPos.y instead of ubo.lightPos.y
     float height = virtualLightPos.y / 4.0;
     float fresnelPower = 5.0;
     float fresnel = pow(1.0 - max(dot(N, V), 0.0), fresnelPower);
-    
+
     // We add a floor of 0.005 so there is always a tiny glint on the glass
     float fresnelAlpha = clamp(height + 0.6, 0.005, 0.3);
 
     // Mix refracted scene with reflection.
     vec3 finalColor = mix(sceneColor, reflectionColor, fresnel * fresnelAlpha);
 
+    // Blinn-Phong specular: tight highlight that reads as "glass reflection"
+    vec3 L = normalize(ubo.lightPos - fragPos);
+    vec3 H = normalize(L + V);
+    float spec = pow(max(dot(N, H), 0.0), 128.0); // high power = sharp glass glint
+    vec3 specular = ubo.lightColor * spec * 0.6;   // 0.6 = clearly visible, not blinding
+
     // 6. FINAL ALPHA BLENDING
-    // Use the height of the virtual light to keep the glass from becoming 
+    // Use the height of the virtual light to keep the glass from becoming
     // too opaque or fully invisible during the 'Night' phase.
     float alpha = clamp(0.5 + (height * 0.2), 0.4, 0.7);
-    
-    outColor = vec4(finalColor, alpha); 
+
+    outColor = vec4(finalColor + specular, alpha);
 }

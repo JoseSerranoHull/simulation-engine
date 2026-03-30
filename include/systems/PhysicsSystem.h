@@ -1,6 +1,7 @@
 #pragma once
 #include "ecs/IECSystem.h"
 #include "ecs/EntityManager.h"
+#include "components/PhysicsComponents.h"
 #include <glm/glm.hpp>
 
 namespace GE::Systems {
@@ -47,6 +48,12 @@ namespace GE::Systems {
 
         /** Q5: When >= 0.0f, overrides every body's restitution during collision resolution. -1 = disabled. */
         float m_restitutionOverride{ -1.0f };
+
+        /** Apply a force at a point relative to the centre of mass.
+         *  Adds force to forceAccum (linear) and r×F to torqueAccum (angular). */
+        static void ApplyForceAtPoint(GE::Components::RigidBody& rb,
+                                       const glm::vec3& force,
+                                       const glm::vec3& pointRelCoM);
 
     private:
         /** Cached dt from Integrate(); used by force-based impulse branch in ResolveCollisions(). */

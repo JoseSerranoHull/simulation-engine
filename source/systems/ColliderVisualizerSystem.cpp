@@ -30,6 +30,11 @@ ColliderVisualizerSystem::ColliderVisualizerSystem(GE::Graphics::GpuUploadContex
 
     uploadGeometry(ctx, planeData.vertices, planeData.indices,
         m_planeVertBuf, m_planeVertMem, m_planeIdxBuf, m_planeIdxMem);
+
+    const auto boxData = GE::Assets::GeometryUtils::generateWireBox(WIRE_COLOR);
+    m_boxIdxCount = static_cast<uint32_t>(boxData.indices.size());
+    uploadGeometry(ctx, boxData.vertices, boxData.indices,
+        m_boxVertBuf, m_boxVertMem, m_boxIdxBuf, m_boxIdxMem);
 }
 
 ColliderVisualizerSystem::~ColliderVisualizerSystem() {
@@ -45,6 +50,11 @@ ColliderVisualizerSystem::~ColliderVisualizerSystem() {
     vkFreeMemory   (ctx->device, m_planeVertMem,  nullptr);
     vkDestroyBuffer(ctx->device, m_planeIdxBuf,   nullptr);
     vkFreeMemory   (ctx->device, m_planeIdxMem,   nullptr);
+
+    vkDestroyBuffer(ctx->device, m_boxVertBuf,  nullptr);
+    vkFreeMemory   (ctx->device, m_boxVertMem,  nullptr);
+    vkDestroyBuffer(ctx->device, m_boxIdxBuf,   nullptr);
+    vkFreeMemory   (ctx->device, m_boxIdxMem,   nullptr);
 }
 
 // ============================================================================
@@ -204,6 +214,39 @@ void ColliderVisualizerSystem::RecordPass(
                 static_cast<uint32_t>(sizeof(glm::mat4)), &model);
 
             vkCmdDrawIndexed(cb, m_planeIdxCount, 1U, 0U, 0, 0U);
+        }
+    }
+
+    // --- BoxColliders ---
+    auto& boxArr = em->GetCompArr<GE::Components::BoxCollider>();
+
+    if (boxArr.GetCount() > 0U) {
+        vkCmdBindVertexBuffers(cb, 0U, 1U, &m_boxVertBuf, &zeroOffset);
+        vkCmdBindIndexBuffer(cb, m_boxIdxBuf, 0U, VK_INDEX_TYPE_UINT32);
+
+        for (uint32_t i = 0U; i < boxArr.GetCount(); ++i) {
+            const auto& box = boxArr.Data()[i];
+            const GE::ECS::EntityID id = boxArr.Index()[i];
+            const auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
+            if (transform == nullptr) { continue; }
+
+            // Strip entity visual scale; apply box half-extents.
+            const glm::vec3 worldPos = glm::vec3(transform->m_worldMatrix[3]);
+            glm::mat3 rotOnly = glm::mat3(transform->m_worldMatrix);
+            rotOnly[0] = glm::normalize(rotOnly[0]);
+            rotOnly[1] = glm::normalize(rotOnly[1]);
+            rotOnly[2] = glm::normalize(rotOnly[2]);
+
+            glm::mat4 model = glm::mat4(rotOnly);
+            model[3] = glm::vec4(worldPos, 1.0f);
+            // Unit wire box has half-extents 1; scale to match actual collider half-extents
+            model = glm::scale(model, glm::vec3(box.sizeX * 0.5f, box.sizeY * 0.5f, box.sizeZ * 0.5f));
+
+            vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                static_cast<uint32_t>(sizeof(glm::mat4)), &model);
+
+            vkCmdDrawIndexed(cb, m_boxIdxCount, 1U, 0U, 0, 0U);
         }
     }
 }

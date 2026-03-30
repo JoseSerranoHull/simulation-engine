@@ -235,6 +235,16 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
             if (ImGui::MenuItem("Lab 6: Q6 Cuboid Inertia Tensor")) {
                 experience->requestScenarioChange("./config/simulation_lab6_q6_cuboid.ini");
             }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Lab 7: Q1+Q2 Spring & Damper")) {
+                experience->requestScenarioChange("./config/simulation_lab7_q1q2_spring.ini");
+            }
+            if (ImGui::MenuItem("Lab 7: Q3 Rope")) {
+                experience->requestScenarioChange("./config/simulation_lab7_q3_rope.ini");
+            }
+            if (ImGui::MenuItem("Lab 7: Q4 Cloth")) {
+                experience->requestScenarioChange("./config/simulation_lab7_q4_cloth.ini");
+            }
             ImGui::EndMenu();
         }
 

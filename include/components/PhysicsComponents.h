@@ -14,6 +14,9 @@ namespace GE::Components {
         float     restitution { 0.6f };
         bool      isStatic    { false };
         bool      useGravity  { true };
+        // Velocity damping multiplier applied each frame: velocity *= pow(linearDamping, dt).
+        // Near-transparent for normal physics (default 0.999) but stabilises spring oscillation.
+        float     linearDamping{ 0.999f };
 
         // ---- Angular dynamics (PhysicsObject workshop pattern) ---------------
         // Orientation represented as a 3x3 rotation matrix (columns = local axes).

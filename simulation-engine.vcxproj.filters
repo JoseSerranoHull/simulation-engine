@@ -94,6 +94,9 @@
     <Filter Include="Markdown Files">
       <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="FlatBuffers Files">
+      <UniqueIdentifier>{2cfc2d12-e698-4386-8e6b-4fea1ac25ee8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="config\config.txt">
@@ -257,6 +260,9 @@
     <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\systems\SpringSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <!-- Shaders -->
@@ -418,13 +424,7 @@
     <None Include="config\simulation_lab5_angular_velocity.ini">
       <Filter>Config Files</Filter>
     </None>
-    <None Include="markdown\Claude - Refactor Plan.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Final Lab README.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Gemini - Refactor Plan.md">
+    <None Include="markdown\C++ Programming and Design - Real-time Graphics - Final Lab README.md">
       <Filter>Markdown Files</Filter>
     </None>
     <None Include="markdown\SimulationLab3.md">
@@ -471,6 +471,12 @@
     </None>
     <None Include="config\simulation_lab6_q6_cuboid.ini">
       <Filter>Config Files</Filter>
+    </None>
+    <None Include="markdown\Simulation and Concurrency - Final Lab.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <None Include="flatbuffers\Scene.fbs">
+      <Filter>FlatBuffers Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -706,6 +712,9 @@
       <Filter>Header Files\services</Filter>
     </ClInclude>
     <ClInclude Include="include\systems\ColliderVisualizerSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\SpringSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

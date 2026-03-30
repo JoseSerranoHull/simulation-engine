@@ -109,6 +109,9 @@ namespace GE::Systems {
                 break;
             }
 
+            // Linear damping — prevents slow energy build-up in spring chains.
+            rb.velocity *= glm::pow(rb.linearDamping, dt);
+
             // --- 3. Clear linear force accumulator ---
             rb.forceAccum = glm::vec3(0.0f);
 

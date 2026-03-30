@@ -58,6 +58,10 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     entityManager->RegisterSystem(particleSystem);
     ServiceLocator::Provide(particleSystem);
 
+    // Lab 7: spring force generator — runs before PhysicsSystem each frame.
+    m_springSystem = std::make_unique<GE::Systems::SpringSystem>();
+    ServiceLocator::Provide(m_springSystem.get());
+
     // --- Step 4: Engine Infrastructure ---
     resources = std::make_unique<GpuResourceManager>();
     ServiceLocator::Provide(resources.get());
@@ -236,9 +240,11 @@ void EngineOrchestrator::drawFrame() {
     const VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     static_cast<void>(vkBeginCommandBuffer(cb, &beginInfo)); // <--- BUFFER IS NOW OPEN
 
-    // CRITICAL FIX: Trigger ECS Systems that record GPU commands (Particles) 
+    // CRITICAL FIX: Trigger ECS Systems that record GPU commands (Particles)
     // only while the buffer is in the 'Recording' state.
     if (activeScenario && !activeScenario->IsPaused()) {
+        // Spring forces must be accumulated BEFORE PhysicsSystem integrates them.
+        m_springSystem->OnUpdate(scaledDelta);
         // This triggers ParticleEmitterSystem::OnUpdate which now has a valid 'cb'.
         em->Update(scaledDelta, cb);
     }

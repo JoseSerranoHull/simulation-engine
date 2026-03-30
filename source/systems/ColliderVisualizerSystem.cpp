@@ -1,4 +1,5 @@
 #include "systems/ColliderVisualizerSystem.h"
+#include "systems/SpringSystem.h"
 #include "assets/GeometryUtils.h"
 #include "graphics/VulkanUtils.h"
 #include "graphics/VulkanContext.h"
@@ -35,6 +36,19 @@ ColliderVisualizerSystem::ColliderVisualizerSystem(GE::Graphics::GpuUploadContex
     m_boxIdxCount = static_cast<uint32_t>(boxData.indices.size());
     uploadGeometry(ctx, boxData.vertices, boxData.indices,
         m_boxVertBuf, m_boxVertMem, m_boxIdxBuf, m_boxIdxMem);
+
+    // --- Allocate host-coherent spring line buffer (persistently mapped) ---
+    {
+        GE::Graphics::VulkanContext* vkCtx = ServiceLocator::GetContext();
+        const VkDeviceSize bufSize = sizeof(GE::Assets::Vertex) * m_springLineMaxVerts;
+        GE::Graphics::VulkanUtils::createBuffer(
+            vkCtx->device, vkCtx->physicalDevice, bufSize,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            m_springLineVertBuf, m_springLineVertMem
+        );
+        vkMapMemory(vkCtx->device, m_springLineVertMem, 0U, bufSize, 0U, &m_springLineMapped);
+    }
 }
 
 ColliderVisualizerSystem::~ColliderVisualizerSystem() {
@@ -55,6 +69,12 @@ ColliderVisualizerSystem::~ColliderVisualizerSystem() {
     vkFreeMemory   (ctx->device, m_boxVertMem,  nullptr);
     vkDestroyBuffer(ctx->device, m_boxIdxBuf,   nullptr);
     vkFreeMemory   (ctx->device, m_boxIdxMem,   nullptr);
+
+    if (m_springLineVertBuf != VK_NULL_HANDLE) {
+        vkUnmapMemory  (ctx->device, m_springLineVertMem);
+        vkDestroyBuffer(ctx->device, m_springLineVertBuf, nullptr);
+        vkFreeMemory   (ctx->device, m_springLineVertMem, nullptr);
+    }
 }
 
 // ============================================================================
@@ -247,6 +267,52 @@ void ColliderVisualizerSystem::RecordPass(
                 static_cast<uint32_t>(sizeof(glm::mat4)), &model);
 
             vkCmdDrawIndexed(cb, m_boxIdxCount, 1U, 0U, 0, 0U);
+        }
+    }
+
+    // --- Spring Lines (dynamic, rebuilt each frame) ---
+    {
+        auto* ss = ServiceLocator::GetSpringSystem();
+        if (ss && !ss->GetSprings().empty() && m_springLineMapped != nullptr) {
+            static constexpr glm::vec3 SPRING_COLOR{ 1.0f, 1.0f, 0.3f }; // yellow
+
+            auto* verts = static_cast<GE::Assets::Vertex*>(m_springLineMapped);
+            uint32_t vertCount = 0U;
+
+            for (const auto& s : ss->GetSprings()) {
+                if (vertCount + 2U > m_springLineMaxVerts) break;
+
+                glm::vec3 posA{}, posB{};
+                if (s.entityA == GE::Systems::SpringSystem::WORLD_ANCHOR) {
+                    posA = s.worldAnchorA;
+                } else {
+                    auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityA);
+                    if (!t) continue;
+                    posA = t->m_position;
+                }
+                if (s.entityB == GE::Systems::SpringSystem::WORLD_ANCHOR) {
+                    posB = s.worldAnchorB;
+                } else {
+                    auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityB);
+                    if (!t) continue;
+                    posB = t->m_position;
+                }
+
+                verts[vertCount]     = GE::Assets::Vertex{ posA, SPRING_COLOR, {}, {} };
+                verts[vertCount + 1] = GE::Assets::Vertex{ posB, SPRING_COLOR, {}, {} };
+                vertCount += 2U;
+            }
+
+            if (vertCount > 0U) {
+                // Spring lines are already in world space — use identity model matrix.
+                const glm::mat4 identity = glm::mat4(1.0f);
+                vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                    static_cast<uint32_t>(sizeof(glm::mat4)), &identity);
+
+                vkCmdBindVertexBuffers(cb, 0U, 1U, &m_springLineVertBuf, &zeroOffset);
+                vkCmdDraw(cb, vertCount, 1U, 0U, 0U);
+            }
         }
     }
 }

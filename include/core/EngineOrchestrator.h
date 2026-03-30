@@ -32,6 +32,7 @@
 #include "services/DebugOverlay.h"
 #include "services/ClimateService.h"
 #include "systems/EngineServiceRegistry.h"
+#include "systems/SpringSystem.h"
 #include "graphics/GpuResourceManager.h"
 
 /**
@@ -111,6 +112,9 @@ private:
     std::unique_ptr<GE::Graphics::VulkanDevice> vulkanEngine;
     std::unique_ptr<GE::Graphics::GpuResourceManager> resources;
     std::unique_ptr<EngineServiceRegistry> systemFactory;
+
+    // --- Spring Physics (Lab 7) ---
+    std::unique_ptr<GE::Systems::SpringSystem> m_springSystem;
 
     // --- Logic & Orchestration ---
     std::unique_ptr<GE::Scenario> activeScenario; // The "Soul" of the current level

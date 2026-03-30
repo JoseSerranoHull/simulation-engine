@@ -3,6 +3,7 @@
 #include "scene/SceneLoader.h"
 #include "systems/PhysicsSystem.h"
 #include "systems/ParticleEmitterSystem.h"
+#include "systems/SpringSystem.h"
 #include "core/EngineOrchestrator.h"
 #include "graphics/GpuUploadContext.h"
 #include "components/PhysicsComponents.h"
@@ -173,6 +174,33 @@ namespace GE {
                     for (uint32_t i = 0; i < rbArray.GetCount(); ++i) {
                         rbArray.Data()[i].angularVelocity = glm::vec3(0.0f);
                         rbArray.Data()[i].torqueAccum     = glm::vec3(0.0f);
+                    }
+                }
+            }
+
+            // --- 10. Lab 7: Spring Controls ---
+            {
+                auto* ss = ServiceLocator::GetSpringSystem();
+                if (ss && !ss->GetSprings().empty()) {
+                    ImGui::Separator();
+                    ImGui::SeparatorText("Lab 7 - Springs");
+                    ImGui::Text("Active springs: %d", static_cast<int>(ss->GetSprings().size()));
+
+                    static float kOverride = -1.0f;
+                    static float bOverride = -1.0f;
+                    ImGui::SliderFloat("Spring K override", &kOverride, -1.0f, 500.0f);
+                    ImGui::SliderFloat("Damping B override", &bOverride, -1.0f, 50.0f);
+
+                    if (ImGui::Button("Apply to All Springs")) {
+                        for (auto& s : ss->GetSpringsMutable()) {
+                            if (kOverride >= 0.0f) s.springConstant = kOverride;
+                            if (bOverride >= 0.0f) s.dampingCoeff   = bOverride;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Restart Scenario")) {
+                        auto* exp = ServiceLocator::GetExperience();
+                        if (exp) exp->requestScenarioChange(m_configPath);
                     }
                 }
             }

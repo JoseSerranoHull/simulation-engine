@@ -95,6 +95,13 @@ private:
     VkBuffer       m_boxIdxBuf { VK_NULL_HANDLE };
     VkDeviceMemory m_boxIdxMem { VK_NULL_HANDLE };
     uint32_t       m_boxIdxCount{ 0U };
+
+    // --- Spring line buffer (host-coherent, persistently mapped, rebuilt each frame) ---
+    // Stores up to m_springLineMaxVerts paired endpoints as yellow LINE_LIST vertices.
+    VkBuffer         m_springLineVertBuf  { VK_NULL_HANDLE };
+    VkDeviceMemory   m_springLineVertMem  { VK_NULL_HANDLE };
+    mutable void*    m_springLineMapped   { nullptr };  // mutable: written in const RecordPass
+    uint32_t         m_springLineMaxVerts { 512U };     // max 256 springs × 2 endpoints
 };
 
 } // namespace GE::Systems

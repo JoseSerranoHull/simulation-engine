@@ -28,7 +28,12 @@
       "Bash(find /c/Users/javie/GitHub/simulation-engine/markdown -name *Lab*6* -o -name *lab*6*)",
       "Bash(find /c/Users/javie/GitHub/simulation-engine -type d -name *Lab* -o -type d -name *markdown*)",
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo /clp:ErrorsOnly)",
-      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.sln\" \"/p:Configuration=Release\" \"/p:Platform=x64\" \"/nologo\" \"/clp:ErrorsOnly\")"
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.sln\" \"/p:Configuration=Release\" \"/p:Platform=x64\" \"/nologo\" \"/clp:ErrorsOnly\")",
+      "WebFetch(domain:docs.unity3d.com)",
+      "WebSearch",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" simulation-engine.sln /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)"
     ]
   }
 }

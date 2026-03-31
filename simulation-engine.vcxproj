@@ -164,7 +164,9 @@
     <ClCompile Include="source\particles\GpuParticleBackend.cpp" />
     <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp" />
     <ClCompile Include="source\systems\PhysicsSystem.cpp" />
+    <ClCompile Include="source\systems\ScriptSystem.cpp" />
     <ClCompile Include="source\systems\SpringSystem.cpp" />
+    <ClCompile Include="source\scripts\GameScriptComponent.cpp" />
     <ClCompile Include="source\lighting\PointLightSource.cpp" />
     <ClCompile Include="source\graphics\PostProcessBackend.cpp" />
     <ClCompile Include="source\graphics\Renderer.cpp" />
@@ -200,6 +202,7 @@
     <None Include="config\simulation_lab7_q1q2_spring.ini" />
     <None Include="config\simulation_lab7_q3_rope.ini" />
     <None Include="config\simulation_lab7_q4_cloth.ini" />
+    <None Include="config\simulation_scripts_demo.ini" />
     <None Include="config\snow_globe.ini" />
     <None Include="flatbuffers\Scene.fbs" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
@@ -336,6 +339,12 @@
     <ClInclude Include="include\graphics\GpuResourceManager.h" />
     <ClInclude Include="include\graphics\GpuUploadContext.h" />
     <ClInclude Include="include\graphics\VulkanUtils.h" />
+    <ClInclude Include="include\scripts\CollisionInfo.h" />
+    <ClInclude Include="include\scripts\GameScriptComponent.h" />
+    <ClInclude Include="include\components\ScriptComponent.h" />
+    <ClInclude Include="include\systems\ScriptSystem.h" />
+    <ClInclude Include="include\game-scripts\DemoPlayerScript.h" />
+    <ClInclude Include="include\game-scripts\DemoTriggerScript.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

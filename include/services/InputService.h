@@ -63,6 +63,22 @@ public:
     /** @brief Resets all simulation toggles and light modifiers to defaults. */
     void resetDefaults();
 
+    // --- Script-friendly input queries ---
+
+    /** @brief Returns true every frame the specified GLFW key is held down.
+     *  @param glfwKey  A GLFW_KEY_* constant (e.g. GLFW_KEY_RIGHT, GLFW_KEY_SPACE).
+     */
+    bool IsKeyDown(int glfwKey) const {
+        return glfwGetKey(window, glfwKey) == GLFW_PRESS;
+    }
+
+    /** @brief Returns true every frame the specified GLFW mouse button is held.
+     *  @param glfwButton  GLFW_MOUSE_BUTTON_LEFT, GLFW_MOUSE_BUTTON_RIGHT, etc.
+     */
+    bool IsMouseButtonDown(int glfwButton) const {
+        return glfwGetMouseButton(window, glfwButton) == GLFW_PRESS;
+    }
+
     /** @brief Checks if a simulation reset was requested and clears the flag. */
     bool consumeResetRequest();
 

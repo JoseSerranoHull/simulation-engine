@@ -61,19 +61,22 @@ namespace GE::Components {
     // --- 3D Colliders (Lab 6) ---
 
     struct CylinderCollider {
-        float radius{ 1.0f };
-        float height{ 2.0f };
+        float radius  { 1.0f };
+        float height  { 2.0f };
+        bool  isTrigger{ false };  ///< If true, skip impulse resolution; detect overlap only (OnTrigger* events)
     };
 
     struct BoxCollider {
         // Full extents (not half-extents): width × height × depth along local X, Y, Z.
-        float sizeX{ 1.0f };
-        float sizeY{ 1.0f };
-        float sizeZ{ 1.0f };
+        float sizeX   { 1.0f };
+        float sizeY   { 1.0f };
+        float sizeZ   { 1.0f };
+        bool  isTrigger{ false };  ///< If true, skip impulse resolution; detect overlap only (OnTrigger* events)
     };
 
     struct SphereCollider {
-        float radius{ 1.0f };
+        float radius  { 1.0f };
+        bool  isTrigger{ false };  ///< If true, skip impulse resolution; detect overlap only (OnTrigger* events)
     };
 
     struct PlaneCollider {

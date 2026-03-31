@@ -54,6 +54,9 @@
     <Filter Include="Source Files\memory">
       <UniqueIdentifier>{a1b2c3d4-0001-0001-000a-00000000000a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\scripts">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-000b-00000000000b}</UniqueIdentifier>
+    </Filter>
     <!-- Header subfolder filters -->
     <Filter Include="Header Files\core">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-0001-000000000011}</UniqueIdentifier>
@@ -90,6 +93,13 @@
     </Filter>
     <Filter Include="Header Files\memory">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-000c-00000000001c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\scripts">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-000d-00000000001d}</UniqueIdentifier>
+    </Filter>
+    <!-- User-authored game scripts live here -->
+    <Filter Include="Game Script Components">
+      <UniqueIdentifier>{c3d4e5f6-0003-0001-0001-000000000031}</UniqueIdentifier>
     </Filter>
     <Filter Include="Markdown Files">
       <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
@@ -258,10 +268,17 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\systems</Filter>
     </ClCompile>
     <ClCompile Include="source\systems\SpringSystem.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <!-- scripting infrastructure -->
+    <ClCompile Include="source\systems\ScriptSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scripts\GameScriptComponent.cpp">
+      <Filter>Source Files\scripts</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -477,6 +494,12 @@
     </None>
     <None Include="flatbuffers\Scene.fbs">
       <Filter>FlatBuffers Files</Filter>
+    </None>
+    <None Include="config\simulation_lab7_q1q2_spring.ini" />
+    <None Include="config\simulation_lab7_q3_rope.ini" />
+    <None Include="config\simulation_lab7_q4_cloth.ini" />
+    <None Include="config\simulation_scripts_demo.ini">
+      <Filter>Config Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -712,10 +735,32 @@
       <Filter>Header Files\services</Filter>
     </ClInclude>
     <ClInclude Include="include\systems\ColliderVisualizerSystem.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\systems</Filter>
     </ClInclude>
     <ClInclude Include="include\systems\SpringSystem.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <!-- scripting system headers -->
+    <ClInclude Include="include\systems\ScriptSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <!-- script infrastructure headers -->
+    <ClInclude Include="include\scripts\CollisionInfo.h">
+      <Filter>Header Files\scripts</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scripts\GameScriptComponent.h">
+      <Filter>Header Files\scripts</Filter>
+    </ClInclude>
+    <!-- script component -->
+    <ClInclude Include="include\components\ScriptComponent.h">
+      <Filter>Header Files\components</Filter>
+    </ClInclude>
+    <!-- user-authored game scripts (Game Script Components filter) -->
+    <ClInclude Include="include\game-scripts\DemoPlayerScript.h">
+      <Filter>Game Script Components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\game-scripts\DemoTriggerScript.h">
+      <Filter>Game Script Components</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

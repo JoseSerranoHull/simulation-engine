@@ -2,6 +2,7 @@
 #include "scene/Scenario.h"
 #include "systems/PhysicsSystem.h"
 #include "systems/ColliderVisualizerSystem.h"
+#include "systems/ScriptSystem.h"
 #include <glm/glm.hpp>
 
 namespace GE {
@@ -58,6 +59,10 @@ namespace GE {
         /** @brief Non-owning pointer to the registered ColliderVisualizerSystem.
          *  EntityManager owns the lifetime; pointer is nulled on OnUnload(). */
         Systems::ColliderVisualizerSystem* m_visualizerSystem{ nullptr };
+
+        /** @brief Non-owning pointer to the registered ScriptSystem.
+         *  EntityManager owns the lifetime; pointer is nulled on OnUnload(). */
+        Systems::ScriptSystem* m_scriptSystem{ nullptr };
 
         /** @brief Per-scenario checkerboard material colours, editable via ImGui. */
         CheckerboardPushConstants m_checkerConstants{};

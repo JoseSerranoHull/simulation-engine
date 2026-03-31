@@ -1,6 +1,7 @@
 ﻿#include "core/EngineOrchestrator.h"
 #include "scene/GenericScenario.h"
 #include "components/PhysicsComponents.h"
+#include "components/ScriptComponent.h"
 #include "systems/TransformSystem.h"
 #include "systems/ParticleEmitterSystem.h"
 #include "systems/ColliderVisualizerSystem.h"
@@ -49,6 +50,8 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     entityManager->RegisterComponent<GE::Components::RigidBody2D>();
     entityManager->RegisterComponent<GE::Components::CircleCollider2D>();
     entityManager->RegisterComponent<GE::Components::BoxCollider2D>();
+
+    entityManager->RegisterComponent<GE::Components::ScriptComponent>();
 
     ServiceLocator::Provide(entityManager.get());
 

@@ -7,6 +7,7 @@
 
 /* parasoft-begin-suppress ALL */
 #include <glm/gtc/matrix_transform.hpp>  // translate, scale
+#include <algorithm>                     // std::min, std::max
 /* parasoft-end-suppress ALL */
 
 namespace GE::Systems {
@@ -201,6 +202,11 @@ namespace GE::Systems {
      * which handles same-mass, different-mass, and one-static cases uniformly.
      */
     void PhysicsSystem::ResolveCollisions() {
+        // Clear collision event sets — ScriptSystem reads these after this call.
+        m_currentContacts.clear();
+        m_currentContactInfos.clear();
+        m_currentTriggers.clear();
+
         auto* em = ServiceLocator::GetEntityManager();
         auto& sphereArray = em->GetCompArr<GE::Components::SphereCollider>();
         auto& planeArray  = em->GetCompArr<GE::Components::PlaneCollider>();
@@ -274,6 +280,26 @@ namespace GE::Systems {
 
                 const glm::vec3 n           = diff / dist;             // Unit normal A←B
                 const float     penetration = radiusSum - dist;
+
+                // --- Trigger check ---
+                // If either collider is a trigger, record the overlap and skip physics resolution.
+                if (aCol.isTrigger || bCol.isTrigger) {
+                    GE::Scripts::EntityPair pair{ std::min(aID, bID), std::max(aID, bID) };
+                    m_currentTriggers.insert(pair);
+                    continue;
+                }
+
+                // --- Solid contact: record for ScriptSystem collision callbacks ---
+                {
+                    GE::Scripts::EntityPair pair{ std::min(aID, bID), std::max(aID, bID) };
+                    GE::Scripts::CollisionInfo info;
+                    info.otherEntity  = bID;   // from A's perspective; ScriptSystem mirrors for B
+                    info.contactPoint = aTrans->m_position + (-n) * aCol.radius;
+                    info.normal       = n;
+                    info.penetration  = penetration;
+                    m_currentContacts.insert(pair);
+                    m_currentContactInfos[pair] = info;
+                }
 
                 const float invMassA = (aRB && !aRB->isStatic) ? aRB->inverseMass : 0.0f;
                 const float invMassB = (bRB && !bRB->isStatic) ? bRB->inverseMass : 0.0f;

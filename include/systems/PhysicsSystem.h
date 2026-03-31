@@ -2,7 +2,9 @@
 #include "ecs/IECSystem.h"
 #include "ecs/EntityManager.h"
 #include "components/PhysicsComponents.h"
+#include "scripts/CollisionInfo.h"
 #include <glm/glm.hpp>
+
 
 namespace GE::Systems {
 
@@ -54,6 +56,19 @@ namespace GE::Systems {
         static void ApplyForceAtPoint(GE::Components::RigidBody& rb,
                                        const glm::vec3& force,
                                        const glm::vec3& pointRelCoM);
+
+        // --- Collision event data (populated each frame by ResolveCollisions) ---
+        // Read by ScriptSystem at ESystemStage::GameLogic to dispatch OnCollision*/OnTrigger* events.
+        // Uses shared types from CollisionInfo.h (GE::Scripts::EntityPair / PairHash).
+
+        /// Solid contact pairs this frame (neither collider is a trigger).
+        GE::Scripts::ContactSet     m_currentContacts;
+
+        /// Full contact data keyed by canonical pair (from the first entity's perspective).
+        GE::Scripts::ContactInfoMap m_currentContactInfos;
+
+        /// Trigger overlap pairs this frame (at least one collider has isTrigger == true).
+        GE::Scripts::ContactSet     m_currentTriggers;
 
     private:
         /** Cached dt from Integrate(); used by force-based impulse branch in ResolveCollisions(). */

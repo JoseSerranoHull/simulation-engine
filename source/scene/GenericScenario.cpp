@@ -4,9 +4,15 @@
 #include "systems/PhysicsSystem.h"
 #include "systems/ParticleEmitterSystem.h"
 #include "systems/SpringSystem.h"
+#include "systems/ScriptSystem.h"
 #include "core/EngineOrchestrator.h"
 #include "graphics/GpuUploadContext.h"
 #include "components/PhysicsComponents.h"
+#include "components/ScriptComponent.h"
+#include "components/Tag.h"
+// Example scripts — include only for the scripts demo scenario
+#include "game-scripts/DemoPlayerScript.h"
+#include "game-scripts/DemoTriggerScript.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
@@ -40,6 +46,41 @@ namespace GE {
         auto* vs = new Systems::ColliderVisualizerSystem(ctx);
         m_visualizerSystem = vs;
         em->RegisterSystem(vs);
+
+        // 4. Register ScriptSystem — drives GameScriptComponent lifecycle at GameLogic stage.
+        // Must be registered after PhysicsSystem so collision data is ready when dispatching events.
+        auto* ss = new Systems::ScriptSystem(m_physicsSystem);
+        m_scriptSystem = ss;
+        em->RegisterSystem(ss);
+
+        // 5. Scripts demo: attach example scripts when loading the scripts demo scenario.
+        //    This is how scripts are connected to entities — programmatically after SceneLoader runs.
+        //    Each project-specific script is std::make_shared<>'d and wrapped in ScriptComponent.
+        if (m_configPath.find("simulation_scripts_demo") != std::string::npos) {
+            // --- Player sphere: keyboard control, collision callbacks, inspector fields ---
+            if (scene->hasEntity("Player")) {
+                const GE::ECS::EntityID playerID = scene->getEntityID("Player");
+                em->AddComponent<GE::Components::ScriptComponent>(
+                    playerID,
+                    GE::Components::ScriptComponent{ std::make_shared<DemoPlayerScript>() }
+                );
+            }
+
+            // --- Trigger zone: add isTrigger collider + script ---
+            if (scene->hasEntity("TriggerZone")) {
+                const GE::ECS::EntityID zoneID = scene->getEntityID("TriggerZone");
+                GE::Components::SphereCollider trigger;
+                trigger.radius    = 1.5f;
+                trigger.isTrigger = true;   // no impulse — only OnTrigger* events fire
+                em->AddComponent<GE::Components::SphereCollider>(zoneID, trigger);
+                em->AddComponent<GE::Components::ScriptComponent>(
+                    zoneID,
+                    GE::Components::ScriptComponent{ std::make_shared<DemoTriggerScript>() }
+                );
+            }
+
+            GE_LOG_INFO("GenericScenario: Scripts demo — DemoPlayerScript and DemoTriggerScript attached.");
+        }
 
         GE_LOG_INFO("GenericScenario: Scenario loaded from " + m_configPath);
     }
@@ -207,6 +248,38 @@ namespace GE {
 
             ImGui::EndMenu();
         }
+
+        // --- SCRIPTS INSPECTOR MENU ---
+        if (ImGui::BeginMenu("Scripts")) {
+            auto* em = ServiceLocator::GetEntityManager();
+            auto& scriptArr = em->GetCompArr<GE::Components::ScriptComponent>();
+
+            if (scriptArr.GetCount() == 0) {
+                ImGui::TextDisabled("No ScriptComponents in scene.");
+            }
+
+            for (uint32_t i = 0; i < scriptArr.GetCount(); ++i) {
+                const GE::ECS::EntityID id = scriptArr.Index()[i];
+                auto& sc = scriptArr.Data()[i];
+                if (!sc.script) continue;
+
+                // Build a readable label: use Tag name if available, fallback to entity ID
+                std::string scriptLabel;
+                auto* tag = em->TryGetTIComponent<GE::Components::Tag>(id);
+                if (tag) {
+                    scriptLabel = tag->m_name + " (Entity " + std::to_string(id) + ")";
+                } else {
+                    scriptLabel = "Entity " + std::to_string(id);
+                }
+
+                if (ImGui::TreeNode(scriptLabel.c_str())) {
+                    sc.script->OnDrawInspector();
+                    ImGui::TreePop();
+                }
+            }
+
+            ImGui::EndMenu();
+        }
     }
 
     void GenericScenario::OnUnload() {
@@ -223,6 +296,11 @@ namespace GE {
         if (m_visualizerSystem != nullptr) {
             em->UnregisterSystemByID(m_visualizerSystem->GetID());
             m_visualizerSystem = nullptr;
+        }
+
+        if (m_scriptSystem != nullptr) {
+            em->UnregisterSystemByID(m_scriptSystem->GetID());
+            m_scriptSystem = nullptr;
         }
 
         // 2. Release GPU particle backends (owned by ParticleEmitterSystem pool)

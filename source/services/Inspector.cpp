@@ -20,6 +20,7 @@ void Inspector::Draw(const GE::ECS::EntityID entityID, GE::ECS::EntityManager* c
     if (auto* rb = em->TryGetTIComponent<RigidBody>(entityID))       { DrawRigidBody(rb); }
     if (auto* sc = em->TryGetTIComponent<SphereCollider>(entityID))  { DrawSphereCollider(sc); }
     if (auto* pc = em->TryGetTIComponent<PlaneCollider>(entityID))   { DrawPlaneCollider(pc); }
+    if (auto* s  = em->TryGetTIComponent<ScriptComponent>(entityID)) { DrawScriptComponent(s); }
 
     ImGui::PopItemWidth();
 }
@@ -62,10 +63,20 @@ void Inspector::DrawRigidBody(GE::Components::RigidBody* const rb) const {
 void Inspector::DrawSphereCollider(GE::Components::SphereCollider* const sc) const {
     if (!ImGui::CollapsingHeader("Sphere Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
     ImGui::DragFloat("Radius", &sc->radius, 0.01f, 0.001f, 1000.0f);
+    ImGui::Checkbox("Is Trigger", &sc->isTrigger);
 }
 
 void Inspector::DrawPlaneCollider(GE::Components::PlaneCollider* const pc) const {
     if (!ImGui::CollapsingHeader("Plane Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
     ImGui::DragFloat3("Normal", &pc->normal.x, 0.01f, -1.0f, 1.0f);
     ImGui::DragFloat("Offset",  &pc->offset,   0.01f);
+}
+
+void Inspector::DrawScriptComponent(GE::Components::ScriptComponent* const sc) const {
+    if (!sc || !sc->script) return;
+
+    const std::string header = std::string(sc->script->GetScriptName()) + " (Script)";
+    if (!ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) return;
+
+    sc->script->OnDrawInspector();
 }

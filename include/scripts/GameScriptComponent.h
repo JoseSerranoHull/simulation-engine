@@ -116,6 +116,9 @@ public:
      */
     virtual void OnDrawInspector();
 
+    /** @brief Override to return the script's display name shown in the Inspector header. */
+    virtual const char* GetScriptName() const { return "Script"; }
+
     // -----------------------------------------------------------------------
     // Engine-visible state (read/written by ScriptSystem)
     // -----------------------------------------------------------------------

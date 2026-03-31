@@ -52,6 +52,8 @@ public:
     glm::vec3 startPosition{ 0.0f };        ///< Read-only: recorded at Start(), shown in inspector
     int       collisionCount{ 0 };          ///< Running count of Enter events this session
 
+    const char* GetScriptName() const override { return "DemoPlayerScript"; }
+
     // -----------------------------------------------------------------------
     // Inspector
     // -----------------------------------------------------------------------

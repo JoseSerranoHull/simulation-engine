@@ -248,38 +248,6 @@ namespace GE {
 
             ImGui::EndMenu();
         }
-
-        // --- SCRIPTS INSPECTOR MENU ---
-        if (ImGui::BeginMenu("Scripts")) {
-            auto* em = ServiceLocator::GetEntityManager();
-            auto& scriptArr = em->GetCompArr<GE::Components::ScriptComponent>();
-
-            if (scriptArr.GetCount() == 0) {
-                ImGui::TextDisabled("No ScriptComponents in scene.");
-            }
-
-            for (uint32_t i = 0; i < scriptArr.GetCount(); ++i) {
-                const GE::ECS::EntityID id = scriptArr.Index()[i];
-                auto& sc = scriptArr.Data()[i];
-                if (!sc.script) continue;
-
-                // Build a readable label: use Tag name if available, fallback to entity ID
-                std::string scriptLabel;
-                auto* tag = em->TryGetTIComponent<GE::Components::Tag>(id);
-                if (tag) {
-                    scriptLabel = tag->m_name + " (Entity " + std::to_string(id) + ")";
-                } else {
-                    scriptLabel = "Entity " + std::to_string(id);
-                }
-
-                if (ImGui::TreeNode(scriptLabel.c_str())) {
-                    sc.script->OnDrawInspector();
-                    ImGui::TreePop();
-                }
-            }
-
-            ImGui::EndMenu();
-        }
     }
 
     void GenericScenario::OnUnload() {

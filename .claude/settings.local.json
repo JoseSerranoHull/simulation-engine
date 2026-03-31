@@ -33,7 +33,9 @@
       "WebSearch",
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" simulation-engine.sln /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
-      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)"
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" simulation-engine.sln /p:Configuration=Debug /p:Platform=x64 /m /v:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"simulation-engine.sln\" \"/p:Configuration=Debug\" \"/p:Platform=x64\" \"/v:minimal\")"
     ]
   }
 }

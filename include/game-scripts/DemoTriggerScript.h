@@ -36,6 +36,8 @@ public:
     int   enterCount { 0 };          ///< How many times something entered this zone
     glm::vec3 zoneColor { 0.0f, 1.0f, 0.0f };  ///< Visual hint (inspector display only)
 
+    const char* GetScriptName() const override { return "DemoTriggerScript"; }
+
     void OnDrawInspector() override {
         GameScriptComponent::OnDrawInspector();
         DrawField("Armed",      isArmed);

@@ -7,6 +7,7 @@
 #include "ecs/EntityManager.h"
 #include "components/Transform.h"
 #include "components/PhysicsComponents.h"
+#include "components/ScriptComponent.h"
 #include "components/Tag.h"
 
 /**
@@ -32,4 +33,5 @@ private:
     void DrawRigidBody(GE::Components::RigidBody* rb) const;
     void DrawSphereCollider(GE::Components::SphereCollider* sc) const;
     void DrawPlaneCollider(GE::Components::PlaneCollider* pc) const;
+    void DrawScriptComponent(GE::Components::ScriptComponent* sc) const;
 };

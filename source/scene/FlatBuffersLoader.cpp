@@ -22,19 +22,28 @@ namespace GE::Scene {
 // SECTION 1: openFileDialog()
 // ===========================================================================
 
-std::string FlatBuffersLoader::openFileDialog() {
+std::string FlatBuffersLoader::openFileDialog(const std::string& initialDir) {
     char szFile[MAX_PATH] = {};
+
+    // Resolve to absolute path — lpstrInitialDir must be absolute and must
+    // outlive the OPENFILENAME struct, so store it in a local std::string.
+    std::string absDir;
+    if (!initialDir.empty()) {
+        std::error_code ec;
+        absDir = std::filesystem::absolute(initialDir, ec).string();
+    }
 
     OPENFILENAMEA ofn;
     ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize  = sizeof(ofn);
-    ofn.hwndOwner    = nullptr;
-    ofn.lpstrFile    = szFile;
-    ofn.nMaxFile     = sizeof(szFile);
-    ofn.lpstrFilter  = "FlatBuffers Files\0*.bin;*.json\0All Files\0*.*\0";
-    ofn.nFilterIndex = 1;
-    ofn.lpstrTitle   = "Select FlatBuffers Scene";
-    ofn.Flags        = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+    ofn.lStructSize     = sizeof(ofn);
+    ofn.hwndOwner       = nullptr;
+    ofn.lpstrFile       = szFile;
+    ofn.nMaxFile        = sizeof(szFile);
+    ofn.lpstrFilter     = "FlatBuffers Files\0*.bin;*.fbs;*.json\0All Files\0*.*\0";
+    ofn.nFilterIndex    = 1;
+    ofn.lpstrTitle      = "Select FlatBuffers Scene";
+    ofn.lpstrInitialDir = absDir.empty() ? nullptr : absDir.c_str();
+    ofn.Flags           = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
     if (GetOpenFileNameA(&ofn) == TRUE) {
         return std::string(szFile);
@@ -187,7 +196,7 @@ std::string FlatBuffersLoader::pickAndPrepare(const std::string& outDir) {
     std::error_code ec;
     std::filesystem::create_directories(outDir, ec);
 
-    const std::string selected = openFileDialog();
+    const std::string selected = openFileDialog(outDir);
     if (selected.empty()) { return ""; }
 
     const std::string ext = std::filesystem::path(selected).extension().string();
@@ -210,7 +219,8 @@ std::vector<std::string> FlatBuffersLoader::scanDirectory(const std::string& dir
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
         if (ec) { break; }
-        if (entry.path().extension() == ".bin") {
+        const auto ext = entry.path().extension();
+        if (ext == ".bin" || ext == ".fbs") {
             results.push_back(entry.path().string());
         }
     }

@@ -40,8 +40,8 @@ namespace GE::Scene {
         static std::vector<std::string> scanDirectory(const std::string& dir);
 
     private:
-        // Opens GetOpenFileNameA filtered to *.bin;*.json. Returns path or "".
-        static std::string openFileDialog();
+        // Opens GetOpenFileNameA filtered to *.bin;*.fbs;*.json, starting in initialDir. Returns path or "".
+        static std::string openFileDialog(const std::string& initialDir);
 
         // Discovers flatc.exe using the priority order documented above.
         static std::string findFlatc();

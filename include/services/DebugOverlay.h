@@ -4,6 +4,7 @@
 #include "core/libs.h"
 #include <memory>
 #include <string>
+#include <vector>
 /* parasoft-end-suppress ALL */
 
 #include "graphics/VulkanContext.h"
@@ -74,7 +75,9 @@ private:
     VkDescriptorPool imguiPool;  /**< Dedicated descriptor pool for ImGui textures. */
 
     // --- Selection State (mutable: written from const update/draw helpers) ---
-    mutable GE::ECS::EntityID m_selectedEntity{ UINT32_MAX };
+    mutable GE::ECS::EntityID       m_selectedEntity { UINT32_MAX };
+    mutable bool                    m_openFbDialog   { false };
+    mutable std::vector<std::string> m_fbScenes;
     Inspector m_inspector{};
 
 	// --- Internal Helper Methods ---

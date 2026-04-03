@@ -1,6 +1,8 @@
 ﻿#include "core/EngineOrchestrator.h"
 #include "scene/GenericScenario.h"
+#include "scene/FlatBuffersScenario.h"
 #include "components/PhysicsComponents.h"
+#include "components/AnimationComponents.h"
 #include "components/ScriptComponent.h"
 #include "systems/TransformSystem.h"
 #include "systems/ParticleEmitterSystem.h"
@@ -46,6 +48,10 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     entityManager->RegisterComponent<GE::Components::PlaneCollider>();
     entityManager->RegisterComponent<GE::Components::CylinderCollider>();
     entityManager->RegisterComponent<GE::Components::BoxCollider>();
+    entityManager->RegisterComponent<GE::Components::CapsuleCollider>();
+    entityManager->RegisterComponent<GE::Components::OwnerComponent>();
+    entityManager->RegisterComponent<GE::Components::AnimatedObjectComponent>();
+    entityManager->RegisterComponent<GE::Components::PhysicsMaterialTag>();
 
     entityManager->RegisterComponent<GE::Components::RigidBody2D>();
     entityManager->RegisterComponent<GE::Components::CircleCollider2D>();
@@ -182,7 +188,11 @@ void EngineOrchestrator::drawFrame() {
         std::string path = m_pendingScenarioPath;
         m_pendingScenarioPath = "";
 
-        changeScenario(std::make_unique<GE::GenericScenario>(path));
+        const bool isFlatBuffers = path.size() > 4U &&
+                                  path.substr(path.size() - 4U) == ".bin";
+        changeScenario(isFlatBuffers
+            ? std::unique_ptr<GE::Scenario>(std::make_unique<GE::FlatBuffersScenario>(path))
+            : std::unique_ptr<GE::Scenario>(std::make_unique<GE::GenericScenario>(path)));
 
         // CRITICAL: We MUST return here to ensure we don't proceed to draw 
         // with empty registries or stale command buffers!

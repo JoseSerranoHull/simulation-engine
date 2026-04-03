@@ -1,8 +1,13 @@
 ﻿#include "services/DebugOverlay.h"
 #include "scene/GenericScenario.h"
+#include "scene/FlatBuffersLoader.h"
 #include "core/EngineOrchestrator.h"
 #include "components/Tag.h"
 #include "components/Transform.h"
+
+/* parasoft-begin-suppress ALL */
+#include <filesystem>
+/* parasoft-end-suppress ALL */
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
@@ -107,6 +112,17 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
 
     // --- 1. Top-Level Main Menu Bar (Agnostic Orchestration) ---
     DrawMainMenuBar(input, light, climate);
+
+    // --- Deferred FlatBuffers file dialog (must be outside BeginMainMenuBar) ---
+    if (m_openFbDialog) {
+        m_openFbDialog = false;
+        auto* experience = ServiceLocator::GetExperience();
+        const std::string binPath =
+            GE::Scene::FlatBuffersLoader::pickAndPrepare("./config/flatbufferConfig/");
+        if (!binPath.empty() && experience != nullptr) {
+            experience->requestScenarioChange(binPath);
+        }
+    }
 
     // --- 2. Hierarchy Window ---
     if (ImGui::Begin("Hierarchy")) {
@@ -249,6 +265,30 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
             if (ImGui::MenuItem("Scripts Demo")) {
                 experience->requestScenarioChange("./config/simulation_scripts_demo.ini");
             }
+
+            ImGui::Separator();
+
+            // --- FLATBUFFERS SCENES ---
+            m_fbScenes = GE::Scene::FlatBuffersLoader::scanDirectory("./config/flatbufferConfig/");
+
+            if (ImGui::MenuItem("Load FlatBuffers Scene...")) {
+                m_openFbDialog = true;
+            }
+
+            if (!m_fbScenes.empty()) {
+                ImGui::Separator();
+                for (const auto& path : m_fbScenes) {
+                    const std::string label =
+                        std::filesystem::path(path).filename().string();
+                    const auto* currentScenario = experience->GetCurrentScenario();
+                    const bool isCurrent = (currentScenario != nullptr &&
+                                            currentScenario->GetConfigPath() == path);
+                    if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent)) {
+                        experience->requestScenarioChange(path);
+                    }
+                }
+            }
+
             ImGui::EndMenu();
         }
 

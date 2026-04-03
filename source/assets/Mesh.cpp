@@ -60,14 +60,17 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPip
         // 2. Bind GraphicsPipeline State (using your actual API)
         activePipeline->bind(cb);
 
-        // 3. Bind Descriptor Sets (using an array to handle the shared_ptr/r-value correctly)
-        const VkDescriptorSet sets[SET_COUNT] = {
-            globalSet,
-            (material != nullptr) ? material->getDescriptorSet() : VK_NULL_HANDLE
-        };
+        // 3. Bind Descriptor Sets.
+        // Only bind Set 1 (material) if the material has a valid descriptor set.
+        // Pipelines with includeMaterialSet=false (e.g. flat-color) have a null
+        // descriptor set; passing VK_NULL_HANDLE violates VUID-vkCmdBindDescriptorSets-pDescriptorSets-00358.
+        const VkDescriptorSet matSet =
+            (material != nullptr) ? material->getDescriptorSet() : VK_NULL_HANDLE;
+        const uint32_t activeSetCount = (matSet != VK_NULL_HANDLE) ? SET_COUNT : 1U;
+        const VkDescriptorSet sets[SET_COUNT] = { globalSet, matSet };
 
         vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            activePipeline->getPipelineLayout(), SET_GLOBAL, SET_COUNT, sets, 0U, nullptr);
+            activePipeline->getPipelineLayout(), SET_GLOBAL, activeSetCount, sets, 0U, nullptr);
 
         // 4. Update World Matrix via Push Constants.
         // Use the caller-supplied modelStages when present (e.g. the checkerboard pipeline

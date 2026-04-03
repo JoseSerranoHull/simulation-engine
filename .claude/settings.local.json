@@ -35,7 +35,27 @@
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.vcxproj\" /p:Configuration=Debug /p:Platform=x64 /m /nologo)",
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" simulation-engine.sln /p:Configuration=Debug /p:Platform=x64 /m /v:minimal)",
-      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"simulation-engine.sln\" \"/p:Configuration=Debug\" \"/p:Platform=x64\" \"/v:minimal\")"
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"simulation-engine.sln\" \"/p:Configuration=Debug\" \"/p:Platform=x64\" \"/v:minimal\")",
+      "Bash(where pdftotext:*)",
+      "Bash(where mutool:*)",
+      "Bash(python -c \"import pdfplumber; print\\(''pdfplumber ok''\\)\")",
+      "Bash(python -c \"import PyPDF2; print\\(''pypdf2 ok''\\)\")",
+      "Bash(python -c \"import fitz; print\\(''pymupdf ok''\\)\")",
+      "Bash(pdftotext:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Bash(done)",
+      "Bash(for i:*)",
+      "Bash(find C:UsersjavieGitHubsimulation-engine -type f \\\\\\(-name *.bin -o -name *.fb -o -name *_generated.* \\\\\\))",
+      "Bash(where flatc:*)",
+      "Bash(\"/c/Users/javie/OneDrive - hull.ac.uk/Documents/Windows.flatc.binary/flatc.exe\" --version)",
+      "Bash(python -c ':*)",
+      "Bash(iconv -f utf-16le -t utf-8 \"C:/Users/javie/GitHub/simulation-engine/build_seq.txt\")",
+      "Bash(\"C:/VulkanSDK/1.4.321.1/Bin/glslc.exe\" flatcolor.vert -o flatcolor_vert.spv)",
+      "Bash(\"C:/VulkanSDK/1.4.321.1/Bin/glslc.exe\" flatcolor.frag -o flatcolor_frag.spv)",
+      "Bash(\"C:\\\\VulkanSDK\\\\1.4.328.1\\\\Bin\\\\spirv-dis.exe\" flatcolor_vert.spv)",
+      "Bash(/c/VulkanSDK/1.4.321.1/Bin/spirv-dis.exe /c/Users/javie/GitHub/simulation-engine/shaders/flatcolor_vert.spv)",
+      "Bash(/c/VulkanSDK/1.4.321.1/Bin/spirv-dis.exe /c/Users/javie/GitHub/simulation-engine/shaders/flatcolor_frag.spv)"
     ]
   }
 }

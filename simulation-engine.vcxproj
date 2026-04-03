@@ -103,12 +103,12 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;C:\VulkanSDK\1.4.328.1\Include;c:\Software\tinyobjloader\include;c:\Software\stb\include;c:\Software\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\glm;$(ProjectDir)\external-libraries\imgui\imgui-1.92.5;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\stb;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.321.1\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;C:\VulkanSDK\1.4.328.1\Include;c:\Software\tinyobjloader\include;c:\Software\stb\include;c:\Software\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\glm;$(ProjectDir)\external-libraries\imgui\imgui-1.92.5;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\stb;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.321.1\Include;$(ProjectDir)\external-libraries\flatbuffers\include;$(ProjectDir)\flatbuffers</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib;Comdlg32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.328.1\Lib;c:\Software\glfw-3.4.bin.WIN64\lib-vc2022;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;C:\VulkanSDK\1.4.321.1\Lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -121,13 +121,13 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;C:\VulkanSDK\1.4.328.1\Include;c:\Software\tinyobjloader\include;c:\Software\stb\include;c:\Software\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\glm;$(ProjectDir)\external-libraries\imgui\imgui-1.92.5;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\stb;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.321.1\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;C:\VulkanSDK\1.4.328.1\Include;c:\Software\tinyobjloader\include;c:\Software\stb\include;c:\Software\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\glm;$(ProjectDir)\external-libraries\imgui\imgui-1.92.5;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\include;$(ProjectDir)\external-libraries\stb;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.321.1\Include;$(ProjectDir)\external-libraries\flatbuffers\include;$(ProjectDir)\flatbuffers</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.328.1\Lib;c:\Software\glfw-3.4.bin.WIN64\lib-vc2022;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;C:\VulkanSDK\1.4.321.1\Lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib;Comdlg32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -182,6 +182,9 @@
     <ClCompile Include="source\graphics\FrameSyncManager.cpp" />
     <ClCompile Include="source\systems\EngineServiceRegistry.cpp" />
     <ClCompile Include="source\systems\TransformSystem.cpp" />
+    <ClCompile Include="source\scene\FlatBuffersLoader.cpp" />
+    <ClCompile Include="source\scene\FlatBuffersScenario.cpp" />
+    <ClCompile Include="source\scene\fb\FBSceneAdapter.cpp" />
     <ClCompile Include="source\graphics\VulkanDevice.cpp" />
     <ClCompile Include="source\graphics\GpuResourceManager.cpp" />
     <ClCompile Include="source\graphics\VulkanUtils.cpp" />
@@ -281,6 +284,13 @@
     <ClInclude Include="include\ecs\EntityManager.h" />
     <ClInclude Include="include\core\EngineOrchestrator.h" />
     <ClInclude Include="include\scene\GenericScenario.h" />
+    <ClInclude Include="include\scene\FlatBuffersLoader.h" />
+    <ClInclude Include="include\scene\FlatBuffersScenario.h" />
+    <ClInclude Include="include\scene\ISceneAdapter.h" />
+    <ClInclude Include="include\scene\fb\FBSceneContext.h" />
+    <ClInclude Include="include\scene\fb\FBSceneAdapter.h" />
+    <ClInclude Include="include\components\AnimationComponents.h" />
+    <ClInclude Include="include\systems\AnimationSystem.h" />
     <ClInclude Include="include\assets\GeometryUtils.h" />
     <ClInclude Include="include\ecs\IComponentArray.h" />
     <ClInclude Include="include\ecs\IECSystem.h" />

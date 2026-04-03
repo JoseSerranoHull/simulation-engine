@@ -140,6 +140,7 @@ public:
 
     const glm::vec3& getFront() const { return Front; }
     float getZoom() const { return Zoom; }
+    void setZoom(float z) { Zoom = z; }
 
     float getMovementSpeed() const { return MovementSpeed; }
     void setMovementSpeed(float speed) { MovementSpeed = speed; }
@@ -169,8 +170,7 @@ public:
     glm::mat4 getProjectionMatrix(float aspect, float nearP = 0.1f, float farP = 100.0f) const {
         if (m_mode == ProjectionMode::ORTHOGRAPHIC) {
             // 'Zoom' acts as the vertical half-extent for the ortho box
-            // A value of 5.0f is a good default for your scene scale
-            float size = 5.0f;
+            float size = Zoom;
             return glm::ortho(-size * aspect, size * aspect, -size, size, nearP, farP);
         }
 

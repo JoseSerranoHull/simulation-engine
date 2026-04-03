@@ -84,6 +84,17 @@ namespace GE::Components {
         float offset{ 0.0f };
     };
 
+    struct CapsuleCollider {
+        float radius    { 0.5f };
+        float height    { 1.0f };   // cylindrical body height (not total capsule height)
+        bool  isTrigger { false };
+    };
+
+    enum class OwnerType : uint8_t { ONE = 0, TWO = 1, THREE = 2, FOUR = 3, NONE = 255 };
+    struct OwnerComponent {
+        OwnerType owner { OwnerType::NONE };
+    };
+
     // --- 2D Physics (Lab Requirement) ---
     struct RigidBody2D {
         glm::vec2 velocity{ 0.0f };

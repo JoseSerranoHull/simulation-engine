@@ -15,6 +15,7 @@ namespace Simulation {
     struct Camera;
     struct Object;
     struct Material;
+    struct MaterialInteraction;
 }
 
 namespace GE::ECS  { using EntityID = uint32_t; }
@@ -50,18 +51,21 @@ namespace GE::Scene::FB {
         std::string              m_sceneName;
 
         // --- Per-element adapters ---
-        void adaptCameras  (FBSceneContext& ctx) const;
-        void adaptMaterials(FBSceneContext& ctx) const;
-        void adaptObjects  (FBSceneContext& ctx) const;
+        void adaptCameras     (FBSceneContext& ctx) const;
+        void adaptMaterials   (FBSceneContext& ctx) const;
+        void adaptObjects     (FBSceneContext& ctx) const;
+        void adaptInteractions(FBSceneContext& ctx) const;
+        void adaptSpawners    (FBSceneContext& ctx) const;
 
-        void adaptObject  (const Simulation::Object*   obj, FBSceneContext& ctx) const;
-        void adaptShape   (const Simulation::Object*   obj, GE::ECS::EntityID id,
-                           const glm::vec3& color, bool isContainer,
-                           FBSceneContext& ctx) const;
-        void adaptBehaviour(const Simulation::Object*  obj, GE::ECS::EntityID id,
-                           FBSceneContext& ctx) const;
-        void adaptCamera  (const Simulation::Camera*   cam, FBSceneContext& ctx) const;
-        void adaptMaterial(const Simulation::Material* mat, FBSceneContext& ctx) const;
+        void adaptObject     (const Simulation::Object*              obj, FBSceneContext& ctx) const;
+        void adaptShape      (const Simulation::Object*              obj, GE::ECS::EntityID id,
+                              const glm::vec3& color, bool isContainer,
+                              FBSceneContext& ctx) const;
+        void adaptBehaviour  (const Simulation::Object*              obj, GE::ECS::EntityID id,
+                              FBSceneContext& ctx) const;
+        void adaptCamera     (const Simulation::Camera*              cam, FBSceneContext& ctx) const;
+        void adaptMaterial   (const Simulation::Material*            mat, FBSceneContext& ctx) const;
+        void adaptInteraction(const Simulation::MaterialInteraction* mi,  FBSceneContext& ctx) const;
 
         glm::vec3 resolveColor(const Simulation::Object* obj,
                                const FBSceneContext& ctx) const;

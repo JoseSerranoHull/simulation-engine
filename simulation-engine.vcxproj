@@ -162,9 +162,11 @@
     <ClCompile Include="source\assets\Mesh.cpp" />
     <ClCompile Include="source\assets\Model.cpp" />
     <ClCompile Include="source\particles\GpuParticleBackend.cpp" />
+    <ClCompile Include="source\systems\AnimationSystem.cpp" />
     <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp" />
     <ClCompile Include="source\systems\PhysicsSystem.cpp" />
     <ClCompile Include="source\systems\ScriptSystem.cpp" />
+    <ClCompile Include="source\systems\SpawnerSystem.cpp" />
     <ClCompile Include="source\systems\SpringSystem.cpp" />
     <ClCompile Include="source\scripts\GameScriptComponent.cpp" />
     <ClCompile Include="source\lighting\PointLightSource.cpp" />
@@ -283,6 +285,7 @@
     <ClInclude Include="include\scene\EntityFactory.h" />
     <ClInclude Include="include\ecs\EntityManager.h" />
     <ClInclude Include="include\core\EngineOrchestrator.h" />
+    <ClInclude Include="include\core\SimulationState.h" />
     <ClInclude Include="include\scene\GenericScenario.h" />
     <ClInclude Include="include\scene\FlatBuffersLoader.h" />
     <ClInclude Include="include\scene\FlatBuffersScenario.h" />
@@ -316,6 +319,7 @@
     <ClInclude Include="include\components\PhysicsComponents.h" />
     <ClInclude Include="include\systems\ColliderVisualizerSystem.h" />
     <ClInclude Include="include\systems\PhysicsSystem.h" />
+    <ClInclude Include="include\systems\SpawnerSystem.h" />
     <ClInclude Include="include\systems\SpringSystem.h" />
     <ClInclude Include="include\graphics\GraphicsPipeline.h" />
     <ClInclude Include="include\physics\Plane.h" />

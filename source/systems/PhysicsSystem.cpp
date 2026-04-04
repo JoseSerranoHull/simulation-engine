@@ -1,6 +1,7 @@
 #include "systems/PhysicsSystem.h"
 #include "core/ServiceLocator.h"
 #include "components/PhysicsComponents.h"
+#include "components/AnimationComponents.h"
 #include "physics/Sphere.h"
 #include "physics/Plane.h"
 #include "components/Transform.h"
@@ -238,9 +239,35 @@ namespace GE::Systems {
 
                     // 2. Velocity reflection with restitution (Q5: override if active)
                     if (sRB) {
-                        const float e = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : sRB->restitution;
+                        float e = sRB->restitution;
+                        const auto pID = planeArray.Index()[pIdx];
+                        if (m_restitutionOverride >= 0.0f) {
+                            e = m_restitutionOverride;
+                        } else if (m_registry) {
+                            const auto* matS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                            const auto* matP = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(pID);
+                            if (matS && matP) {
+                                GE::Physics::MaterialInteractionRecord rec;
+                                if (m_registry->Lookup(matS->name, matP->name, rec)) { e = rec.restitution; }
+                            }
+                        }
+
+                        // Kinematic animated plane: compute its velocity from prevPosition
+                        glm::vec3 planeVel{ 0.0f };
+                        const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
+                        const auto* aoc   = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
+                        if (aoc && pTrans && m_lastDt > 1e-6f) {
+                            planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                        }
+
                         const glm::vec3& pn = plane.GetNormal();
-                        sRB->velocity -= (1.0f + e) * glm::dot(sRB->velocity, pn) * pn;
+                        // Relative velocity of sphere w.r.t. plane surface
+                        const glm::vec3 relVel = sRB->velocity - planeVel;
+                        const float     vRelN  = glm::dot(relVel, pn);
+                        // Only resolve if approaching
+                        if (vRelN < 0.0f) {
+                            sRB->velocity -= (1.0f + e) * vRelN * pn;
+                        }
 
                         // Kill micro-velocities to prevent jitter at rest
                         if (glm::length(sRB->velocity) < 0.05f) {
@@ -301,37 +328,64 @@ namespace GE::Systems {
                     m_currentContactInfos[pair] = info;
                 }
 
-                const float invMassA = (aRB && !aRB->isStatic) ? aRB->inverseMass : 0.0f;
-                const float invMassB = (bRB && !bRB->isStatic) ? bRB->inverseMass : 0.0f;
+                // Animated objects are kinematic: infinite effective mass, velocity from prevPosition
+                const auto* aAOC = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(aID);
+                const auto* bAOC = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(bID);
+                const bool aIsAnimated = (aAOC != nullptr);
+                const bool bIsAnimated = (bAOC != nullptr);
+
+                const float invMassA = (aRB && !aRB->isStatic && !aIsAnimated) ? aRB->inverseMass : 0.0f;
+                const float invMassB = (bRB && !bRB->isStatic && !bIsAnimated) ? bRB->inverseMass : 0.0f;
                 const float totalInvMass = invMassA + invMassB;
 
                 // 1. Positional correction — proportional to inverse mass
                 if (totalInvMass > 0.0f) {
                     const glm::vec3 correction = (penetration / totalInvMass) * n;
-                    if (aRB && !aRB->isStatic) aTrans->m_position += correction * invMassA;
-                    if (bRB && !bRB->isStatic) bTrans->m_position -= correction * invMassB;
+                    if (aRB && !aRB->isStatic && !aIsAnimated) aTrans->m_position += correction * invMassA;
+                    if (bRB && !bRB->isStatic && !bIsAnimated) bTrans->m_position -= correction * invMassB;
                 }
 
                 // 2. Impulse response — general formula:  j = -(1+e)*vRel / (1/mA + 1/mB)
+                // Animated spheres contribute their kinematic velocity to the relative velocity calc
+                // but do NOT receive an impulse (invMass is 0 for them).
                 // Q5: restitutionOverride replaces per-body values when active.
                 // Q4: force-based mode converts impulse J to force F=J/dt for next Integrate().
-                if (aRB && bRB && totalInvMass > 0.0f) {
-                    const float vRel = glm::dot(aRB->velocity - bRB->velocity, n);
+                if (totalInvMass > 0.0f) {
+                    // Determine effective velocities for relative velocity calculation
+                    glm::vec3 velA = aRB ? aRB->velocity : glm::vec3{ 0.0f };
+                    glm::vec3 velB = bRB ? bRB->velocity : glm::vec3{ 0.0f };
+                    if (aIsAnimated && m_lastDt > 1e-6f) {
+                        velA = (aTrans->m_position - aAOC->prevPosition) / m_lastDt;
+                    }
+                    if (bIsAnimated && m_lastDt > 1e-6f) {
+                        velB = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                    }
+
+                    const float vRel = glm::dot(velA - velB, n);
                     if (vRel < 0.0f) {  // Only resolve if objects are approaching
-                        const float eA = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : aRB->restitution;
-                        const float eB = (m_restitutionOverride >= 0.0f) ? m_restitutionOverride : bRB->restitution;
-                        const float e  = glm::min(eA, eB);
-                        const float j  = -(1.0f + e) * vRel / totalInvMass;
+                        float e = glm::min(
+                            aRB ? aRB->restitution : 0.6f,
+                            bRB ? bRB->restitution : 0.6f);
+                        if (m_restitutionOverride >= 0.0f) {
+                            e = m_restitutionOverride;
+                        } else if (m_registry) {
+                            const auto* matA = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(aID);
+                            const auto* matB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                            if (matA && matB) {
+                                GE::Physics::MaterialInteractionRecord rec;
+                                if (m_registry->Lookup(matA->name, matB->name, rec)) { e = rec.restitution; }
+                            }
+                        }
+                        const float j = -(1.0f + e) * vRel / totalInvMass;
 
                         if (m_useForceBasedImpulse && m_lastDt > 1e-6f) {
                             // Q4: convert impulse to force F = J/dt; applied on the next Integrate() call.
-                            // One-frame delay is the intended observable consequence of this approach.
-                            if (!aRB->isStatic) aRB->forceAccum += (j * invMassA / m_lastDt) * n;
-                            if (!bRB->isStatic) bRB->forceAccum -= (j * invMassB / m_lastDt) * n;
+                            if (aRB && !aRB->isStatic && !aIsAnimated) aRB->forceAccum += (j * invMassA / m_lastDt) * n;
+                            if (bRB && !bRB->isStatic && !bIsAnimated) bRB->forceAccum -= (j * invMassB / m_lastDt) * n;
                         } else {
                             // Default: apply velocity change directly this frame.
-                            if (!aRB->isStatic) aRB->velocity += j * invMassA * n;
-                            if (!bRB->isStatic) bRB->velocity -= j * invMassB * n;
+                            if (aRB && !aRB->isStatic && !aIsAnimated) aRB->velocity += j * invMassA * n;
+                            if (bRB && !bRB->isStatic && !bIsAnimated) bRB->velocity -= j * invMassB * n;
                         }
                     }
                 }

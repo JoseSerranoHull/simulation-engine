@@ -1,4 +1,21 @@
-﻿#include "core/EngineOrchestrator.h"
+﻿// Pull in only the Win32 threading API (SetThreadAffinityMask, GetCurrentThread).
+// NOGDI: prevents wingdi.h from #define-ing DEFAULT_PITCH, FIXED_PITCH etc.
+//        which would clash with Camera.h's static constexpr members.
+// NOMINMAX: prevents min/max macro conflicts with std::min / std::max.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOGDI
+#define NOGDI
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+/* parasoft-begin-suppress ALL */
+#include <windows.h>
+/* parasoft-end-suppress ALL */
+
+#include "core/EngineOrchestrator.h"
 #include "scene/GenericScenario.h"
 #include "scene/FlatBuffersScenario.h"
 #include "components/PhysicsComponents.h"
@@ -149,20 +166,59 @@ void EngineOrchestrator::initVulkan() {
 }
 
 /**
- * @brief Enters the main execution loop.
+ * @brief Enters the multi-threaded execution loop.
+ *
+ * Thread map (0-indexed cores):
+ *   Core 0 (0x01) — main thread: GLFW poll + Vulkan render + ImGui
+ *   Core 1 (0x02) — networking placeholder (Session 4 will fill this in)
+ *   Core 3 (0x08) — physics: fixed-timestep accumulator + SimulationState writes
  */
 void EngineOrchestrator::run() {
-    while (glfwWindowShouldClose(window) == GLFW_FALSE) {
-        // Step 1: Poll OS Events
-        glfwPollEvents();
+    // --- Spawn physics thread (Core 4, affinity bit 3) ---
+    m_physicsThread = std::jthread([this](std::stop_token st) { runPhysicsLoop(st); });
+    SetThreadAffinityMask(
+        reinterpret_cast<HANDLE>(m_physicsThread.native_handle()), 0x08);
 
-        // Step 2: Update simulation timers and telemetry
+    // --- Spawn networking placeholder thread (Cores 2-3, bits 1-2) ---
+    m_networkingThread = std::jthread([](std::stop_token st) {
+        while (!st.stop_requested()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    });
+    SetThreadAffinityMask(
+        reinterpret_cast<HANDLE>(m_networkingThread.native_handle()), 0x06);
+
+    // --- Pin main thread to Core 1 (bit 0) ---
+    SetThreadAffinityMask(GetCurrentThread(), 0x01);
+
+    using Clock = std::chrono::steady_clock;
+    auto frameStart = Clock::now();
+
+    // --- Graphics loop ---
+    while (glfwWindowShouldClose(window) == GLFW_FALSE) {
+        glfwPollEvents();
         timeManager->update();
         statsManager->update(timeManager->getDelta());
-
-        // Step 3: Record and submit frame
         drawFrame();
+
+        // Cap graphics frame rate to m_graphicsHz (0 = uncapped)
+        if (m_graphicsHz > 0.0f) {
+            const auto frameBudget =
+                std::chrono::duration_cast<Clock::duration>(
+                    std::chrono::duration<float>(1.0f / m_graphicsHz));
+            const auto elapsed = Clock::now() - frameStart;
+            if (elapsed < frameBudget) {
+                std::this_thread::sleep_for(frameBudget - elapsed);
+            }
+        }
+        frameStart = Clock::now();
     }
+
+    // Stop background threads before GPU teardown
+    m_physicsThread.request_stop();
+    m_networkingThread.request_stop();
+    m_physicsThread.join();
+    m_networkingThread.join();
 
     // Ensure GPU is idle before resource teardown
     if ((context != nullptr) && (context->device != VK_NULL_HANDLE)) {
@@ -182,9 +238,10 @@ void EngineOrchestrator::drawFrame() {
     VulkanContext* const ctx = ServiceLocator::GetContext();
 
     if (!m_pendingScenarioPath.empty()) {
+        // Block the physics thread while we tear down and rebuild the scenario.
+        std::unique_lock<std::mutex> sceneLock(m_simMutex);
         vkDeviceWaitIdle(ctx->device);
 
-        // Use a local copy to avoid issues during the change
         std::string path = m_pendingScenarioPath;
         m_pendingScenarioPath = "";
 
@@ -194,7 +251,7 @@ void EngineOrchestrator::drawFrame() {
             ? std::unique_ptr<GE::Scenario>(std::make_unique<GE::FlatBuffersScenario>(path))
             : std::unique_ptr<GE::Scenario>(std::make_unique<GE::GenericScenario>(path)));
 
-        // CRITICAL: We MUST return here to ensure we don't proceed to draw 
+        // CRITICAL: We MUST return here to ensure we don't proceed to draw
         // with empty registries or stale command buffers!
         return;
     }
@@ -253,73 +310,93 @@ void EngineOrchestrator::drawFrame() {
     const VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     static_cast<void>(vkBeginCommandBuffer(cb, &beginInfo)); // <--- BUFFER IS NOW OPEN
 
-    // CRITICAL FIX: Trigger ECS Systems that record GPU commands (Particles)
-    // only while the buffer is in the 'Recording' state.
-    if (activeScenario && !activeScenario->IsPaused()) {
-        // Spring forces must be accumulated BEFORE PhysicsSystem integrates them.
-        m_springSystem->OnUpdate(scaledDelta);
-        // This triggers ParticleEmitterSystem::OnUpdate which now has a valid 'cb'.
-        em->Update(scaledDelta, cb);
-    }
+    // --- Thread-safe ECS update ---
+    // The physics thread owns CPU-stage ECS updates (via runPhysicsLoop).
+    // The main thread holds m_simMutex here so that:
+    //   a) We apply the latest physics snapshot to ECS Transform world matrices.
+    //   b) We run GPU-stage systems (particles) and record render commands while
+    //      the physics thread cannot concurrently modify the component arrays.
+    {
+        std::lock_guard<std::mutex> lock(m_simMutex);
 
-    // Collect scenario-scoped material pipelines for this frame
-    std::vector<GraphicsPipeline*> rawPipelines;
-    if (activeScenario) {
-        for (const auto& p : activeScenario->GetPipelines()) {
-            rawPipelines.push_back(p.get());
+        // a) Apply the physics snapshot → ECS Transform (so the renderer reads
+        //    consistent world matrices produced by the last completed physics tick).
+        {
+            const int frontIdx = m_frontSimIdx.load(std::memory_order_acquire);
+            std::lock_guard<std::mutex> snapLock(m_simBuffers[frontIdx].mutex);
+            for (const auto& snap : m_simBuffers[frontIdx].snapshots) {
+                auto* tr = em->GetTIComponent<GE::Components::Transform>(snap.id);
+                if (tr != nullptr) {
+                    tr->m_worldMatrix = snap.worldMatrix;
+                }
+            }
         }
-    }
 
-    // Extract per-scenario rendering overrides.
-    const glm::vec4 clearColor = activeScenario
-        ? activeScenario->GetClearColor()
-        : glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
+        // b) GPU-stage systems (ParticleEmitterSystem) need the live command buffer.
+        if (activeScenario && !activeScenario->IsPaused()) {
+            em->UpdateGpuStages(scaledDelta, cb);
+        }
 
-    const GE::Graphics::GraphicsPipeline* checkerPipeline = activeScenario
-        ? activeScenario->GetCheckerboardPipeline() : nullptr;
-    const void*  checkerPushData = activeScenario
-        ? activeScenario->GetCheckerboardPushData() : nullptr;
-    const uint32_t checkerPushSize = activeScenario
-        ? activeScenario->GetCheckerboardPushDataSize() : 0U;
+        // Collect scenario-scoped material pipelines for this frame
+        std::vector<GraphicsPipeline*> rawPipelines;
+        if (activeScenario) {
+            for (const auto& p : activeScenario->GetPipelines()) {
+                rawPipelines.push_back(p.get());
+            }
+        }
 
-    const GE::Graphics::GraphicsPipeline* wirePipeline = activeScenario
-        ? activeScenario->GetWirePipeline() : nullptr;
-    GE::Systems::ColliderVisualizerSystem* visualizer = activeScenario
-        ? activeScenario->GetVisualizerSystem() : nullptr;
+        // Extract per-scenario rendering overrides.
+        const glm::vec4 clearColor = activeScenario
+            ? activeScenario->GetClearColor()
+            : glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
 
-    // Record Draw Calls: Renderer queries ECS for meshes/particles
-    renderer->recordFrame(
-        cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
-        em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
-        resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
-        rawPipelines, m_shadowPipeline.get(),
-        clearColor, checkerPipeline, checkerPushData, checkerPushSize,
-        wirePipeline, visualizer
-    );
+        const GE::Graphics::GraphicsPipeline* checkerPipeline = activeScenario
+            ? activeScenario->GetCheckerboardPipeline() : nullptr;
+        const void*  checkerPushData = activeScenario
+            ? activeScenario->GetCheckerboardPushData() : nullptr;
+        const uint32_t checkerPushSize = activeScenario
+            ? activeScenario->GetCheckerboardPushDataSize() : 0U;
 
-    // --- Step 5: UI & Final Render Pass ---
-    VkRenderPassBeginInfo finalPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-    finalPassInfo.renderPass = vulkanEngine->getFinalRenderPass();
-    finalPassInfo.framebuffer = vulkanEngine->getFramebuffer(imageIndex);
-    finalPassInfo.renderArea.extent = vulkanEngine->getSwapChainExtent();
+        const GE::Graphics::GraphicsPipeline* wirePipeline = activeScenario
+            ? activeScenario->GetWirePipeline() : nullptr;
+        GE::Systems::ColliderVisualizerSystem* visualizer = activeScenario
+            ? activeScenario->GetVisualizerSystem() : nullptr;
 
-    std::array<VkClearValue, 2U> clearValues{};
-    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-    clearValues[1].depthStencil = { 1.0f, 0U };
-    finalPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    finalPassInfo.pClearValues = clearValues.data();
+        // c) Record Draw Calls: Renderer queries ECS for meshes (reads Transform world matrices).
+        //    Must remain inside the mutex so physics cannot race-write those fields.
+        renderer->recordFrame(
+            cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
+            em, postProcessor.get(), resources->getDescriptorSet(imageIndex),
+            resources->getShadowRenderPass(), resources->getShadowFramebuffer(),
+            rawPipelines, m_shadowPipeline.get(),
+            clearColor, checkerPipeline, checkerPushData, checkerPushSize,
+            wirePipeline, visualizer
+        );
 
-    vkCmdBeginRenderPass(cb, &finalPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        // --- Step 5: UI & Final Render Pass ---
+        VkRenderPassBeginInfo finalPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        finalPassInfo.renderPass = vulkanEngine->getFinalRenderPass();
+        finalPassInfo.framebuffer = vulkanEngine->getFramebuffer(imageIndex);
+        finalPassInfo.renderArea.extent = vulkanEngine->getSwapChainExtent();
 
-    if (postProcessor != nullptr) {
-        postProcessor->draw(cb, inputManager->getBloomEnabled());
-    }
+        std::array<VkClearValue, 2U> clearValues{};
+        clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+        clearValues[1].depthStencil = { 1.0f, 0U };
+        finalPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        finalPassInfo.pClearValues = clearValues.data();
 
-    uiManager->update(inputManager.get(), statsManager.get(), nullptr, timeManager.get(), climateManager.get());
-    uiManager->draw(cb);
+        vkCmdBeginRenderPass(cb, &finalPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdEndRenderPass(cb);
-    static_cast<void>(vkEndCommandBuffer(cb)); // <--- BUFFER IS NOW CLOSED
+        if (postProcessor != nullptr) {
+            postProcessor->draw(cb, inputManager->getBloomEnabled());
+        }
+
+        uiManager->update(inputManager.get(), statsManager.get(), nullptr, timeManager.get(), climateManager.get());
+        uiManager->draw(cb);
+
+        vkCmdEndRenderPass(cb);
+        static_cast<void>(vkEndCommandBuffer(cb)); // <--- BUFFER IS NOW CLOSED
+    } // releases m_simMutex — physics thread may resume
 
     // --- Step 6: Submission & Presentation ---
     VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -467,8 +544,9 @@ void EngineOrchestrator::changeScenario(std::unique_ptr<GE::Scenario> newScenari
  */
 void EngineOrchestrator::stepSimulation(float fixedStep) {
     if (activeScenario && activeScenario->IsPaused()) {
-        // Fix: Pass VK_NULL_HANDLE because there is no active frame buffer during a manual step
-        entityManager->Update(fixedStep, VK_NULL_HANDLE);
+        // Run only CPU-stage systems; GPU systems (particles) require a live command buffer.
+        m_springSystem->OnUpdate(fixedStep);
+        entityManager->UpdateCpuStages(fixedStep);
         activeScenario->OnUpdate(fixedStep, timeManager->getTotal());
 
         GE_LOG_INFO("EngineOrchestrator: Manual simulation step performed.");
@@ -578,7 +656,93 @@ void EngineOrchestrator::mouseCallback(GLFWwindow* pWindow, double xpos, double 
 }
 
 // ========================================================================
-// SECTION 8: GRAPHICS & ASSET HELPERS
+// SECTION 8: PHYSICS THREAD
+// ========================================================================
+
+/**
+ * @brief Physics thread body — fixed-timestep accumulator.
+ *
+ * Runs on Core 4 (affinity set in run()).  Each tick:
+ *   1. Holds m_simMutex to prevent concurrent ECS access from the render thread.
+ *   2. Runs SpringSystem then all CPU-stage ECS systems (Animation, Physics, Transform, etc.).
+ *   3. Copies resulting Transform world-matrices into the SimulationState back buffer.
+ *   4. Atomically publishes the new front index so the render thread sees a
+ *      complete, consistent snapshot next frame.
+ */
+void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
+    using Clock    = std::chrono::steady_clock;
+    using FloatSec = std::chrono::duration<float>;
+
+    auto   prevTime     = Clock::now();
+    float  accumulator  = 0.0f;
+
+    while (!st.stop_requested()) {
+        const auto  now    = Clock::now();
+        const float realDt = std::chrono::duration_cast<FloatSec>(now - prevTime).count();
+        prevTime = now;
+
+        // Guard against spiral-of-death on hitches (clamp to 4 missed ticks)
+        const float clampedDt  = std::min(realDt, 4.0f / m_physicsHz);
+        accumulator += clampedDt;
+
+        // Read Hz once per outer loop iteration so ImGui changes take effect next cycle
+        const float fixedDt = 1.0f / std::max(m_physicsHz, 1.0f);
+
+        while (accumulator >= fixedDt) {
+            // Skip if no scenario or scenario is paused
+            if ((activeScenario == nullptr) || activeScenario->IsPaused()) {
+                accumulator = 0.0f;
+                break;
+            }
+
+            auto* const em = entityManager.get();
+
+            {
+                std::lock_guard<std::mutex> lock(m_simMutex);
+
+                // 1. Spring forces must be accumulated before PhysicsSystem integrates.
+                m_springSystem->OnUpdate(fixedDt);
+
+                // 2. CPU-stage ECS systems: TransformSystem, AnimationSystem,
+                //    PhysicsSystem, SpawnerSystem, etc.
+                em->UpdateCpuStages(fixedDt);
+
+                // 3. Copy all Transform world-matrices to the SimulationState back buffer.
+                const int backIdx = 1 - m_frontSimIdx.load(std::memory_order_relaxed);
+                {
+                    std::lock_guard<std::mutex> snapLock(m_simBuffers[backIdx].mutex);
+                    auto& transforms = em->GetCompArr<GE::Components::Transform>();
+                    const uint32_t count = transforms.GetCount();
+                    m_simBuffers[backIdx].snapshots.resize(count);
+                    for (uint32_t i = 0U; i < count; ++i) {
+                        m_simBuffers[backIdx].snapshots[i] = {
+                            transforms.Index()[i],
+                            transforms.Data()[i].m_worldMatrix
+                        };
+                    }
+                }
+
+                // 4. Atomically publish the new front (release so render thread
+                //    sees fully written snapshot data).
+                m_frontSimIdx.store(backIdx, std::memory_order_release);
+            }
+
+            accumulator -= fixedDt;
+        }
+
+        // Sleep for the remainder of the fixed step to avoid busy-spinning.
+        const auto tickEnd    = Clock::now();
+        const auto tickElapsed = tickEnd - prevTime;
+        const auto tickBudget  =
+            std::chrono::duration_cast<Clock::duration>(FloatSec(fixedDt));
+        if (tickElapsed < tickBudget) {
+            std::this_thread::sleep_for(tickBudget - tickElapsed);
+        }
+    }
+}
+
+// ========================================================================
+// SECTION 9: GRAPHICS & ASSET HELPERS
 // ========================================================================
 
 /**

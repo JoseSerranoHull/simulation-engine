@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 /* parasoft-end-suppress ALL */
 
+#include "components/AnimationComponents.h"  // SpawnLocType, EntityID
+
 // Forward declarations to avoid pulling in heavy headers
 namespace GE::ECS    { class EntityManager; }
 namespace GE::Scene  { class Scene; }
@@ -21,6 +23,42 @@ namespace GE::Scene::FB {
     struct PhysicsMaterialRecord {
         std::string name;
         float       density { 1.0f };
+    };
+
+    /** @brief Interaction parameters for a material pair, extracted from FlatBuffers MaterialInteraction table. */
+    struct MaterialInteractionRecord {
+        std::string materialA;
+        std::string materialB;
+        float restitution     { 0.6f };
+        float staticFriction  { 0.0f };
+        float dynamicFriction { 0.0f };
+    };
+
+    /**
+     * @brief Intermediate record for one spawner entry, populated by adaptSpawners().
+     *        Entity IDs are pre-created at load time; SpawnerSystem activates them at runtime.
+     */
+    struct SpawnerRecord {
+        std::string name;
+        float    startTime  { 0.0f };
+        bool     isBurst    { true };
+        uint32_t maxCount   { 1 };
+        float    interval   { 1.0f };
+
+        // Location
+        GE::Components::SpawnLocType locationType { GE::Components::SpawnLocType::FIXED };
+        glm::vec3 fixedPos     { 0.0f };
+        glm::vec3 boxMin       { -1.0f };
+        glm::vec3 boxMax       {  1.0f };
+        glm::vec3 sphereCenter {  0.0f };
+        float     sphereRadius { 1.0f };
+
+        // Velocity ranges
+        glm::vec3 linVelMin { 0.0f }, linVelMax { 0.0f };
+        glm::vec3 angVelMin { 0.0f }, angVelMax { 0.0f };
+
+        // Pre-created entity IDs (in activation order, SEQUENTIAL cycling already applied)
+        std::vector<GE::ECS::EntityID> entityIds;
     };
 
     /**
@@ -57,8 +95,10 @@ namespace GE::Scene::FB {
         bool useOwnerColors { true };
 
         // --- Output collections (populated by adapt*() calls) ---
-        std::vector<PhysicsMaterialRecord> physicsMaterials;
-        std::vector<FBCameraRecord>        cameras;
+        std::vector<PhysicsMaterialRecord>    physicsMaterials;
+        std::vector<FBCameraRecord>           cameras;
+        std::vector<MaterialInteractionRecord> interactions;
+        std::vector<SpawnerRecord>            spawners;
 
         // Owner color palette: ONE=red, TWO=green, THREE=blue, FOUR=yellow
         static constexpr std::array<glm::vec3, 4> ownerColors = {{

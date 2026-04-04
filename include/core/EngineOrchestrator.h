@@ -5,6 +5,10 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <chrono>
 /* parasoft-end-suppress ALL */
 
 // Core Module Includes
@@ -34,6 +38,7 @@
 #include "systems/EngineServiceRegistry.h"
 #include "systems/SpringSystem.h"
 #include "graphics/GpuResourceManager.h"
+#include "core/SimulationState.h"
 
 /**
  * @class EngineOrchestrator
@@ -97,6 +102,10 @@ public:
     /** @brief Requests a scenario transition to be performed at the start of the next frame. */
     void requestScenarioChange(const std::string& path) { m_pendingScenarioPath = path; }
 
+    // --- Thread Frequency Controls (read/written by ImGui on main thread) ---
+    float m_physicsHz  { 120.0f };  ///< Physics fixed-step rate (1–2000 Hz)
+    float m_graphicsHz {  60.0f };  ///< Graphics frame-cap (0 = uncapped)
+
 private:
     // --- Windowing & Core Infrastructure ---
     GLFWwindow* window;
@@ -145,9 +154,25 @@ private:
     uint32_t currentFrame;
     std::string m_pendingScenarioPath = ""; // Stores the path for the next frame
 
+    // --- Thread Architecture (Stage 2.2) ---
+    /// Double-buffered physics snapshot: physics writes back, renderer reads front.
+    GE::SimulationState m_simBuffers[2];
+    /// Atomic index indicating which SimulationState is the current "front" (renderer reads it).
+    std::atomic<int> m_frontSimIdx { 0 };
+    /// Serialises ECS access: physics tick vs. render command recording.
+    std::mutex       m_simMutex;
+    /// Physics thread: fixed-step accumulator, pinned to Core 4.
+    std::jthread     m_physicsThread;
+    /// Networking placeholder thread, pinned to Cores 2–3.
+    std::jthread     m_networkingThread;
+
     // --- Internal Initialization Helpers ---
     void initWindow(char const* const title);
     void initVulkan();
+
+    // --- Thread Entry Points ---
+    /** @brief Physics thread body: fixed-step accumulator + SimulationState double-buffer. */
+    void runPhysicsLoop(std::stop_token st);
     // void loadAssets(); Due to now being agnostic, the assets are loaded in the SceneLoader
     void initSkybox();
 

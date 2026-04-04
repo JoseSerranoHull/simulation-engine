@@ -2,6 +2,7 @@
 #include "ecs/IECSystem.h"
 #include "ecs/EntityManager.h"
 #include "components/PhysicsComponents.h"
+#include "physics/MaterialInteractionRegistry.h"
 #include "scripts/CollisionInfo.h"
 #include <glm/glm.hpp>
 
@@ -51,6 +52,10 @@ namespace GE::Systems {
         /** Q5: When >= 0.0f, overrides every body's restitution during collision resolution. -1 = disabled. */
         float m_restitutionOverride{ -1.0f };
 
+        /** Provides per-material-pair restitution. When set, used in ResolveCollisions() before falling back
+         *  to rb.restitution. Non-owning pointer; lifetime managed by FlatBuffersScenario. */
+        void SetRegistry(const GE::Physics::MaterialInteractionRegistry* reg) { m_registry = reg; }
+
         /** Apply a force at a point relative to the centre of mass.
          *  Adds force to forceAccum (linear) and r×F to torqueAccum (angular). */
         static void ApplyForceAtPoint(GE::Components::RigidBody& rb,
@@ -73,6 +78,9 @@ namespace GE::Systems {
     private:
         /** Cached dt from Integrate(); used by force-based impulse branch in ResolveCollisions(). */
         float m_lastDt{ 0.016f };
+
+        /** Non-owning pointer to the scene's MaterialInteractionRegistry. May be nullptr. */
+        const GE::Physics::MaterialInteractionRegistry* m_registry{ nullptr };
         /** @brief Internal derivative state used by the RK4 integrator. */
         struct Derivative { glm::vec3 dPos{ 0.0f }; glm::vec3 dVel{ 0.0f }; };
 

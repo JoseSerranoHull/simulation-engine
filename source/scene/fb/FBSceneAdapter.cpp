@@ -1,10 +1,15 @@
 /* parasoft-begin-suppress ALL */
 #include <fstream>
+#include <random>
 #include <string>
 /* parasoft-end-suppress ALL */
 
 #include "scene/fb/FBSceneAdapter.h"
 #include "Scene_generated.h"        // flatc-generated from flatbuffers/Scene.fbs
+
+/* parasoft-begin-suppress ALL */
+#include <glm/gtc/constants.hpp>   // glm::pi<float>()
+/* parasoft-end-suppress ALL */
 
 // Engine ECS & component headers
 #include "ecs/EntityManager.h"
@@ -77,10 +82,12 @@ void FBSceneAdapter::adaptToECS(FBSceneContext& ctx) {
     if (m_scene == nullptr) { return; }
 
     // Order matters: materials must be available when adaptObjects() looks them up
-    if (m_scene->cameras()   != nullptr) { adaptCameras(ctx);   }
-    if (m_scene->materials() != nullptr) { adaptMaterials(ctx); }
-    if (m_scene->objects()   != nullptr) { adaptObjects(ctx);   }
-    // Spawners: deferred to a future iteration
+    if (m_scene->cameras()      != nullptr) { adaptCameras(ctx);      }
+    if (m_scene->materials()    != nullptr) { adaptMaterials(ctx);    }
+    if (m_scene->interactions() != nullptr) { adaptInteractions(ctx); }
+    if (m_scene->objects()      != nullptr) { adaptObjects(ctx);      }
+    if (m_scene->spawners()     != nullptr &&
+        m_scene->spawners_type() != nullptr) { adaptSpawners(ctx);    }
 }
 
 // ===========================================================================
@@ -149,7 +156,29 @@ void FBSceneAdapter::adaptMaterial(const Simulation::Material* mat, FBSceneConte
 }
 
 // ===========================================================================
-// SECTION 5: adaptObjects()
+// SECTION 5: adaptInteractions()
+// ===========================================================================
+
+void FBSceneAdapter::adaptInteractions(FBSceneContext& ctx) const {
+    for (const auto* mi : *m_scene->interactions()) {
+        if (mi != nullptr) { adaptInteraction(mi, ctx); }
+    }
+}
+
+void FBSceneAdapter::adaptInteraction(const Simulation::MaterialInteraction* mi,
+                                       FBSceneContext& ctx) const
+{
+    MaterialInteractionRecord rec;
+    rec.materialA     = (mi->material_a() != nullptr) ? mi->material_a()->str() : "";
+    rec.materialB     = (mi->material_b() != nullptr) ? mi->material_b()->str() : "";
+    rec.restitution   = mi->restitution();
+    rec.staticFriction  = mi->static_friction();
+    rec.dynamicFriction = mi->dynamic_friction();
+    ctx.interactions.push_back(rec);
+}
+
+// ===========================================================================
+// SECTION 6: adaptObjects()
 // ===========================================================================
 
 void FBSceneAdapter::adaptObjects(FBSceneContext& ctx) const {
@@ -315,13 +344,109 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
     case Simulation::Behaviour::SimulatedObject: {
         const auto* sim = obj->behaviour_as_SimulatedObject();
         GE::Components::RigidBody rb;
-        rb.isStatic   = false;
-        rb.useGravity = true;
+
+        // --- Density lookup ---
+        float density = 1.0f;
+        if (obj->material() != nullptr) {
+            const std::string matName = obj->material()->str();
+            for (const auto& rec : ctx.physicsMaterials) {
+                if (rec.name == matName) { density = rec.density; break; }
+            }
+        }
+
+        // --- Mass & inertia tensor from shape geometry ---
+        // Planes are always treated as static (infinite mass).
+        const bool isPlane = (obj->shape_type() == Simulation::Shape::Plane);
+        if (isPlane) {
+            rb.isStatic    = true;
+            rb.useGravity  = false;
+            rb.mass        = 0.0f;
+            rb.inverseMass = 0.0f;
+            rb.invInertiaTensor = glm::mat3(0.0f);
+        } else {
+            rb.isStatic   = false;
+            rb.useGravity = true;
+            float mass = 1.0f;
+            glm::mat3 invI = glm::mat3(1.0f);
+
+            const float PI = glm::pi<float>();
+
+            switch (obj->shape_type()) {
+            case Simulation::Shape::Sphere: {
+                const auto* s = obj->shape_as_Sphere();
+                const float r = (s != nullptr) ? s->radius() : 0.5f;
+                const float vol = (4.0f / 3.0f) * PI * r * r * r;
+                mass = density * vol;
+                // I = (2/5) m r²  ·  Identity  →  I⁻¹ = 5/(2mr²) · Identity
+                const float invIxx = (mass > 0.0f) ? (5.0f / (2.0f * mass * r * r)) : 0.0f;
+                invI = glm::mat3(invIxx);
+                break;
+            }
+            case Simulation::Shape::Cuboid: {
+                const auto* c = obj->shape_as_Cuboid();
+                const glm::vec3 sz = (c != nullptr && c->size() != nullptr)
+                    ? toVec3(*c->size()) : glm::vec3{ 1.0f };
+                const float w = sz.x, h = sz.y, d = sz.z;
+                const float vol = w * h * d;
+                mass = density * vol;
+                // Ix = m(h²+d²)/12, Iy = m(w²+d²)/12, Iz = m(w²+h²)/12
+                if (mass > 0.0f) {
+                    invI[0][0] = 12.0f / (mass * (h*h + d*d));
+                    invI[1][1] = 12.0f / (mass * (w*w + d*d));
+                    invI[2][2] = 12.0f / (mass * (w*w + h*h));
+                }
+                break;
+            }
+            case Simulation::Shape::Cylinder: {
+                const auto* c = obj->shape_as_Cylinder();
+                const float r = (c != nullptr) ? c->radius() : 0.5f;
+                const float ht = (c != nullptr) ? c->height() : 1.0f;
+                const float vol = PI * r * r * ht;
+                mass = density * vol;
+                // Ixx = Izz = m(3r² + h²)/12, Iyy = mr²/2
+                if (mass > 0.0f) {
+                    const float invIxz = 12.0f / (mass * (3.0f*r*r + ht*ht));
+                    const float invIy  = 2.0f  / (mass * r * r);
+                    invI[0][0] = invIxz;
+                    invI[1][1] = invIy;
+                    invI[2][2] = invIxz;
+                }
+                break;
+            }
+            case Simulation::Shape::Capsule: {
+                const auto* c = obj->shape_as_Capsule();
+                const float r  = (c != nullptr) ? c->radius() : 0.5f;
+                const float ht = (c != nullptr) ? c->height() : 1.0f;
+                // Approximate: cylinder body + full sphere (two hemispheres), additive tensors
+                const float mc = density * PI * r * r * ht;              // cylinder mass
+                const float ms = density * (4.0f / 3.0f) * PI * r * r * r;  // sphere mass
+                mass = mc + ms;
+                if (mass > 0.0f) {
+                    // Cylinder: Ixx=Izz = mc(3r²+h²)/12, Iyy = mc·r²/2
+                    // Sphere:   Iall    = (2/5)·ms·r²
+                    const float Is    = (2.0f / 5.0f) * ms * r * r;
+                    const float Icxz  = mc * (3.0f * r * r + ht * ht) / 12.0f;
+                    const float Icy   = mc * r * r * 0.5f;
+                    invI[0][0] = 1.0f / (Icxz + Is);
+                    invI[1][1] = 1.0f / (Icy  + Is);
+                    invI[2][2] = 1.0f / (Icxz + Is);
+                }
+                break;
+            }
+            default:
+                mass = density;  // Fallback: unit volume
+                break;
+            }
+
+            rb.mass        = mass;
+            rb.inverseMass = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
+            rb.invInertiaTensor = invI;
+        }
 
         if (sim != nullptr && sim->initial_state() != nullptr) {
             const auto* ps = sim->initial_state();
-            rb.velocity         = toVec3(ps->linear_velocity());
-            rb.angularVelocity  = glm::radians(toVec3(ps->angular_velocity()));
+            rb.velocity        = toVec3(ps->linear_velocity());
+            rb.angularVelocity = glm::radians(toVec3(ps->angular_velocity()));
         }
 
         ctx.em->AddComponent(id, rb);
@@ -402,6 +527,291 @@ glm::vec3 FBSceneAdapter::resolveColor(const Simulation::Object* obj,
     }
 
     return FBSceneContext::defaultColor;
+}
+
+// ===========================================================================
+// SECTION 9: adaptSpawners()
+// Pre-creates entity pools for each spawner (frozen, hidden) so that no GPU
+// uploads occur at runtime. SpawnerSystem activates entities from pendingIds.
+// ===========================================================================
+
+void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
+{
+    const auto* spawnTypesVec = m_scene->spawners_type();
+    const auto* spawnersVec   = m_scene->spawners();
+    const auto  count         = spawnersVec->size();
+
+    // Seeded once per adaptSpawners call for radius/size randomisation
+    std::mt19937 rng(std::random_device{}());
+    auto randFloat = [&](float lo, float hi) -> float {
+        if (lo >= hi) return lo;
+        return lo + std::uniform_real_distribution<float>(0.0f, 1.0f)(rng) * (hi - lo);
+    };
+
+    const float PI = glm::pi<float>();
+
+    for (flatbuffers::uoffset_t i = 0; i < count; ++i) {
+        const Simulation::BaseSpawner* base  = nullptr;
+        float radiusMin = 0.5f, radiusMax = 0.5f;
+        float heightMin = 1.0f, heightMax = 1.0f;
+        glm::vec3 sizeMin{ 1.0f }, sizeMax{ 1.0f };
+        enum class SpawnShape { Sphere, Cylinder, Capsule, Cuboid } spawnShape{};
+
+        switch ((*spawnTypesVec)[i]) {
+        case Simulation::SpawnerType::SphereSpawner: {
+            const auto* s = spawnersVec->GetAs<Simulation::SphereSpawner>(i);
+            if (!s) continue;
+            base = s->base();
+            if (s->radius_range()) { radiusMin = s->radius_range()->min(); radiusMax = s->radius_range()->max(); }
+            spawnShape = SpawnShape::Sphere;
+            break;
+        }
+        case Simulation::SpawnerType::CylinderSpawner: {
+            const auto* c = spawnersVec->GetAs<Simulation::CylinderSpawner>(i);
+            if (!c) continue;
+            base = c->base();
+            if (c->radius_range()) { radiusMin = c->radius_range()->min(); radiusMax = c->radius_range()->max(); }
+            if (c->height_range()) { heightMin = c->height_range()->min(); heightMax = c->height_range()->max(); }
+            spawnShape = SpawnShape::Cylinder;
+            break;
+        }
+        case Simulation::SpawnerType::CapsuleSpawner: {
+            const auto* c = spawnersVec->GetAs<Simulation::CapsuleSpawner>(i);
+            if (!c) continue;
+            base = c->base();
+            if (c->radius_range()) { radiusMin = c->radius_range()->min(); radiusMax = c->radius_range()->max(); }
+            if (c->height_range()) { heightMin = c->height_range()->min(); heightMax = c->height_range()->max(); }
+            spawnShape = SpawnShape::Capsule;
+            break;
+        }
+        case Simulation::SpawnerType::CuboidSpawner: {
+            const auto* c = spawnersVec->GetAs<Simulation::CuboidSpawner>(i);
+            if (!c) continue;
+            base = c->base();
+            if (c->size_range()) {
+                sizeMin = toVec3(c->size_range()->min());
+                sizeMax = toVec3(c->size_range()->max());
+            }
+            spawnShape = SpawnShape::Cuboid;
+            break;
+        }
+        default:
+            continue;
+        }
+
+        if (base == nullptr) continue;
+
+        SpawnerRecord rec;
+        rec.name      = (base->name() != nullptr) ? base->name()->str() : "spawner";
+        rec.startTime = base->start_time();
+
+        // --- SpawnType ---
+        if (base->spawn_type_type() == Simulation::SpawnType::SingleBurstSpawn) {
+            const auto* bs = base->spawn_type_as_SingleBurstSpawn();
+            rec.isBurst  = true;
+            rec.maxCount = (bs != nullptr) ? bs->count() : 1u;
+        } else if (base->spawn_type_type() == Simulation::SpawnType::RepeatingSpawn) {
+            const auto* rs = base->spawn_type_as_RepeatingSpawn();
+            rec.isBurst  = false;
+            rec.interval = (rs != nullptr) ? rs->interval() : 1.0f;
+            rec.maxCount = (rs != nullptr) ? rs->max_count() : 1u;
+        }
+
+        // --- SpawnLocation ---
+        if (base->location_type() == Simulation::SpawnLocation::FixedLocation) {
+            rec.locationType = GE::Components::SpawnLocType::FIXED;
+            const auto* fl = base->location_as_FixedLocation();
+            if (fl && fl->transform()) {
+                rec.fixedPos = toVec3(fl->transform()->position());
+            }
+        } else if (base->location_type() == Simulation::SpawnLocation::RandomBox) {
+            rec.locationType = GE::Components::SpawnLocType::RANDOM_BOX;
+            const auto* rb = base->location_as_RandomBox();
+            if (rb) {
+                if (rb->min()) rec.boxMin = toVec3(*rb->min());
+                if (rb->max()) rec.boxMax = toVec3(*rb->max());
+            }
+        } else if (base->location_type() == Simulation::SpawnLocation::RandomSphere) {
+            rec.locationType = GE::Components::SpawnLocType::RANDOM_SPHERE;
+            const auto* rs = base->location_as_RandomSphere();
+            if (rs) {
+                if (rs->center()) rec.sphereCenter = toVec3(*rs->center());
+                rec.sphereRadius = rs->radius();
+            }
+        }
+
+        // --- Velocity ranges ---
+        if (base->linear_velocity()) {
+            rec.linVelMin = toVec3(base->linear_velocity()->min());
+            rec.linVelMax = toVec3(base->linear_velocity()->max());
+        }
+        if (base->angular_velocity()) {
+            rec.angVelMin = toVec3(base->angular_velocity()->min());
+            rec.angVelMax = toVec3(base->angular_velocity()->max());
+        }
+
+        // --- Density lookup for mass pre-computation ---
+        float density = 1.0f;
+        if (base->material() != nullptr) {
+            const std::string matName = base->material()->str();
+            for (const auto& pmr : ctx.physicsMaterials) {
+                if (pmr.name == matName) { density = pmr.density; break; }
+            }
+        }
+
+        // --- Owner cycling ---
+        const Simulation::SpawnerOwnerType ownerType = base->owner();
+        const bool isSequential = (ownerType == Simulation::SpawnerOwnerType::SEQUENTIAL);
+
+        // --- Pre-create entity pool ---
+        if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
+            GE_LOG_ERROR("FBSceneAdapter::adaptSpawners: flat-color pipeline not available, skipping spawner.");
+            continue;
+        }
+        GE::Graphics::GraphicsPipeline* const flatColorPipeline =
+            (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
+
+        for (uint32_t e = 0; e < rec.maxCount; ++e) {
+            // Determine owner and color
+            GE::Components::OwnerType owner;
+            if (isSequential) {
+                owner = static_cast<GE::Components::OwnerType>(e % 4);
+            } else {
+                owner = static_cast<GE::Components::OwnerType>(
+                    static_cast<int8_t>(ownerType));
+            }
+            const auto ownerIdx = static_cast<std::size_t>(static_cast<int>(owner));
+            const glm::vec3 color = (ctx.useOwnerColors && ownerIdx < FBSceneContext::ownerColors.size())
+                ? FBSceneContext::ownerColors[ownerIdx]
+                : FBSceneContext::defaultColor;
+
+            // Sample shape parameters
+            const float r  = randFloat(radiusMin, radiusMax);
+            const float ht = randFloat(heightMin, heightMax);
+            const glm::vec3 sz{
+                randFloat(sizeMin.x, sizeMax.x),
+                randFloat(sizeMin.y, sizeMax.y),
+                randFloat(sizeMin.z, sizeMax.z)
+            };
+
+            const GE::ECS::EntityID id = ctx.em->CreateEntity();
+
+            // Transform — hidden far below world until activated
+            GE::Components::Transform tr;
+            tr.m_position = glm::vec3{ 0.0f, -1.0e6f, 0.0f };
+            tr.m_scale    = glm::vec3{ 1.0f };
+            ctx.em->AddComponent(id, tr);
+
+            // Tag
+            const std::string entName = rec.name + "_pool_" + std::to_string(e);
+            ctx.em->AddComponent(id, GE::Components::Tag{ entName });
+            ctx.scene->addEntity(entName, id);
+
+            // PhysicsMaterialTag
+            if (base->material() != nullptr) {
+                const std::string matName = base->material()->str();
+                for (const auto& pmr : ctx.physicsMaterials) {
+                    if (pmr.name == matName) {
+                        ctx.em->AddComponent(id, GE::Components::PhysicsMaterialTag{ pmr.name, pmr.density });
+                        break;
+                    }
+                }
+            }
+
+            // Mesh + Collider + RigidBody (shape-dependent)
+            using namespace GE::Assets;
+            OBJLoader::MeshData meshData;
+            float mass = 0.0f;
+            glm::mat3 invI = glm::mat3(0.0f);
+
+            switch (spawnShape) {
+            case SpawnShape::Sphere: {
+                meshData = GeometryUtils::generateSphere(32, r, -r, color);
+                ctx.em->AddComponent(id, GE::Components::SphereCollider{ r });
+                mass = density * (4.0f / 3.0f) * PI * r * r * r;
+                if (mass > 0.0f) invI = glm::mat3(5.0f / (2.0f * mass * r * r));
+                break;
+            }
+            case SpawnShape::Cylinder: {
+                meshData = GeometryUtils::generateCylinder(32, r, r, ht, color, true, true);
+                ctx.em->AddComponent(id, GE::Components::CylinderCollider{ r, ht });
+                mass = density * PI * r * r * ht;
+                if (mass > 0.0f) {
+                    invI[0][0] = 12.0f / (mass * (3.0f * r * r + ht * ht));
+                    invI[1][1] = 2.0f  / (mass * r * r);
+                    invI[2][2] = invI[0][0];
+                }
+                break;
+            }
+            case SpawnShape::Capsule: {
+                meshData = GeometryUtils::generateCapsule(r, ht, 32, 16);
+                for (auto& v : meshData.vertices) { v.color = color; }
+                ctx.em->AddComponent(id, GE::Components::CapsuleCollider{ r, ht });
+                const float mc = density * PI * r * r * ht;
+                const float ms = density * (4.0f / 3.0f) * PI * r * r * r;
+                mass = mc + ms;
+                if (mass > 0.0f) {
+                    const float Is   = (2.0f / 5.0f) * ms * r * r;
+                    const float Icxz = mc * (3.0f * r * r + ht * ht) / 12.0f;
+                    const float Icy  = mc * r * r * 0.5f;
+                    invI[0][0] = 1.0f / (Icxz + Is);
+                    invI[1][1] = 1.0f / (Icy  + Is);
+                    invI[2][2] = invI[0][0];
+                }
+                break;
+            }
+            case SpawnShape::Cuboid: {
+                meshData = GeometryUtils::generateBox(sz.x, sz.y, sz.z, color);
+                ctx.em->AddComponent(id, GE::Components::BoxCollider{ sz.x, sz.y, sz.z });
+                mass = density * sz.x * sz.y * sz.z;
+                if (mass > 0.0f) {
+                    invI[0][0] = 12.0f / (mass * (sz.y * sz.y + sz.z * sz.z));
+                    invI[1][1] = 12.0f / (mass * (sz.x * sz.x + sz.z * sz.z));
+                    invI[2][2] = 12.0f / (mass * (sz.x * sz.x + sz.y * sz.y));
+                }
+                break;
+            }
+            }
+
+            // Upload mesh to GPU
+            auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
+            flatMat->SetCastsShadows(false);
+            auto meshPtr = ctx.am->processMeshData(
+                meshData, flatMat,
+                ctx.uploadCtx->cmd,
+                ctx.uploadCtx->stagingBuffers,
+                ctx.uploadCtx->stagingMemories);
+            if (meshPtr) {
+                GE::Assets::Mesh* const rawPtr = meshPtr.get();
+                auto dummyModel = std::make_unique<GE::Assets::Model>();
+                dummyModel->addMesh(std::move(meshPtr));
+                GE::Components::MeshRenderer mr;
+                mr.subMeshes.push_back({ rawPtr, flatMat.get() });
+                ctx.em->AddComponent(id, mr);
+                ctx.ownedModels->push_back(std::move(dummyModel));
+            } else {
+                GE_LOG_ERROR("FBSceneAdapter::adaptSpawners: processMeshData failed for pool entity.");
+            }
+
+            // RigidBody — frozen until SpawnerSystem activates it
+            GE::Components::RigidBody rb;
+            rb.isStatic         = true;
+            rb.useGravity       = false;
+            rb.mass             = mass;
+            rb.inverseMass      = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
+            rb.invInertiaTensor = invI;
+            ctx.em->AddComponent(id, rb);
+
+            // OwnerComponent
+            ctx.em->AddComponent(id, GE::Components::OwnerComponent{ owner });
+
+            rec.entityIds.push_back(id);
+        }
+
+        if (!rec.entityIds.empty()) {
+            ctx.spawners.push_back(std::move(rec));
+        }
+    }
 }
 
 } // namespace GE::Scene::FB

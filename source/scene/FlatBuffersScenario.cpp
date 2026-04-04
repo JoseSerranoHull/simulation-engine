@@ -6,6 +6,8 @@
 #include "scene/fb/FBSceneAdapter.h"
 #include "scene/fb/FBSceneContext.h"
 #include "systems/AnimationSystem.h"
+#include "systems/PhysicsSystem.h"
+#include "systems/SpawnerSystem.h"
 #include "graphics/ShaderModule.h"
 #include "graphics/GraphicsPipeline.h"
 #include "graphics/GpuUploadContext.h"
@@ -104,10 +106,55 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     // 7. Scan ./config/ for available .bin files
     scanSceneDirectory();
 
-    // 8. Register AnimationSystem stub
+    // 8. Build MaterialInteraction registry from adapted data
+    m_interactionRegistry.Clear();
+    for (const auto& rec : adaptCtx.interactions) {
+        m_interactionRegistry.Register(
+            rec.materialA, rec.materialB,
+            rec.restitution, rec.staticFriction, rec.dynamicFriction);
+    }
+
+    // 9. Register AnimationSystem first so prevPosition is set before PhysicsSystem resolves collisions
     auto* as = new GE::Systems::AnimationSystem();
     m_animationSystem = as;
     em->RegisterSystem(as);
+
+    // 10. Register PhysicsSystem and wire up the interaction registry
+    auto* ps = new GE::Systems::PhysicsSystem();
+    ps->SetRegistry(&m_interactionRegistry);
+    m_physicsSystem = ps;
+    em->RegisterSystem(ps);
+
+    // 11. Build SpawnerComponent entities from adapted spawner records
+    for (auto& rec : adaptCtx.spawners) {
+        const GE::ECS::EntityID spawnerId = em->CreateEntity();
+        GE::Components::Transform spawnTr;
+        spawnTr.m_position = rec.fixedPos;
+        em->AddComponent(spawnerId, spawnTr);
+
+        GE::Components::SpawnerComponent sc;
+        sc.startTime    = rec.startTime;
+        sc.isBurst      = rec.isBurst;
+        sc.burstCount   = rec.maxCount;
+        sc.interval     = rec.interval;
+        sc.locationType = rec.locationType;
+        sc.fixedPos     = rec.fixedPos;
+        sc.boxMin       = rec.boxMin;
+        sc.boxMax       = rec.boxMax;
+        sc.sphereCenter = rec.sphereCenter;
+        sc.sphereRadius = rec.sphereRadius;
+        sc.linVelMin    = rec.linVelMin;
+        sc.linVelMax    = rec.linVelMax;
+        sc.angVelMin    = rec.angVelMin;
+        sc.angVelMax    = rec.angVelMax;
+        for (const auto id : rec.entityIds) { sc.pendingIds.push_back(id); }
+        em->AddComponent(spawnerId, sc);
+    }
+
+    // 12. Register SpawnerSystem
+    auto* ss = new GE::Systems::SpawnerSystem();
+    m_spawnerSystem = ss;
+    em->RegisterSystem(ss);
 
     GE_LOG_INFO("FlatBuffersScenario: Loaded '" + m_sceneName + "' from " + m_configPath);
 }
@@ -127,11 +174,22 @@ void FlatBuffersScenario::OnUpdate(float /*dt*/, float /*totalTime*/) {
 void FlatBuffersScenario::OnUnload() {
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
 
+    if ((m_physicsSystem != nullptr) && (em != nullptr)) {
+        em->UnregisterSystemByID(m_physicsSystem->GetID());
+        m_physicsSystem = nullptr;
+    }
+
     if ((m_animationSystem != nullptr) && (em != nullptr)) {
         em->UnregisterSystemByID(m_animationSystem->GetID());
         m_animationSystem = nullptr;
     }
 
+    if ((m_spawnerSystem != nullptr) && (em != nullptr)) {
+        em->UnregisterSystemByID(m_spawnerSystem->GetID());
+        m_spawnerSystem = nullptr;
+    }
+
+    m_interactionRegistry.Clear();
     m_cameras.clear();
     m_availableScenes.clear();
     m_ownedModels.clear();
@@ -179,6 +237,17 @@ void FlatBuffersScenario::OnGUI() {
                     exp->requestScenarioChange(m_configPath);
                 }
             }
+        }
+        ImGui::EndMenu();
+    }
+
+    // --- Simulation frequency controls ---
+    if (ImGui::BeginMenu("Simulation")) {
+        auto* exp = ServiceLocator::GetExperience();
+        if (exp != nullptr) {
+            ImGui::SliderFloat("Physics Hz",  &exp->m_physicsHz,  1.0f,   2000.0f, "%.0f Hz");
+            ImGui::SliderFloat("Graphics Hz", &exp->m_graphicsHz, 0.0f,    300.0f, "%.0f Hz");
+            ImGui::TextDisabled("Graphics Hz = 0 means uncapped");
         }
         ImGui::EndMenu();
     }

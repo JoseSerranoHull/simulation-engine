@@ -55,6 +55,16 @@ namespace GE::ECS {
 		ERROR_CODE RegisterSystem(IECSystem *system);
 		ERROR_CODE UnregisterSystem(const IECSystem *system);
 		ERROR_CODE UnregisterSystemByID(ISystemTypeID systemID);
+
+		/** @brief Runs only CPU-side system stages (EarlyUpdate through Camera).
+		 *  Safe to call from a background thread; passes VK_NULL_HANDLE as cb so
+		 *  any IGpuSystem that receives the call is a no-op or skips gracefully. */
+		void UpdateCpuStages(float dt);
+
+		/** @brief Runs only GPU-side system stages (Particle through LateUpdate).
+		 *  Must be called from the main thread with a live command buffer. */
+		void UpdateGpuStages(float dt, VkCommandBuffer cb);
+
 		template <class T>
 		ComponentArray<T> &GetCompArr();
 

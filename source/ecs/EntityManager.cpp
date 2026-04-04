@@ -44,6 +44,35 @@ namespace GE::ECS
         }
     }
 
+    void EntityManager::UpdateCpuStages(const float dt)
+    {
+        // Run stages EarlyUpdate through Camera (everything before Particle).
+        // GPU systems (Particle, Render, LateUpdate) are intentionally skipped here;
+        // they need a live VkCommandBuffer and must run on the main thread.
+        constexpr size_t kLastCpuStage = static_cast<size_t>(ESystemStage::Camera);
+        for (size_t s = 0; s <= kLastCpuStage; ++s) {
+            for (auto* sys : m_systems[s]) {
+                if (sys != nullptr) {
+                    sys->OnUpdate(dt, VK_NULL_HANDLE);
+                }
+            }
+        }
+    }
+
+    void EntityManager::UpdateGpuStages(const float dt, VkCommandBuffer cb)
+    {
+        // Run stages Particle through LateUpdate — GPU-dispatching systems only.
+        constexpr size_t kFirstGpuStage = static_cast<size_t>(ESystemStage::Particle);
+        constexpr size_t kStageCount    = static_cast<size_t>(ESystemStage::Count);
+        for (size_t s = kFirstGpuStage; s < kStageCount; ++s) {
+            for (auto* sys : m_systems[s]) {
+                if (sys != nullptr) {
+                    sys->OnUpdate(dt, cb);
+                }
+            }
+        }
+    }
+
     ERROR_CODE EntityManager::Shutdown()
     {
     	if (m_state == SystemState::Uninitialized || m_state == SystemState::ShuttingDown) return ERROR_CODE::OK;

@@ -6,9 +6,10 @@
 /* parasoft-end-suppress ALL */
 
 #include "scene/Scenario.h"
-#include "scene/fb/FBSceneContext.h"   // for FBCameraRecord
+#include "scene/fb/FBSceneContext.h"      // for FBCameraRecord
+#include "physics/MaterialInteractionRegistry.h"
 
-namespace GE::Systems { class AnimationSystem; }
+namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; }
 
 namespace GE {
 
@@ -52,6 +53,11 @@ namespace GE {
 
         // --- Owned systems ---
         GE::Systems::AnimationSystem* m_animationSystem { nullptr };
+        GE::Systems::PhysicsSystem*   m_physicsSystem   { nullptr };
+        GE::Systems::SpawnerSystem*   m_spawnerSystem   { nullptr };
+
+        // --- Material interaction registry (populated at load, passed to PhysicsSystem) ---
+        GE::Physics::MaterialInteractionRegistry m_interactionRegistry;
 
         // --- Helpers ---
         void buildCamerasFromContext(const GE::Scene::FB::FBSceneContext& ctx);

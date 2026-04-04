@@ -20,6 +20,8 @@
 #include "scene/FlatBuffersScenario.h"
 #include "components/PhysicsComponents.h"
 #include "components/AnimationComponents.h"
+#include "components/ClothComponent.h"
+#include "components/FlockingComponent.h"
 #include "components/ScriptComponent.h"
 #include "systems/TransformSystem.h"
 #include "systems/ParticleEmitterSystem.h"
@@ -27,6 +29,7 @@
 #include "components/SkyboxComponent.h"
 #include "components/ParticleComponent.h"
 #include "graphics/GpuUploadContext.h"
+#include "core/NetworkBridge.h"
 
 using namespace GE::Graphics;
 using namespace GE::Assets;
@@ -68,6 +71,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     entityManager->RegisterComponent<GE::Components::CapsuleCollider>();
     entityManager->RegisterComponent<GE::Components::OwnerComponent>();
     entityManager->RegisterComponent<GE::Components::AnimatedObjectComponent>();
+    entityManager->RegisterComponent<GE::Components::SpawnerComponent>();
     entityManager->RegisterComponent<GE::Components::PhysicsMaterialTag>();
 
     entityManager->RegisterComponent<GE::Components::RigidBody2D>();
@@ -75,6 +79,8 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     entityManager->RegisterComponent<GE::Components::BoxCollider2D>();
 
     entityManager->RegisterComponent<GE::Components::ScriptComponent>();
+    entityManager->RegisterComponent<GE::Components::ClothComponent>();
+    entityManager->RegisterComponent<GE::Components::FlockingComponent>();
 
     ServiceLocator::Provide(entityManager.get());
 
@@ -87,6 +93,14 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     // Lab 7: spring force generator — runs before PhysicsSystem each frame.
     m_springSystem = std::make_unique<GE::Systems::SpringSystem>();
     ServiceLocator::Provide(m_springSystem.get());
+
+    // --- Stage 3.0: Networking Foundation ---
+    // NetworkService is constructed here; Init() is deferred until after
+    // the user chooses a port in the ImGui "Network" menu.
+    m_networkService = std::make_unique<GE::Networking::NetworkService>();
+    m_networkBridge  = std::make_unique<GE::NetworkBridge>(
+        m_networkService.get(), entityManager.get());
+    ServiceLocator::Provide(m_networkBridge.get());
 
     // --- Step 4: Engine Infrastructure ---
     resources = std::make_unique<GpuResourceManager>();
@@ -129,7 +143,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     // Create the empty skybox shell (waiting for .ini textures)
     initSkybox();
 
-    changeScenario(std::make_unique<GE::GenericScenario>("./config/snow_globe.ini"));
+    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/test_fb_scene.bin"));
 }
 
 /**
@@ -179,17 +193,26 @@ void EngineOrchestrator::run() {
     SetThreadAffinityMask(
         reinterpret_cast<HANDLE>(m_physicsThread.native_handle()), 0x08);
 
-    // --- Spawn networking placeholder thread (Cores 2-3, bits 1-2) ---
-    m_networkingThread = std::jthread([](std::stop_token st) {
+    // --- Spawn networking thread (Cores 2-3, bits 1-2) ---
+    m_networkingThread = std::jthread([this](std::stop_token st) {
+        GE_LOG_INFO("NetworkingThread started, CPU " + std::to_string(GetCurrentProcessorNumber()));
         while (!st.stop_requested()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            if (m_networkBridge != nullptr) {
+                m_networkBridge->GetService()->Poll(
+                    [this](uint8_t senderId, const uint8_t* data, std::size_t size) {
+                        m_networkBridge->ApplyReceivedState(senderId, data, size);
+                    });
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
+        GE_LOG_INFO("NetworkingThread stopped.");
     });
     SetThreadAffinityMask(
         reinterpret_cast<HANDLE>(m_networkingThread.native_handle()), 0x06);
 
     // --- Pin main thread to Core 1 (bit 0) ---
     SetThreadAffinityMask(GetCurrentThread(), 0x01);
+    GE_LOG_INFO("MainThread on CPU " + std::to_string(GetCurrentProcessorNumber()));
 
     using Clock = std::chrono::steady_clock;
     auto frameStart = Clock::now();
@@ -236,6 +259,14 @@ void EngineOrchestrator::run() {
  */
 void EngineOrchestrator::drawFrame() {
     VulkanContext* const ctx = ServiceLocator::GetContext();
+
+    // Pick up any network-triggered scene change (written by the networking thread).
+    if (m_networkBridge != nullptr) {
+        auto pending = m_networkBridge->PollPendingSceneChange();
+        if (pending.has_value()) {
+            requestScenarioChange(*pending);
+        }
+    }
 
     if (!m_pendingScenarioPath.empty()) {
         // Block the physics thread while we tear down and rebuild the scenario.
@@ -302,8 +333,6 @@ void EngineOrchestrator::drawFrame() {
     static_cast<void>(vkResetFences(ctx->device, 1U, &frameFence));
 
     // --- Step 4: Command Buffer Recording (GPU WORK BEGINS) ---
-    updateUniformBuffer(imageIndex);
-
     const VkCommandBuffer cb = sync->getCommandBuffer(currentFrame);
     static_cast<void>(vkResetCommandBuffer(cb, 0U));
 
@@ -313,13 +342,19 @@ void EngineOrchestrator::drawFrame() {
     // --- Thread-safe ECS update ---
     // The physics thread owns CPU-stage ECS updates (via runPhysicsLoop).
     // The main thread holds m_simMutex here so that:
-    //   a) We apply the latest physics snapshot to ECS Transform world matrices.
-    //   b) We run GPU-stage systems (particles) and record render commands while
+    //   a) updateUniformBuffer reads Transform/LightComponent without racing
+    //      the physics thread which may concurrently write those same arrays.
+    //   b) We apply the latest physics snapshot to ECS Transform world matrices.
+    //   c) We run GPU-stage systems (particles) and record render commands while
     //      the physics thread cannot concurrently modify the component arrays.
     {
         std::lock_guard<std::mutex> lock(m_simMutex);
 
-        // a) Apply the physics snapshot → ECS Transform (so the renderer reads
+        // a) UBO upload — must be inside the mutex because it reads ECS Transform
+        //    and LightComponent arrays that the physics thread may also be writing.
+        updateUniformBuffer(imageIndex);
+
+        // b) Apply the physics snapshot → ECS Transform (so the renderer reads
         //    consistent world matrices produced by the last completed physics tick).
         {
             const int frontIdx = m_frontSimIdx.load(std::memory_order_acquire);
@@ -332,7 +367,7 @@ void EngineOrchestrator::drawFrame() {
             }
         }
 
-        // b) GPU-stage systems (ParticleEmitterSystem) need the live command buffer.
+        // c) GPU-stage systems (ParticleEmitterSystem) need the live command buffer.
         if (activeScenario && !activeScenario->IsPaused()) {
             em->UpdateGpuStages(scaledDelta, cb);
         }
@@ -362,7 +397,7 @@ void EngineOrchestrator::drawFrame() {
         GE::Systems::ColliderVisualizerSystem* visualizer = activeScenario
             ? activeScenario->GetVisualizerSystem() : nullptr;
 
-        // c) Record Draw Calls: Renderer queries ECS for meshes (reads Transform world matrices).
+        // d) Record Draw Calls: Renderer queries ECS for meshes (reads Transform world matrices).
         //    Must remain inside the mutex so physics cannot race-write those fields.
         renderer->recordFrame(
             cb, vulkanEngine->getSwapChainExtent(), skybox.get(),
@@ -563,7 +598,14 @@ void EngineOrchestrator::cleanup() {
         vkDeviceWaitIdle(context->device);
     }
 
-    // 2. Destroy High-Level Logic
+    // 2. Networking shutdown (before ECS / Vulkan teardown)
+    if (m_networkService != nullptr) {
+        m_networkService->Shutdown();
+    }
+    m_networkBridge.reset();
+    m_networkService.reset();
+
+    // 3. Destroy High-Level Logic
     if (activeScenario) {
         activeScenario->OnUnload();
     }
@@ -670,6 +712,8 @@ void EngineOrchestrator::mouseCallback(GLFWwindow* pWindow, double xpos, double 
  *      complete, consistent snapshot next frame.
  */
 void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
+    GE_LOG_INFO("PhysicsThread started, CPU " + std::to_string(GetCurrentProcessorNumber()));
+
     using Clock    = std::chrono::steady_clock;
     using FloatSec = std::chrono::duration<float>;
 
@@ -689,16 +733,18 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
         const float fixedDt = 1.0f / std::max(m_physicsHz, 1.0f);
 
         while (accumulator >= fixedDt) {
-            // Skip if no scenario or scenario is paused
-            if ((activeScenario == nullptr) || activeScenario->IsPaused()) {
-                accumulator = 0.0f;
-                break;
-            }
-
             auto* const em = entityManager.get();
 
             {
                 std::lock_guard<std::mutex> lock(m_simMutex);
+
+                // Skip if no scenario or scenario is paused.
+                // Guard must be inside the mutex so the render thread cannot
+                // concurrently destroy activeScenario via changeScenario().
+                if ((activeScenario == nullptr) || activeScenario->IsPaused()) {
+                    accumulator = 0.0f;
+                    break;
+                }
 
                 // 1. Spring forces must be accumulated before PhysicsSystem integrates.
                 m_springSystem->OnUpdate(fixedDt);
@@ -706,6 +752,11 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
                 // 2. CPU-stage ECS systems: TransformSystem, AnimationSystem,
                 //    PhysicsSystem, SpawnerSystem, etc.
                 em->UpdateCpuStages(fixedDt);
+
+                // 2b. Broadcast owned entity states to peers (throttled to ~60/sec).
+                if (m_networkBridge != nullptr) {
+                    m_networkBridge->BroadcastOwnedStates();
+                }
 
                 // 3. Copy all Transform world-matrices to the SimulationState back buffer.
                 const int backIdx = 1 - m_frontSimIdx.load(std::memory_order_relaxed);
@@ -739,6 +790,7 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
             std::this_thread::sleep_for(tickBudget - tickElapsed);
         }
     }
+    GE_LOG_INFO("PhysicsThread stopped.");
 }
 
 // ========================================================================

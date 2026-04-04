@@ -39,6 +39,7 @@
 #include "systems/SpringSystem.h"
 #include "graphics/GpuResourceManager.h"
 #include "core/SimulationState.h"
+#include "core/NetworkBridge.h"
 
 /**
  * @class EngineOrchestrator
@@ -163,8 +164,12 @@ private:
     std::mutex       m_simMutex;
     /// Physics thread: fixed-step accumulator, pinned to Core 4.
     std::jthread     m_physicsThread;
-    /// Networking placeholder thread, pinned to Cores 2–3.
+    /// Networking thread: polls UDP socket, pinned to Cores 2–3.
     std::jthread     m_networkingThread;
+
+    // --- Networking (Stage 3.0) ---
+    std::unique_ptr<GE::Networking::NetworkService> m_networkService;
+    std::unique_ptr<GE::NetworkBridge>              m_networkBridge;
 
     // --- Internal Initialization Helpers ---
     void initWindow(char const* const title);

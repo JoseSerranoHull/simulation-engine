@@ -9,7 +9,7 @@
 #include "scene/fb/FBSceneContext.h"      // for FBCameraRecord
 #include "physics/MaterialInteractionRegistry.h"
 
-namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; }
+namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; }
 
 namespace GE {
 
@@ -55,9 +55,23 @@ namespace GE {
         GE::Systems::AnimationSystem* m_animationSystem { nullptr };
         GE::Systems::PhysicsSystem*   m_physicsSystem   { nullptr };
         GE::Systems::SpawnerSystem*   m_spawnerSystem   { nullptr };
+        GE::Systems::ClothSystem*     m_clothSystem     { nullptr };
+        GE::Systems::FlockingSystem*  m_flockingSystem  { nullptr };
 
         // --- Material interaction registry (populated at load, passed to PhysicsSystem) ---
         GE::Physics::MaterialInteractionRegistry m_interactionRegistry;
+
+        // --- Networking UI state (ImGui "Network" menu) ---
+        struct PeerUIEntry {
+            char ip[64]    { "127.0.0.1" };
+            int  port      { 7001 };
+            int  peerId    { 2 };      ///< Explicit remote peer ID (1-4, != local)
+            bool connected { false };
+        };
+        int          m_localPeerId    { 1 };
+        int          m_localPort      { 7000 };
+        bool         m_netInitialised { false };
+        PeerUIEntry  m_peerEntries[3] {};   ///< Entries for peers 2, 3, 4 relative to local
 
         // --- Helpers ---
         void buildCamerasFromContext(const GE::Scene::FB::FBSceneContext& ctx);

@@ -1,0 +1,100 @@
+{
+  "name": "Flock Test",
+  "description": "60 boid agents demonstrating Reynolds flocking (separation + alignment + cohesion) with static sphere obstacles to avoid.",
+  "gravity_on": false,
+  "cameras": [
+    {
+      "name": "FlockCam",
+      "transform": {
+        "position": { "x": 0.0, "y": 0.0, "z": 25.0 },
+        "orientation": { "yaw": -90.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 60.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "plastic", "density": 900.0 },
+    { "name": "stone",   "density": 2600.0 }
+  ],
+  "interactions": [
+    {
+      "material_a": "plastic",
+      "material_b": "stone",
+      "restitution": 0.4,
+      "static_friction": 0.3,
+      "dynamic_friction": 0.2
+    }
+  ],
+  "objects": [
+    {
+      "name": "FlockSpawn",
+      "transform": {
+        "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "plastic",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.01 },
+      "behaviour_type": "FlockAgent",
+      "behaviour": {
+        "agent_count": 60,
+        "sphere_radius": 0.3,
+        "separation_radius": 1.5,
+        "alignment_radius": 3.0,
+        "cohesion_radius": 5.0,
+        "w_separation": 2.0,
+        "w_alignment": 1.0,
+        "w_cohesion": 1.0,
+        "max_speed": 6.0,
+        "max_force": 15.0,
+        "spawn_radius": 6.0
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "Obstacle_A",
+      "transform": {
+        "position": { "x": 3.0, "y": 1.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "stone",
+      "shape_type": "Sphere",
+      "shape": { "radius": 1.2 },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "Obstacle_B",
+      "transform": {
+        "position": { "x": -3.5, "y": -1.5, "z": 1.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "stone",
+      "shape_type": "Sphere",
+      "shape": { "radius": 1.0 },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "Obstacle_C",
+      "transform": {
+        "position": { "x": 0.5, "y": -2.5, "z": -2.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "stone",
+      "shape_type": "Sphere",
+      "shape": { "radius": 1.4 },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    }
+  ]
+}

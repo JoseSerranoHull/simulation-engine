@@ -1,0 +1,90 @@
+{
+  "name": "Cloth Test",
+  "description": "A 15x15 cloth hanging from its top edge, with a falling sphere that deforms it.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "MainCam",
+      "transform": {
+        "position": { "x": 1.5, "y": 2.5, "z": 6.0 },
+        "orientation": { "yaw": -90.0, "pitch": -10.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 60.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 1200.0 },
+    { "name": "concrete", "density": 2400.0 }
+  ],
+  "interactions": [
+    {
+      "material_a": "rubber",
+      "material_b": "concrete",
+      "restitution": 0.5,
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3
+    }
+  ],
+  "objects": [
+    {
+      "name": "ClothPanel",
+      "transform": {
+        "position": { "x": 0.0, "y": 3.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "ClothObject",
+      "behaviour": {
+        "rows": 15,
+        "cols": 15,
+        "cell_size": 0.15,
+        "spring_k": 200.0,
+        "shear_k": 100.0,
+        "flexion_k": 50.0,
+        "damping": 0.05,
+        "particle_mass": 0.05,
+        "pin_top_edge": true
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "FallingSphere",
+      "transform": {
+        "position": { "x": 1.0, "y": 4.5, "z": 1.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.35 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "ONE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "Floor",
+      "transform": {
+        "position": { "x": 0.0, "y": -1.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    }
+  ]
+}

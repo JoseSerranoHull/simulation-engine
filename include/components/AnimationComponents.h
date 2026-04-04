@@ -73,6 +73,10 @@ namespace GE::Components {
         glm::vec3 linVelMin { 0.0f }, linVelMax { 0.0f };
         glm::vec3 angVelMin { 0.0f }, angVelMax { 0.0f };
 
+        // --- Ownership (which peer fires this spawner) ---
+        /// Peer ID (1-4) that owns this spawner.  0 = unowned (all peers run it).
+        uint8_t ownerPeerId { 0 };
+
         // --- Pre-created entity pool (populated at load time) ---
         std::deque<GE::ECS::EntityID> pendingIds;
     };

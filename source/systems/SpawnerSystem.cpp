@@ -1,5 +1,7 @@
 #include "systems/SpawnerSystem.h"
 #include "core/ServiceLocator.h"
+#include "core/NetworkBridge.h"
+#include "networking/NetworkService.h"
 #include "ecs/EntityManager.h"
 #include "components/Transform.h"
 #include "components/PhysicsComponents.h"
@@ -96,18 +98,40 @@ namespace GE::Systems {
         if (!em) return;
         auto& arr = em->GetCompArr<GE::Components::SpawnerComponent>();
 
+        // Resolve networking state once per frame (avoids repeated ServiceLocator calls)
+        GE::NetworkBridge* bridge   = ServiceLocator::GetNetworkBridge();
+        auto* netSvc = (bridge != nullptr) ? bridge->GetService() : nullptr;
+        const bool  netActive       = (netSvc != nullptr) && netSvc->IsConnected();
+        const uint8_t localPeerId   = netActive ? netSvc->GetLocalPeerId() : 0U;
+
         for (uint32_t i = 0; i < arr.GetCount(); ++i) {
             auto& sc = arr.Data()[i];
             sc.elapsed += dt;
 
             if (sc.elapsed < sc.startTime || sc.pendingIds.empty()) continue;
 
-            // Pre-compute a spawn position and velocity (same for burst, reused for each pop)
+            // Ownership gate: when networking is active, only the owning peer fires this spawner.
+            if (netActive && sc.ownerPeerId != 0U && sc.ownerPeerId != localPeerId) { continue; }
+
+            // Helper: activate one entity and broadcast its spawn to remote peers.
             auto doActivate = [&]() {
+                if (sc.pendingIds.empty()) return;
+
+                // Peek ID before activateEntity pops it (needed for broadcast)
+                const GE::ECS::EntityID id = sc.pendingIds.front();
+
                 const glm::vec3 pos    = pickLocation(sc);
                 const glm::vec3 linVel = randomInRange(sc.linVelMin, sc.linVelMax);
                 const glm::vec3 angVel = randomInRange(sc.angVelMin, sc.angVelMax);
                 activateEntity(em, sc, pos, linVel, angVel);
+
+                // Broadcast to remote peers so they activate the same entity
+                if (netActive && bridge != nullptr) {
+                    auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(id);
+                    const float mass = (rb != nullptr && rb->inverseMass > 0.0f)
+                                       ? (1.0f / rb->inverseMass) : 0.0f;
+                    bridge->BroadcastSpawnObject(id, sc.ownerPeerId, 0U, pos, glm::vec3{1.0f}, linVel, mass);
+                }
             };
 
             if (sc.isBurst) {

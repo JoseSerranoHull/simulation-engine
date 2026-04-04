@@ -86,10 +86,40 @@ table Cuboid { size: Vec3; }
 // Behaviour
 // =======================
 
+table ClothObject {
+  rows:            int   = 10;
+  cols:            int   = 10;
+  cell_size:       float = 0.2;
+  spring_k:        float = 100.0;
+  shear_k:         float = 50.0;
+  flexion_k:       float = 25.0;
+  damping:         float = 0.1;
+  particle_mass:   float = 0.1;
+  pin_top_edge:    bool  = true;
+}
+
+// Spawns agent_count flocking agents around the object's transform position.
+// The object's own transform.position is used as the spawn-sphere centre.
+table FlockAgent {
+  agent_count:       int   = 60;
+  sphere_radius:     float = 0.3;
+  separation_radius: float = 1.5;
+  alignment_radius:  float = 3.0;
+  cohesion_radius:   float = 5.0;
+  w_separation:      float = 2.0;
+  w_alignment:       float = 1.0;
+  w_cohesion:        float = 1.0;
+  max_speed:         float = 6.0;
+  max_force:         float = 15.0;
+  spawn_radius:      float = 5.0;
+}
+
 union Behaviour {
   StaticObject,
   SimulatedObject,
-  AnimatedObject
+  AnimatedObject,
+  ClothObject,
+  FlockAgent
 }
 
 table StaticObject {

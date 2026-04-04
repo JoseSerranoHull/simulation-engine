@@ -18,6 +18,8 @@
 #include "components/Tag.h"
 #include "components/PhysicsComponents.h"
 #include "components/AnimationComponents.h"
+#include "components/ClothComponent.h"
+#include "components/FlockingComponent.h"
 #include "scene/Scene.h"
 #include "assets/AssetManager.h"
 #include "assets/GeometryUtils.h"
@@ -25,6 +27,8 @@
 #include "assets/Material.h"
 #include "graphics/GraphicsPipeline.h"
 #include "graphics/GpuUploadContext.h"
+#include "graphics/VulkanUtils.h"
+#include "assets/Vertex.h"
 #include "core/Logger.h"
 
 // Flat-color pipeline index within m_pipelines (appended after createMaterialPipelines())
@@ -38,6 +42,32 @@ namespace GE::Scene::FB {
 
 static glm::vec3 toVec3(const Simulation::Vec3& v) {
     return { v.x(), v.y(), v.z() };
+}
+
+// Creates a host-visible, host-coherent VkBuffer of the given size and persistently maps it.
+// Returns false on failure. Caller owns cleanup (vkUnmapMemory, vkDestroyBuffer, vkFreeMemory).
+static bool createHostVisibleBuffer(VkDevice device,
+                                    VkPhysicalDevice physDevice,
+                                    VkDeviceSize size,
+                                    VkBufferUsageFlags usage,
+                                    VkBuffer& outBuffer,
+                                    VkDeviceMemory& outMemory,
+                                    void*& outMapped)
+{
+    GE::Graphics::VulkanUtils::createBuffer(
+        device, physDevice, size, usage,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        outBuffer, outMemory);
+
+    if (outBuffer == VK_NULL_HANDLE || outMemory == VK_NULL_HANDLE) {
+        return false;
+    }
+
+    if (vkMapMemory(device, outMemory, 0, size, 0, &outMapped) != VK_SUCCESS) {
+        outMapped = nullptr;
+        return false;
+    }
+    return true;
 }
 
 // ===========================================================================
@@ -222,10 +252,15 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
     }
 
     // --- Shape → Mesh + Collider ---
-    const bool isContainer = (obj->collision_type() == Simulation::CollisionType::CONTAINER);
-    adaptShape(obj, id, color, isContainer, ctx);
+    // ClothObject and FlockAgent build their own geometry; skip the static adaptShape() path.
+    const bool isCloth      = (obj->behaviour_type() == Simulation::Behaviour::ClothObject);
+    const bool isFlockAgent = (obj->behaviour_type() == Simulation::Behaviour::FlockAgent);
+    const bool isContainer  = (obj->collision_type() == Simulation::CollisionType::CONTAINER);
+    if (!isCloth && !isFlockAgent) {
+        adaptShape(obj, id, color, isContainer, ctx);
+    }
 
-    // --- Behaviour → RigidBody / AnimatedObjectComponent ---
+    // --- Behaviour → RigidBody / AnimatedObjectComponent / ClothComponent ---
     adaptBehaviour(obj, id, ctx);
 }
 
@@ -498,6 +533,246 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         ctx.em->AddComponent(id, ac);
         break;
     }
+    case Simulation::Behaviour::ClothObject: {
+        const auto* cloth = obj->behaviour_as_ClothObject();
+
+        GE::Components::ClothComponent cc;
+        cc.rows         = (cloth != nullptr) ? cloth->rows()          : 10;
+        cc.cols         = (cloth != nullptr) ? cloth->cols()          : 10;
+        cc.cellSize     = (cloth != nullptr) ? cloth->cell_size()     : 0.2f;
+        cc.springK      = (cloth != nullptr) ? cloth->spring_k()      : 100.0f;
+        cc.shearK       = (cloth != nullptr) ? cloth->shear_k()       : 50.0f;
+        cc.flexionK     = (cloth != nullptr) ? cloth->flexion_k()     : 25.0f;
+        cc.damping      = (cloth != nullptr) ? cloth->damping()       : 0.1f;
+        cc.particleMass = (cloth != nullptr) ? cloth->particle_mass() : 0.1f;
+        const bool pinTop = (cloth != nullptr) ? cloth->pin_top_edge() : true;
+
+        // Get the entity's world position from its Transform
+        const GE::Components::Transform* tr =
+            ctx.em->GetTIComponent<GE::Components::Transform>(id);
+        const glm::vec3 origin = (tr != nullptr) ? tr->m_position : glm::vec3{ 0.0f };
+
+        // Initialise particle flat grid
+        cc.particles.resize(static_cast<std::size_t>(cc.rows * cc.cols));
+        for (int r = 0; r < cc.rows; ++r) {
+            for (int c = 0; c < cc.cols; ++c) {
+                const int     idx = r * cc.cols + c;
+                const glm::vec3 pos = origin + glm::vec3{
+                    c * cc.cellSize, 0.0f, r * cc.cellSize };
+                cc.particles[idx].position     = pos;
+                cc.particles[idx].prevPosition = pos;
+                cc.particles[idx].pinned       = (pinTop && r == 0);
+            }
+        }
+
+        // Resolve owner color
+        cc.color = resolveColor(obj, ctx);
+
+        // Build initial vertex data (flat grid)
+        const uint32_t vCount = static_cast<uint32_t>(cc.rows * cc.cols);
+        std::vector<GE::Assets::Vertex> verts(vCount);
+        for (int r = 0; r < cc.rows; ++r) {
+            for (int c = 0; c < cc.cols; ++c) {
+                const int idx = r * cc.cols + c;
+                GE::Assets::Vertex& v = verts[idx];
+                v.position = cc.particles[idx].position;
+                v.color    = cc.color;
+                v.texcoord = glm::vec2{
+                    static_cast<float>(c) / static_cast<float>(cc.cols - 1),
+                    static_cast<float>(r) / static_cast<float>(cc.rows - 1) };
+                v.normal   = glm::vec3{ 0.0f, 1.0f, 0.0f };
+            }
+        }
+
+        // Build index data (two triangles per quad)
+        std::vector<uint32_t> indices;
+        indices.reserve(static_cast<std::size_t>((cc.rows - 1) * (cc.cols - 1) * 6));
+        for (int r = 0; r < cc.rows - 1; ++r) {
+            for (int c = 0; c < cc.cols - 1; ++c) {
+                const uint32_t tl = static_cast<uint32_t>(r * cc.cols + c);
+                const uint32_t tr_ = tl + 1U;
+                const uint32_t bl = static_cast<uint32_t>((r + 1) * cc.cols + c);
+                const uint32_t br = bl + 1U;
+                // Triangle 1: tl, bl, tr
+                indices.push_back(tl);
+                indices.push_back(bl);
+                indices.push_back(tr_);
+                // Triangle 2: tr, bl, br
+                indices.push_back(tr_);
+                indices.push_back(bl);
+                indices.push_back(br);
+            }
+        }
+        cc.vertexCount = vCount;
+        cc.indexCount  = static_cast<uint32_t>(indices.size());
+
+        // Allocate combined host-visible buffer: [vertices][indices]
+        const VkDeviceSize vertexBytes = static_cast<VkDeviceSize>(vCount) * sizeof(GE::Assets::Vertex);
+        const VkDeviceSize indexBytes  = static_cast<VkDeviceSize>(cc.indexCount) * sizeof(uint32_t);
+        cc.indexOffset = vertexBytes;
+        const VkDeviceSize totalBytes  = vertexBytes + indexBytes;
+
+        GE::Graphics::VulkanContext* vkCtx = ServiceLocator::GetContext();
+        if (vkCtx == nullptr || vkCtx->device == VK_NULL_HANDLE) {
+            GE_LOG_ERROR("FBSceneAdapter: ClothObject: VulkanContext unavailable.");
+            break;
+        }
+
+        if (!createHostVisibleBuffer(
+                vkCtx->device, vkCtx->physicalDevice,
+                totalBytes,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                cc.vertexBuffer, cc.vertexMemory, cc.mappedVertices))
+        {
+            GE_LOG_ERROR("FBSceneAdapter: ClothObject: Failed to create host-visible buffer.");
+            break;
+        }
+
+        // Write initial vertices + indices into mapped buffer
+        std::memcpy(cc.mappedVertices, verts.data(), vertexBytes);
+        std::memcpy(static_cast<uint8_t*>(cc.mappedVertices) + vertexBytes,
+                    indices.data(), indexBytes);
+
+        // Create a Mesh wrapping the cloth buffer — non-owning reference, cloth owns cleanup.
+        if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
+            GE_LOG_ERROR("FBSceneAdapter: ClothObject: Flat-color pipeline not available.");
+            break;
+        }
+        GE::Graphics::GraphicsPipeline* const flatColorPipeline =
+            (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
+        auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
+        flatMat->SetCastsShadows(false);
+
+        auto meshPtr = std::make_unique<GE::Assets::Mesh>(
+            cc.vertexBuffer,
+            cc.indexCount,
+            cc.indexOffset,
+            flatMat);
+
+        GE::Assets::Mesh* const rawMesh = meshPtr.get();
+        auto dummyModel = std::make_unique<GE::Assets::Model>();
+        dummyModel->addMesh(std::move(meshPtr));
+
+        GE::Components::MeshRenderer mr;
+        mr.subMeshes.push_back({ rawMesh, flatMat.get() });
+        ctx.em->AddComponent(id, mr);
+        ctx.ownedModels->push_back(std::move(dummyModel));
+
+        ctx.em->AddComponent(id, cc);
+        break;
+    }
+    case Simulation::Behaviour::FlockAgent: {
+        // FlockAgent spawns N agent entities around this object's transform position.
+        // The host object itself is not used as a physics body — it's just the spawn anchor.
+        const auto* fa = obj->behaviour_as_FlockAgent();
+
+        const int   agentCount       = (fa != nullptr) ? fa->agent_count()       : 60;
+        const float sphereRadius     = (fa != nullptr) ? fa->sphere_radius()     : 0.3f;
+        const float separationRadius = (fa != nullptr) ? fa->separation_radius() : 1.5f;
+        const float alignmentRadius  = (fa != nullptr) ? fa->alignment_radius()  : 3.0f;
+        const float cohesionRadius   = (fa != nullptr) ? fa->cohesion_radius()   : 5.0f;
+        const float wSeparation      = (fa != nullptr) ? fa->w_separation()      : 2.0f;
+        const float wAlignment       = (fa != nullptr) ? fa->w_alignment()       : 1.0f;
+        const float wCohesion        = (fa != nullptr) ? fa->w_cohesion()        : 1.0f;
+        const float maxSpeed         = (fa != nullptr) ? fa->max_speed()         : 6.0f;
+        const float maxForce         = (fa != nullptr) ? fa->max_force()         : 15.0f;
+        const float spawnRadius      = (fa != nullptr) ? fa->spawn_radius()      : 5.0f;
+
+        // Get spawn origin from the anchor object's Transform
+        const GE::Components::Transform* anchor =
+            ctx.em->GetTIComponent<GE::Components::Transform>(id);
+        const glm::vec3 origin = (anchor != nullptr) ? anchor->m_position : glm::vec3{ 0.0f };
+
+        // Prepare flat-color material
+        if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
+            GE_LOG_ERROR("FBSceneAdapter: FlockAgent: Flat-color pipeline not available.");
+            break;
+        }
+        GE::Graphics::GraphicsPipeline* const flatColorPipeline =
+            (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
+
+        // Seeded RNG for scatter positions
+        std::mt19937 rng(0xF10C1337u);
+        std::uniform_real_distribution<float> distUnit(-1.0f, 1.0f);
+
+        const float PI = glm::pi<float>();
+        // Agent mass from sphere volume with density 1.0 (flock agents are lightweight)
+        const float density = 1.0f;
+        const float mass = density * (4.0f / 3.0f) * PI * sphereRadius * sphereRadius * sphereRadius;
+        const float invI_val = (mass > 0.0f) ? (5.0f / (2.0f * mass * sphereRadius * sphereRadius)) : 0.0f;
+
+        for (int i = 0; i < agentCount; ++i) {
+            // Random position inside a sphere via rejection sampling
+            glm::vec3 offset{ 0.0f };
+            for (int attempt = 0; attempt < 100; ++attempt) {
+                offset = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) };
+                if (glm::dot(offset, offset) <= 1.0f) { break; }
+            }
+            const glm::vec3 spawnPos = origin + offset * spawnRadius;
+
+            const GE::ECS::EntityID agentId = ctx.em->CreateEntity();
+
+            // Transform
+            GE::Components::Transform agentTr;
+            agentTr.m_position = spawnPos;
+            agentTr.m_scale    = glm::vec3{ 1.0f };
+            ctx.em->AddComponent(agentId, agentTr);
+
+            // Tag
+            const std::string agentName = "flock_agent_" + std::to_string(i);
+            ctx.em->AddComponent(agentId, GE::Components::Tag{ agentName });
+            ctx.scene->addEntity(agentName, agentId);
+
+            // SphereCollider
+            ctx.em->AddComponent(agentId, GE::Components::SphereCollider{ sphereRadius });
+
+            // RigidBody — no gravity, flock forces drive motion
+            GE::Components::RigidBody rb;
+            rb.isStatic         = false;
+            rb.useGravity       = false;
+            rb.mass             = mass;
+            rb.inverseMass      = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
+            rb.invInertiaTensor = glm::mat3(invI_val);
+            rb.linearDamping    = 0.95f; // extra damping to prevent indefinite acceleration
+            // Random initial velocity (small kick)
+            rb.velocity = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) } * 2.0f;
+            ctx.em->AddComponent(agentId, rb);
+
+            // FlockingComponent
+            GE::Components::FlockingComponent fk;
+            fk.separationRadius = separationRadius;
+            fk.alignmentRadius  = alignmentRadius;
+            fk.cohesionRadius   = cohesionRadius;
+            fk.wSeparation      = wSeparation;
+            fk.wAlignment       = wAlignment;
+            fk.wCohesion        = wCohesion;
+            fk.maxSpeed         = maxSpeed;
+            fk.maxForce         = maxForce;
+            ctx.em->AddComponent(agentId, fk);
+
+            // Mesh (sphere)
+            const glm::vec3 agentColor = GE::Scene::FB::FBSceneContext::defaultColor;
+            auto agentMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
+            agentMat->SetCastsShadows(false);
+            GE::Assets::OBJLoader::MeshData meshData =
+                GE::Assets::GeometryUtils::generateSphere(16, sphereRadius, -sphereRadius, agentColor);
+            auto meshPtr = ctx.am->processMeshData(
+                meshData, agentMat,
+                ctx.uploadCtx->cmd,
+                ctx.uploadCtx->stagingBuffers,
+                ctx.uploadCtx->stagingMemories);
+            if (meshPtr) {
+                GE::Assets::Mesh* const rawPtr = meshPtr.get();
+                auto dummyModel = std::make_unique<GE::Assets::Model>();
+                dummyModel->addMesh(std::move(meshPtr));
+                GE::Components::MeshRenderer mr;
+                mr.subMeshes.push_back({ rawPtr, agentMat.get() });
+                ctx.em->AddComponent(agentId, mr);
+                ctx.ownedModels->push_back(std::move(dummyModel));
+            }
+        }
+        break;
+    }
     default:
         break;
     }
@@ -662,6 +937,12 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
         // --- Owner cycling ---
         const Simulation::SpawnerOwnerType ownerType = base->owner();
         const bool isSequential = (ownerType == Simulation::SpawnerOwnerType::SEQUENTIAL);
+
+        // Derive the spawner's owning peer ID from the SpawnerOwnerType.
+        // ONE=0 → peer 1, TWO=1 → peer 2, ... SEQUENTIAL → peer 1 (peer 1 fires and broadcasts).
+        rec.ownerPeerId = isSequential
+            ? uint8_t(1)
+            : static_cast<uint8_t>(static_cast<int8_t>(ownerType) + 1);
 
         // --- Pre-create entity pool ---
         if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {

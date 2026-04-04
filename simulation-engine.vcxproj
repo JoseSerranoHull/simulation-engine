@@ -108,7 +108,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib;Comdlg32.lib</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib;Comdlg32.lib;Ws2_32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.328.1\Lib;c:\Software\glfw-3.4.bin.WIN64\lib-vc2022;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;C:\VulkanSDK\1.4.321.1\Lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -127,7 +127,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.328.1\Lib;c:\Software\glfw-3.4.bin.WIN64\lib-vc2022;$(ProjectDir)\external-libraries\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;C:\VulkanSDK\1.4.321.1\Lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib;Comdlg32.lib</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;gdi32.lib;user32.lib;shell32.lib;Comdlg32.lib;Ws2_32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -163,6 +163,8 @@
     <ClCompile Include="source\assets\Model.cpp" />
     <ClCompile Include="source\particles\GpuParticleBackend.cpp" />
     <ClCompile Include="source\systems\AnimationSystem.cpp" />
+    <ClCompile Include="source\systems\ClothSystem.cpp" />
+    <ClCompile Include="source\systems\FlockingSystem.cpp" />
     <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp" />
     <ClCompile Include="source\systems\PhysicsSystem.cpp" />
     <ClCompile Include="source\systems\ScriptSystem.cpp" />
@@ -190,9 +192,14 @@
     <ClCompile Include="source\graphics\VulkanDevice.cpp" />
     <ClCompile Include="source\graphics\GpuResourceManager.cpp" />
     <ClCompile Include="source\graphics\VulkanUtils.cpp" />
+    <ClCompile Include="source\networking\NetworkService.cpp" />
+    <ClCompile Include="source\core\NetworkBridge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CLAUDE.md" />
+    <None Include="config\flatbufferConfig\cloth_test.json" />
+    <None Include="config\flatbufferConfig\flock_test.json" />
+    <None Include="config\flatbufferConfig\test_fb_scene.json" />
     <None Include="config\simulation_lab2.ini" />
     <None Include="config\simulation_lab3.ini" />
     <None Include="config\simulation_lab4.ini" />
@@ -293,6 +300,10 @@
     <ClInclude Include="include\scene\fb\FBSceneContext.h" />
     <ClInclude Include="include\scene\fb\FBSceneAdapter.h" />
     <ClInclude Include="include\components\AnimationComponents.h" />
+    <ClInclude Include="include\components\ClothComponent.h" />
+    <ClInclude Include="include\components\FlockingComponent.h" />
+    <ClInclude Include="include\systems\ClothSystem.h" />
+    <ClInclude Include="include\systems\FlockingSystem.h" />
     <ClInclude Include="include\systems\AnimationSystem.h" />
     <ClInclude Include="include\assets\GeometryUtils.h" />
     <ClInclude Include="include\ecs\IComponentArray.h" />
@@ -359,6 +370,9 @@
     <ClInclude Include="include\systems\ScriptSystem.h" />
     <ClInclude Include="include\game-scripts\DemoPlayerScript.h" />
     <ClInclude Include="include\game-scripts\DemoTriggerScript.h" />
+    <ClInclude Include="include\networking\Packets.h" />
+    <ClInclude Include="include\networking\NetworkService.h" />
+    <ClInclude Include="include\core\NetworkBridge.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -57,7 +57,21 @@
       "Bash(/c/VulkanSDK/1.4.321.1/Bin/spirv-dis.exe /c/Users/javie/GitHub/simulation-engine/shaders/flatcolor_vert.spv)",
       "Bash(/c/VulkanSDK/1.4.321.1/Bin/spirv-dis.exe /c/Users/javie/GitHub/simulation-engine/shaders/flatcolor_frag.spv)",
       "Bash(\"C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.sln\" //p:Configuration=Debug //p:Platform=x64 //nologo //v:minimal)",
-      "Bash(\"C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.sln\" //p:Configuration=Release //p:Platform=x64 //nologo //v:minimal)"
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.sln\" //p:Configuration=Release //p:Platform=x64 //nologo //v:minimal)",
+      "Bash(/mnt/c/Windows/System32/cmd.exe /c \"cd /d \\\\\"C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\GitHub\\\\\\\\simulation-engine\\\\\" && \\\\\"C:\\\\\\\\Program Files\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\Community\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe\\\\\" simulation-engine.sln /p:Configuration=Debug /p:Platform=x64 /m /v:minimal\")",
+      "Read(//c/Windows/System32/**)",
+      "Read(//cygdrive/c/Windows/System32/**)",
+      "Bash(\"/c/Windows/System32/cmd.exe\" /c \"\\\\\"C:\\\\\\\\Program Files\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\Community\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe\\\\\" \\\\\"C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\GitHub\\\\\\\\simulation-engine\\\\\\\\simulation-engine.sln\\\\\" /p:Configuration=Debug /p:Platform=x64 /m /v:minimal\")",
+      "Bash(\"/c/Windows/System32/cmd.exe\" /c \"\\\\\"C:\\\\\\\\Program Files\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\Community\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe\\\\\" \\\\\"C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\GitHub\\\\\\\\simulation-engine\\\\\\\\simulation-engine.sln\\\\\" /p:Configuration=Debug /p:Platform=x64 /m /v:minimal > C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\build_output.txt 2>&1\")",
+      "Read(//c/Users/javie/**)",
+      "Bash(\"/c/Windows/System32/cmd.exe\" /c \"\\\\\"C:\\\\\\\\Program Files\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\Community\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe\\\\\" \\\\\"C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\GitHub\\\\\\\\simulation-engine\\\\\\\\simulation-engine.sln\\\\\" /p:Configuration=Debug /p:Platform=x64 /t:Rebuild /m /v:minimal > C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\build_output.txt 2>&1\")",
+      "Bash(\"/c/Windows/System32/cmd.exe\" /c \"\\\\\"C:\\\\\\\\Program Files\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\Community\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe\\\\\" \\\\\"C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\GitHub\\\\\\\\simulation-engine\\\\\\\\simulation-engine.sln\\\\\" /p:Configuration=Debug /p:Platform=x64 /t:Rebuild /m /v:minimal > C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\build_new.txt 2>&1 & echo done\")",
+      "Bash(\"/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe\" -Command \"& 'C:\\\\\\\\Program Files\\\\\\\\Microsoft Visual Studio\\\\\\\\2022\\\\\\\\Community\\\\\\\\MSBuild\\\\\\\\Current\\\\\\\\Bin\\\\\\\\MSBuild.exe' 'C:\\\\\\\\Users\\\\\\\\javie\\\\\\\\GitHub\\\\\\\\simulation-engine\\\\\\\\simulation-engine.sln' /p:Configuration=Debug /p:Platform=x64 /t:Rebuild /m /v:minimal 2>&1\")",
+      "Bash(\"/c/Users/javie/flatbuffers/Release/flatc.exe\" --cpp -o . Scene.fbs)",
+      "Bash(\"/c/Users/javie/flatbuffers/Release/flatc.exe\" -b \"../../flatbuffers/Scene.fbs\" cloth_test.json)",
+      "Bash(/c/Users/javie/flatbuffers/Release/flatc.exe --binary flatbuffers/Scene.fbs config/flatbufferConfig/flock_test.json -o config/flatbufferConfig/)",
+      "Bash(/c/Users/javie/flatbuffers/Release/flatc.exe -o config/flatbufferConfig/ --binary flatbuffers/Scene.fbs config/flatbufferConfig/flock_test.json)",
+      "Bash(Write-Output \"test\")"
     ]
   }
 }

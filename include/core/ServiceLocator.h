@@ -7,6 +7,7 @@
 
 // Forward declarations
 class EngineOrchestrator;
+namespace GE { class NetworkBridge; }
 namespace GE::ECS { class EntityManager; }
 class AssetManager;
 class InputService;
@@ -33,6 +34,7 @@ public:
     static void Provide(TimeService* timeManager) { m_timeManager = timeManager; }
 	static void Provide(GE::Systems::ParticleEmitterSystem* particleEmitterSystem) { m_particleEmitterSystem = particleEmitterSystem; }
     static void Provide(GE::Systems::SpringSystem* springSystem) { m_springSystem = springSystem; }
+    static void Provide(GE::NetworkBridge* bridge) { m_networkBridge = bridge; }
 
     // --- Retrievers ---
     static GE::Graphics::VulkanContext* GetContext() {
@@ -86,6 +88,7 @@ public:
 	}
 
     static GE::Systems::SpringSystem* GetSpringSystem() { return m_springSystem; }
+    static GE::NetworkBridge* GetNetworkBridge() { return m_networkBridge; }
 
 private:
     static inline GE::Graphics::VulkanContext* m_context = nullptr;
@@ -99,4 +102,5 @@ private:
 	static inline TimeService* m_timeManager = nullptr;
 	static inline GE::Systems::ParticleEmitterSystem* m_particleEmitterSystem = nullptr;
     static inline GE::Systems::SpringSystem* m_springSystem = nullptr;
+    static inline GE::NetworkBridge* m_networkBridge = nullptr;
 };

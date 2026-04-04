@@ -59,6 +59,9 @@ namespace GE::Scene::FB {
 
         // Pre-created entity IDs (in activation order, SEQUENTIAL cycling already applied)
         std::vector<GE::ECS::EntityID> entityIds;
+
+        /// Peer ID (1-4) responsible for firing this spawner; derived from SpawnerOwnerType.
+        uint8_t ownerPeerId { 1 };
     };
 
     /**

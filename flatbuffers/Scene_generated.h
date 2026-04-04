@@ -51,6 +51,12 @@ struct CylinderBuilder;
 struct Cuboid;
 struct CuboidBuilder;
 
+struct ClothObject;
+struct ClothObjectBuilder;
+
+struct FlockAgent;
+struct FlockAgentBuilder;
+
 struct StaticObject;
 struct StaticObjectBuilder;
 
@@ -231,33 +237,39 @@ enum class Behaviour : uint8_t {
   StaticObject = 1,
   SimulatedObject = 2,
   AnimatedObject = 3,
+  ClothObject = 4,
+  FlockAgent = 5,
   MIN = NONE,
-  MAX = AnimatedObject
+  MAX = FlockAgent
 };
 
-inline const Behaviour (&EnumValuesBehaviour())[4] {
+inline const Behaviour (&EnumValuesBehaviour())[6] {
   static const Behaviour values[] = {
     Behaviour::NONE,
     Behaviour::StaticObject,
     Behaviour::SimulatedObject,
-    Behaviour::AnimatedObject
+    Behaviour::AnimatedObject,
+    Behaviour::ClothObject,
+    Behaviour::FlockAgent
   };
   return values;
 }
 
 inline const char * const *EnumNamesBehaviour() {
-  static const char * const names[5] = {
+  static const char * const names[7] = {
     "NONE",
     "StaticObject",
     "SimulatedObject",
     "AnimatedObject",
+    "ClothObject",
+    "FlockAgent",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameBehaviour(Behaviour e) {
-  if (::flatbuffers::IsOutRange(e, Behaviour::NONE, Behaviour::AnimatedObject)) return "";
+  if (::flatbuffers::IsOutRange(e, Behaviour::NONE, Behaviour::FlockAgent)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesBehaviour()[index];
 }
@@ -276,6 +288,14 @@ template<> struct BehaviourTraits<Simulation::SimulatedObject> {
 
 template<> struct BehaviourTraits<Simulation::AnimatedObject> {
   static const Behaviour enum_value = Behaviour::AnimatedObject;
+};
+
+template<> struct BehaviourTraits<Simulation::ClothObject> {
+  static const Behaviour enum_value = Behaviour::ClothObject;
+};
+
+template<> struct BehaviourTraits<Simulation::FlockAgent> {
+  static const Behaviour enum_value = Behaviour::FlockAgent;
 };
 
 template <bool B = false>
@@ -1236,6 +1256,186 @@ inline ::flatbuffers::Offset<Cuboid> CreateCuboid(
   return builder_.Finish();
 }
 
+struct ClothObject FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef ClothObjectBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROWS = 4,
+    VT_COLS = 6,
+    VT_CELL_SIZE = 8,
+    VT_SPRING_K = 10,
+    VT_SHEAR_K = 12,
+    VT_FLEXION_K = 14,
+    VT_DAMPING = 16,
+    VT_PARTICLE_MASS = 18,
+    VT_PIN_TOP_EDGE = 20
+  };
+  int32_t rows() const { return GetField<int32_t>(VT_ROWS, 10); }
+  int32_t cols() const { return GetField<int32_t>(VT_COLS, 10); }
+  float cell_size() const { return GetField<float>(VT_CELL_SIZE, 0.2f); }
+  float spring_k() const { return GetField<float>(VT_SPRING_K, 100.0f); }
+  float shear_k() const { return GetField<float>(VT_SHEAR_K, 50.0f); }
+  float flexion_k() const { return GetField<float>(VT_FLEXION_K, 25.0f); }
+  float damping() const { return GetField<float>(VT_DAMPING, 0.1f); }
+  float particle_mass() const { return GetField<float>(VT_PARTICLE_MASS, 0.1f); }
+  bool pin_top_edge() const { return GetField<uint8_t>(VT_PIN_TOP_EDGE, 1) != 0; }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_ROWS, 4) &&
+           VerifyField<int32_t>(verifier, VT_COLS, 4) &&
+           VerifyField<float>(verifier, VT_CELL_SIZE, 4) &&
+           VerifyField<float>(verifier, VT_SPRING_K, 4) &&
+           VerifyField<float>(verifier, VT_SHEAR_K, 4) &&
+           VerifyField<float>(verifier, VT_FLEXION_K, 4) &&
+           VerifyField<float>(verifier, VT_DAMPING, 4) &&
+           VerifyField<float>(verifier, VT_PARTICLE_MASS, 4) &&
+           VerifyField<uint8_t>(verifier, VT_PIN_TOP_EDGE, 1) &&
+           verifier.EndTable();
+  }
+};
+
+struct ClothObjectBuilder {
+  typedef ClothObject Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_rows(int32_t rows) { fbb_.AddElement<int32_t>(ClothObject::VT_ROWS, rows, 10); }
+  void add_cols(int32_t cols) { fbb_.AddElement<int32_t>(ClothObject::VT_COLS, cols, 10); }
+  void add_cell_size(float cell_size) { fbb_.AddElement<float>(ClothObject::VT_CELL_SIZE, cell_size, 0.2f); }
+  void add_spring_k(float spring_k) { fbb_.AddElement<float>(ClothObject::VT_SPRING_K, spring_k, 100.0f); }
+  void add_shear_k(float shear_k) { fbb_.AddElement<float>(ClothObject::VT_SHEAR_K, shear_k, 50.0f); }
+  void add_flexion_k(float flexion_k) { fbb_.AddElement<float>(ClothObject::VT_FLEXION_K, flexion_k, 25.0f); }
+  void add_damping(float damping) { fbb_.AddElement<float>(ClothObject::VT_DAMPING, damping, 0.1f); }
+  void add_particle_mass(float particle_mass) { fbb_.AddElement<float>(ClothObject::VT_PARTICLE_MASS, particle_mass, 0.1f); }
+  void add_pin_top_edge(bool pin_top_edge) { fbb_.AddElement<uint8_t>(ClothObject::VT_PIN_TOP_EDGE, static_cast<uint8_t>(pin_top_edge), 1); }
+  explicit ClothObjectBuilder(::flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<ClothObject> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    return ::flatbuffers::Offset<ClothObject>(end);
+  }
+};
+
+inline ::flatbuffers::Offset<ClothObject> CreateClothObject(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t rows = 10,
+    int32_t cols = 10,
+    float cell_size = 0.2f,
+    float spring_k = 100.0f,
+    float shear_k = 50.0f,
+    float flexion_k = 25.0f,
+    float damping = 0.1f,
+    float particle_mass = 0.1f,
+    bool pin_top_edge = true) {
+  ClothObjectBuilder builder_(_fbb);
+  builder_.add_particle_mass(particle_mass);
+  builder_.add_damping(damping);
+  builder_.add_flexion_k(flexion_k);
+  builder_.add_shear_k(shear_k);
+  builder_.add_spring_k(spring_k);
+  builder_.add_cell_size(cell_size);
+  builder_.add_cols(cols);
+  builder_.add_rows(rows);
+  builder_.add_pin_top_edge(pin_top_edge);
+  return builder_.Finish();
+}
+
+struct FlockAgent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef FlockAgentBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_AGENT_COUNT       = 4,
+    VT_SPHERE_RADIUS     = 6,
+    VT_SEPARATION_RADIUS = 8,
+    VT_ALIGNMENT_RADIUS  = 10,
+    VT_COHESION_RADIUS   = 12,
+    VT_W_SEPARATION      = 14,
+    VT_W_ALIGNMENT       = 16,
+    VT_W_COHESION        = 18,
+    VT_MAX_SPEED         = 20,
+    VT_MAX_FORCE         = 22,
+    VT_SPAWN_RADIUS      = 24
+  };
+  int32_t agent_count()       const { return GetField<int32_t>(VT_AGENT_COUNT,       60);   }
+  float   sphere_radius()     const { return GetField<float>  (VT_SPHERE_RADIUS,     0.3f); }
+  float   separation_radius() const { return GetField<float>  (VT_SEPARATION_RADIUS, 1.5f); }
+  float   alignment_radius()  const { return GetField<float>  (VT_ALIGNMENT_RADIUS,  3.0f); }
+  float   cohesion_radius()   const { return GetField<float>  (VT_COHESION_RADIUS,   5.0f); }
+  float   w_separation()      const { return GetField<float>  (VT_W_SEPARATION,      2.0f); }
+  float   w_alignment()       const { return GetField<float>  (VT_W_ALIGNMENT,       1.0f); }
+  float   w_cohesion()        const { return GetField<float>  (VT_W_COHESION,        1.0f); }
+  float   max_speed()         const { return GetField<float>  (VT_MAX_SPEED,         6.0f); }
+  float   max_force()         const { return GetField<float>  (VT_MAX_FORCE,        15.0f); }
+  float   spawn_radius()      const { return GetField<float>  (VT_SPAWN_RADIUS,      5.0f); }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_AGENT_COUNT,       4) &&
+           VerifyField<float>  (verifier, VT_SPHERE_RADIUS,     4) &&
+           VerifyField<float>  (verifier, VT_SEPARATION_RADIUS, 4) &&
+           VerifyField<float>  (verifier, VT_ALIGNMENT_RADIUS,  4) &&
+           VerifyField<float>  (verifier, VT_COHESION_RADIUS,   4) &&
+           VerifyField<float>  (verifier, VT_W_SEPARATION,      4) &&
+           VerifyField<float>  (verifier, VT_W_ALIGNMENT,       4) &&
+           VerifyField<float>  (verifier, VT_W_COHESION,        4) &&
+           VerifyField<float>  (verifier, VT_MAX_SPEED,         4) &&
+           VerifyField<float>  (verifier, VT_MAX_FORCE,         4) &&
+           VerifyField<float>  (verifier, VT_SPAWN_RADIUS,      4) &&
+           verifier.EndTable();
+  }
+};
+
+struct FlockAgentBuilder {
+  typedef FlockAgent Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_agent_count      (int32_t v) { fbb_.AddElement<int32_t>(FlockAgent::VT_AGENT_COUNT,       v, 60);   }
+  void add_sphere_radius    (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_SPHERE_RADIUS,     v, 0.3f); }
+  void add_separation_radius(float   v) { fbb_.AddElement<float>  (FlockAgent::VT_SEPARATION_RADIUS, v, 1.5f); }
+  void add_alignment_radius (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_ALIGNMENT_RADIUS,  v, 3.0f); }
+  void add_cohesion_radius  (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_COHESION_RADIUS,   v, 5.0f); }
+  void add_w_separation     (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_W_SEPARATION,      v, 2.0f); }
+  void add_w_alignment      (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_W_ALIGNMENT,       v, 1.0f); }
+  void add_w_cohesion       (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_W_COHESION,        v, 1.0f); }
+  void add_max_speed        (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_MAX_SPEED,         v, 6.0f); }
+  void add_max_force        (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_MAX_FORCE,         v,15.0f); }
+  void add_spawn_radius     (float   v) { fbb_.AddElement<float>  (FlockAgent::VT_SPAWN_RADIUS,      v, 5.0f); }
+  explicit FlockAgentBuilder(::flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<FlockAgent> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    return ::flatbuffers::Offset<FlockAgent>(end);
+  }
+};
+
+inline ::flatbuffers::Offset<FlockAgent> CreateFlockAgent(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t agent_count       = 60,
+    float   sphere_radius     = 0.3f,
+    float   separation_radius = 1.5f,
+    float   alignment_radius  = 3.0f,
+    float   cohesion_radius   = 5.0f,
+    float   w_separation      = 2.0f,
+    float   w_alignment       = 1.0f,
+    float   w_cohesion        = 1.0f,
+    float   max_speed         = 6.0f,
+    float   max_force         = 15.0f,
+    float   spawn_radius      = 5.0f) {
+  FlockAgentBuilder builder_(_fbb);
+  builder_.add_spawn_radius(spawn_radius);
+  builder_.add_max_force(max_force);
+  builder_.add_max_speed(max_speed);
+  builder_.add_w_cohesion(w_cohesion);
+  builder_.add_w_alignment(w_alignment);
+  builder_.add_w_separation(w_separation);
+  builder_.add_cohesion_radius(cohesion_radius);
+  builder_.add_alignment_radius(alignment_radius);
+  builder_.add_separation_radius(separation_radius);
+  builder_.add_sphere_radius(sphere_radius);
+  builder_.add_agent_count(agent_count);
+  return builder_.Finish();
+}
+
 struct StaticObject FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef StaticObjectBuilder Builder;
   template <bool B = false>
@@ -1528,6 +1728,12 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const Simulation::AnimatedObject *behaviour_as_AnimatedObject() const {
     return behaviour_type() == Simulation::Behaviour::AnimatedObject ? static_cast<const Simulation::AnimatedObject *>(behaviour()) : nullptr;
   }
+  const Simulation::ClothObject *behaviour_as_ClothObject() const {
+    return behaviour_type() == Simulation::Behaviour::ClothObject ? static_cast<const Simulation::ClothObject *>(behaviour()) : nullptr;
+  }
+  const Simulation::FlockAgent *behaviour_as_FlockAgent() const {
+    return behaviour_type() == Simulation::Behaviour::FlockAgent ? static_cast<const Simulation::FlockAgent *>(behaviour()) : nullptr;
+  }
   Simulation::CollisionType collision_type() const {
     return static_cast<Simulation::CollisionType>(GetField<int8_t>(VT_COLLISION_TYPE, 0));
   }
@@ -1580,6 +1786,14 @@ template<> inline const Simulation::SimulatedObject *Object::behaviour_as<Simula
 
 template<> inline const Simulation::AnimatedObject *Object::behaviour_as<Simulation::AnimatedObject>() const {
   return behaviour_as_AnimatedObject();
+}
+
+template<> inline const Simulation::ClothObject *Object::behaviour_as<Simulation::ClothObject>() const {
+  return behaviour_as_ClothObject();
+}
+
+template<> inline const Simulation::FlockAgent *Object::behaviour_as<Simulation::FlockAgent>() const {
+  return behaviour_as_FlockAgent();
 }
 
 struct ObjectBuilder {
@@ -2763,6 +2977,14 @@ inline bool VerifyBehaviour(::flatbuffers::VerifierTemplate<B> &verifier, const 
     }
     case Behaviour::AnimatedObject: {
       auto ptr = reinterpret_cast<const Simulation::AnimatedObject *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Behaviour::ClothObject: {
+      auto ptr = reinterpret_cast<const Simulation::ClothObject *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Behaviour::FlockAgent: {
+      auto ptr = reinterpret_cast<const Simulation::FlockAgent *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;

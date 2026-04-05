@@ -756,6 +756,9 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
                 // 2b. Broadcast owned entity states to peers (throttled to ~60/sec).
                 if (m_networkBridge != nullptr) {
                     m_networkBridge->BroadcastOwnedStates();
+                    // 2c. Apply dead-reckoned positions to remote entities, overwriting
+                    //     whatever PhysicsSystem integrated for them this tick.
+                    m_networkBridge->UpdateRemoteEntities(fixedDt);
                 }
 
                 // 3. Copy all Transform world-matrices to the SimulationState back buffer.

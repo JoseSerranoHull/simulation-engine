@@ -85,49 +85,24 @@ void ClothSystem::OnUpdate(float dt) {
         }
 
         // ---------------------------------------------------------------
-        // 2. Structural springs (N/S/E/W, rest = cellSize)
+        // 2-4. Springs (structural + shear + flexion) via explicit list.
+        //      Supports tearing: springs with active==false are skipped permanently.
         // ---------------------------------------------------------------
-        const float restStruct  = cc.cellSize;
-        const float restShear   = cc.cellSize * 1.41421356f; // √2
-        const float restFlex    = cc.cellSize * 2.0f;
+        for (GE::Components::ClothSpring& s : cc.springs) {
+            if (!s.active) { continue; }
 
-        for (int r = 0; r < R; ++r) {
-            for (int c = 0; c < C; ++c) {
-                auto& pA = cc.particles[r * C + c];
-                // East
-                if (c + 1 < C) {
-                    applySpring(pA, cc.particles[r * C + (c + 1)], restStruct, cc.springK, cc.damping, dt);
-                }
-                // South
-                if (r + 1 < R) {
-                    applySpring(pA, cc.particles[(r + 1) * C + c], restStruct, cc.springK, cc.damping, dt);
-                }
-            }
-        }
+            GE::Components::ClothParticle& pA = cc.particles[s.a];
+            GE::Components::ClothParticle& pB = cc.particles[s.b];
 
-        // ---------------------------------------------------------------
-        // 3. Shear springs (diagonal, rest = cellSize * √2)
-        // ---------------------------------------------------------------
-        for (int r = 0; r < R - 1; ++r) {
-            for (int c = 0; c < C - 1; ++c) {
-                applySpring(cc.particles[r * C + c],     cc.particles[(r + 1) * C + (c + 1)], restShear, cc.shearK, cc.damping, dt);
-                applySpring(cc.particles[r * C + (c + 1)], cc.particles[(r + 1) * C + c],     restShear, cc.shearK, cc.damping, dt);
-            }
-        }
+            // Deactivate springs involving burned particles
+            if (pA.burned || pB.burned) { s.active = false; continue; }
 
-        // ---------------------------------------------------------------
-        // 4. Flexion springs (skip-one, rest = 2 * cellSize)
-        // ---------------------------------------------------------------
-        for (int r = 0; r < R; ++r) {
-            for (int c = 0; c < C - 2; ++c) {
-                // East-skip
-                applySpring(cc.particles[r * C + c], cc.particles[r * C + (c + 2)], restFlex, cc.flexionK, cc.damping, dt);
-            }
-        }
-        for (int r = 0; r < R - 2; ++r) {
-            for (int c = 0; c < C; ++c) {
-                // South-skip
-                applySpring(cc.particles[r * C + c], cc.particles[(r + 2) * C + c], restFlex, cc.flexionK, cc.damping, dt);
+            applySpring(pA, pB, s.restLen, s.kSpring, cc.damping, dt);
+
+            // Tearing check: if current length exceeds threshold * restLen, tear permanently
+            const float currentLen = glm::length(pA.position - pB.position);
+            if (currentLen > cc.tearThreshold * s.restLen) {
+                s.active = false;
             }
         }
 
@@ -167,6 +142,33 @@ void ClothSystem::OnUpdate(float dt) {
                 const float     dist = glm::length(diff);
                 if (dist < sphereRadius && dist > MIN_LENGTH) {
                     p.position = sphereCenter + glm::normalize(diff) * sphereRadius;
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // 7. Burning: heat particles within burnCenter radius, free when >= 1.0
+        // ---------------------------------------------------------------
+        if (cc.burnActive) {
+            for (uint32_t pi = 0U; pi < static_cast<uint32_t>(cc.particles.size()); ++pi) {
+                GE::Components::ClothParticle& p = cc.particles[pi];
+                if (p.burned || p.pinned) { continue; }
+
+                const float dist = glm::length(p.position - cc.burnCenter);
+                if (dist < cc.burnRadius) {
+                    p.heat += cc.burnRate * dt;
+                }
+
+                if (p.heat >= 1.0f && !p.burned) {
+                    p.burned = true;
+                    p.pinned = false; // ensure free fall
+                    // Deactivate all springs connected to this particle
+                    for (GE::Components::ClothSpring& s : cc.springs) {
+                        if (s.a == static_cast<uint16_t>(pi) ||
+                            s.b == static_cast<uint16_t>(pi)) {
+                            s.active = false;
+                        }
+                    }
                 }
             }
         }

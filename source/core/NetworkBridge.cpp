@@ -116,11 +116,26 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
     if (pkt.header.sequence <= m_lastSeenSequence[peerIdx]) { return; }
     m_lastSeenSequence[peerIdx] = pkt.header.sequence;
 
-    auto* tr = m_entityManager->GetTIComponent<GE::Components::Transform>(pkt.entityId);
-    auto* rb = m_entityManager->GetTIComponent<GE::Components::RigidBody>(pkt.entityId);
+    // Dead reckoning: store authoritative state; blend will be applied
+    // by UpdateRemoteEntities() on the physics thread.
+    {
+        std::lock_guard<std::mutex> lock(m_remoteStatesMutex);
+        RemoteEntityState& rs = m_remoteStates[pkt.entityId];
+        rs.authPosition  = pkt.position;
+        rs.authVelocity  = pkt.linearVelocity;
+        rs.authTimeSec   = std::chrono::duration<double>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        rs.blendTimer    = RemoteEntityState::BLEND_DURATION;
+    }
 
+    // Apply angularVelocity and orientation immediately
+    // (rotation is not dead-reckoned — too complex for rotation blending).
+    auto* rb = m_entityManager->GetTIComponent<GE::Components::RigidBody>(pkt.entityId);
+    if (rb != nullptr) {
+        rb->angularVelocity = pkt.angularVelocity;
+    }
+    auto* tr = m_entityManager->GetTIComponent<GE::Components::Transform>(pkt.entityId);
     if (tr != nullptr) {
-        tr->m_position = pkt.position;
         const glm::quat q(pkt.orientation[3],   // w
                           pkt.orientation[0],   // x
                           pkt.orientation[1],   // y
@@ -134,11 +149,70 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
             glm::vec4(pkt.position,         1.0f)
         );
     }
+}
 
-    if (rb != nullptr) {
-        rb->velocity        = pkt.linearVelocity;
-        rb->angularVelocity = pkt.angularVelocity;
+// ---------------------------------------------------------------------------
+// UpdateRemoteEntities — dead reckoning + smooth blend correction
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::UpdateRemoteEntities(float dt)
+{
+    if (m_entityManager == nullptr) { return; }
+    if (m_service == nullptr) { return; }
+
+    const uint8_t localId = m_service->GetLocalPeerId();
+    const auto localOwner = (localId >= 1 && localId <= 4)
+                             ? static_cast<GE::Components::OwnerType>(localId - 1U)
+                             : GE::Components::OwnerType::ONE;
+
+    const double nowSec = std::chrono::duration<double>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    std::lock_guard<std::mutex> lock(m_remoteStatesMutex);
+
+    for (auto& [entityId, rs] : m_remoteStates) {
+        // Skip entities owned by this local peer
+        auto* owner = m_entityManager->TryGetTIComponent<GE::Components::OwnerComponent>(entityId);
+        if (owner != nullptr && owner->owner == localOwner) { continue; }
+
+        auto* tr = m_entityManager->TryGetTIComponent<GE::Components::Transform>(entityId);
+        auto* rb = m_entityManager->TryGetTIComponent<GE::Components::RigidBody>(entityId);
+        if (tr == nullptr || rb == nullptr) { continue; }
+
+        // Guard: if packet is stale (peer likely disconnected), stop dead reckoning
+        const float dtSincePacket = static_cast<float>(nowSec - rs.authTimeSec);
+        if (dtSincePacket > 2.0f) { continue; }
+
+        // Dead reckoning: predict position based on last known velocity
+        const glm::vec3 predictedPos = rs.authPosition + rs.authVelocity * dtSincePacket;
+
+        if (rs.blendTimer > 0.0f) {
+            // Active blend: lerp from current rendered position toward predicted
+            const float alpha = dt / rs.blendTimer;
+            const float t     = glm::clamp(alpha, 0.0f, 1.0f);
+            rs.renderPosition = glm::mix(tr->m_position, predictedPos, t);
+            rs.blendTimer    -= dt;
+            if (rs.blendTimer < 0.0f) { rs.blendTimer = 0.0f; }
+        } else {
+            // No active blend: pure dead reckoning
+            rs.renderPosition = predictedPos;
+        }
+
+        // Apply to entity (overwrites whatever PhysicsSystem did this tick)
+        tr->m_position        = rs.renderPosition;
+        rb->velocity          = rs.authVelocity;
+        tr->m_worldMatrix[3]  = glm::vec4(rs.renderPosition, 1.0f);
     }
+}
+
+// ---------------------------------------------------------------------------
+// ClearRemoteStates — call on scene change to purge stale entity IDs
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::ClearRemoteStates()
+{
+    std::lock_guard<std::mutex> lock(m_remoteStatesMutex);
+    m_remoteStates.clear();
 }
 
 // ---------------------------------------------------------------------------

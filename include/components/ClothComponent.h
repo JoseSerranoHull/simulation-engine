@@ -14,6 +14,18 @@ struct ClothParticle {
     glm::vec3 prevPosition { 0.0f }; // Verlet: stores last-frame position
     glm::vec3 force        { 0.0f };
     bool      pinned       { false };
+    float     heat         { 0.0f }; // 0 = cold, 1.0 = fully burned
+    bool      burned       { false };// true = freed by burning, falls freely
+};
+
+// Explicit spring between two cloth particles.
+// kSpring is baked at load time; runtime ImGui slider changes affect new cloth loads only.
+struct ClothSpring {
+    uint16_t a       { 0 };       // index into ClothComponent::particles
+    uint16_t b       { 0 };
+    float    restLen { 0.0f };    // original rest length (set at load time)
+    float    kSpring { 100.0f };  // spring constant (structural / shear / flexion)
+    bool     active  { true };    // false = spring has torn; permanently skip
 };
 
 struct ClothComponent {
@@ -45,6 +57,16 @@ struct ClothComponent {
 
     // Color baked at load time from owner color palette
     glm::vec3 color { 0.8f, 0.8f, 0.8f };
+
+    // Tearing
+    std::vector<ClothSpring> springs;            // explicit spring list (populated at load time)
+    float tearThreshold { 3.0f };                // spring tears when length > threshold * restLen
+
+    // Burning (Runtime ImGui tweakables — benign race on POD scalars/vec3)
+    glm::vec3 burnCenter { 0.0f, -1000.0f, 0.0f }; // default far off-scene = inactive
+    float     burnRadius { 0.8f };
+    float     burnRate   { 1.5f };               // heat units per second within burnRadius
+    bool      burnActive { false };
 
     // Runtime ImGui tweakables (benign race between main thread write and physics thread read)
     float windX { 0.0f }, windZ { 0.0f };

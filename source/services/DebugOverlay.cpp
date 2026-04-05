@@ -203,8 +203,9 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                 if (ImGui::MenuItem("Reset Current Scenario", "F5")) {
                     std::string currentPath = experience->GetCurrentScenario()->GetConfigPath();
 
-                    // We reload the scenario by creating a fresh instance with the same path
-                    experience->changeScenario(std::make_unique<GE::GenericScenario>(currentPath));
+                    // Use the deferred path so vkDeviceWaitIdle() is called before
+                    // pipelines are destroyed — prevents Vulkan validation errors.
+                    experience->requestScenarioChange(currentPath);
 
                     GE_LOG_INFO("UI: Resetting scenario from " + currentPath);
                 }

@@ -1,0 +1,185 @@
+{
+  "name": "Animation Demo",
+  "description": "Three animated platforms demonstrating all PathModes: Platform A uses STOP (moves once and stops), Platform B uses LOOP with SMOOTHSTEP easing (visibly decelerates at waypoints), Platform C uses REVERSE (constant-speed ping-pong). Simulated spheres are dropped onto each platform to demonstrate momentum transfer.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "MainCam",
+      "transform": {
+        "position": { "x": 0.0, "y": 6.0, "z": 18.0 },
+        "orientation": { "yaw": -90.0, "pitch": -18.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 60.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 1200.0 },
+    { "name": "concrete", "density": 2400.0 },
+    { "name": "steel",    "density": 7800.0 }
+  ],
+  "interactions": [
+    {
+      "material_a": "rubber",
+      "material_b": "steel",
+      "restitution": 0.6,
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3
+    },
+    {
+      "material_a": "rubber",
+      "material_b": "concrete",
+      "restitution": 0.5,
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4
+    }
+  ],
+  "objects": [
+    {
+      "name": "Floor",
+      "transform": {
+        "position":    { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "PlatformA_STOP_LINEAR",
+      "transform": {
+        "position":    { "x": -4.0, "y": 1.0, "z": -4.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 3.0, "y": 0.3, "z": 3.0 } },
+      "behaviour_type": "AnimatedObject",
+      "behaviour": {
+        "waypoints": [
+          { "position": { "x": -4.0, "y": 1.0, "z": -4.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 0.0 },
+          { "position": { "x":  4.0, "y": 1.0, "z": -4.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 4.0 }
+        ],
+        "total_duration": 4.0,
+        "easing": "LINEAR",
+        "path_mode": "STOP"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereA",
+      "transform": {
+        "position":    { "x": -4.0, "y": 5.0, "z": -4.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.35 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "ONE"
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "PlatformB_LOOP_SMOOTHSTEP",
+      "transform": {
+        "position":    { "x": 0.0, "y": 1.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 3.0, "y": 0.3, "z": 3.0 } },
+      "behaviour_type": "AnimatedObject",
+      "behaviour": {
+        "waypoints": [
+          { "position": { "x": -3.0, "y": 1.0, "z": 0.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 0.0 },
+          { "position": { "x":  3.0, "y": 4.0, "z": 0.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 3.0 },
+          { "position": { "x": -3.0, "y": 1.0, "z": 0.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 6.0 }
+        ],
+        "total_duration": 6.0,
+        "easing": "SMOOTHSTEP",
+        "path_mode": "LOOP"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereB",
+      "transform": {
+        "position":    { "x": 0.0, "y": 6.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.35 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "TWO"
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "PlatformC_REVERSE_LINEAR",
+      "transform": {
+        "position":    { "x": 0.0, "y": 1.0, "z": 4.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 3.0, "y": 0.3, "z": 3.0 } },
+      "behaviour_type": "AnimatedObject",
+      "behaviour": {
+        "waypoints": [
+          { "position": { "x":  0.0, "y": 1.0, "z": 4.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 0.0 },
+          { "position": { "x":  0.0, "y": 4.0, "z": 4.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 2.5 },
+          { "position": { "x":  0.0, "y": 1.0, "z": 4.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 5.0 }
+        ],
+        "total_duration": 5.0,
+        "easing": "LINEAR",
+        "path_mode": "REVERSE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereC",
+      "transform": {
+        "position":    { "x": 0.0, "y": 7.0, "z": 4.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.35 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "THREE"
+      },
+      "collision_type": "SOLID"
+    }
+  ]
+}

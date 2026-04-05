@@ -7,6 +7,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_map>
 /* parasoft-end-suppress ALL */
 
 // NetworkBridge is the ONLY class permitted to include both networking and ECS headers.
@@ -76,11 +77,47 @@ namespace GE {
          */
         std::optional<std::string> PollPendingSceneChange();
 
+        /**
+         * @brief Applies dead-reckoned positions to all tracked remote entities.
+         *        Smoothly blends from the last rendered position toward the predicted
+         *        authoritative position over BLEND_DURATION seconds.
+         *
+         * Call site: physics thread, immediately after BroadcastOwnedStates().
+         * Lock ordering: physics thread acquires simMutex first, then remoteStatesMutex here.
+         */
+        void UpdateRemoteEntities(float dt);
+
+        /**
+         * @brief Clears all tracked remote entity states.
+         *        Call on scene change to prevent stale IDs from a previous scene.
+         */
+        void ClearRemoteStates();
+
         // --- Accessors used by EngineOrchestrator / ImGui ---
 
         Networking::NetworkService* GetService() const { return m_service; }
 
+        std::size_t GetRemoteStateCount() const {
+            std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_remoteStatesMutex));
+            return m_remoteStates.size();
+        }
+
     private:
+        // Dead reckoning state for each tracked remote entity.
+        // Lock ordering: physics thread acquires simMutex FIRST, then remoteStatesMutex.
+        //                networking thread acquires remoteStatesMutex ONLY (never simMutex).
+        struct RemoteEntityState {
+            glm::vec3  authPosition   { 0.0f };  // last received authoritative position
+            glm::vec3  authVelocity   { 0.0f };  // last received authoritative velocity
+            glm::vec3  renderPosition { 0.0f };  // current interpolated position applied to entity
+            double     authTimeSec    { 0.0 };   // wall-clock time when authPosition was received
+            float      blendTimer     { 0.0f };  // seconds remaining in blend (0 = pure dead reckoning)
+            static constexpr float BLEND_DURATION = 0.12f; // 120 ms blend window
+        };
+
+        std::unordered_map<uint32_t, RemoteEntityState> m_remoteStates;
+        std::mutex m_remoteStatesMutex;
+
         Networking::NetworkService* m_service       { nullptr };
         GE::ECS::EntityManager*     m_entityManager  { nullptr };
 

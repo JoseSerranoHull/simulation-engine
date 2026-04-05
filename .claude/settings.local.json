@@ -71,7 +71,20 @@
       "Bash(\"/c/Users/javie/flatbuffers/Release/flatc.exe\" -b \"../../flatbuffers/Scene.fbs\" cloth_test.json)",
       "Bash(/c/Users/javie/flatbuffers/Release/flatc.exe --binary flatbuffers/Scene.fbs config/flatbufferConfig/flock_test.json -o config/flatbufferConfig/)",
       "Bash(/c/Users/javie/flatbuffers/Release/flatc.exe -o config/flatbufferConfig/ --binary flatbuffers/Scene.fbs config/flatbufferConfig/flock_test.json)",
-      "Bash(Write-Output \"test\")"
+      "Bash(Write-Output \"test\")",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe\" \"C:/Users/javie/GitHub/simulation-engine/simulation-engine.sln\" -p:Configuration=Debug -p:Platform=x64 -v:minimal -noautoresponse)",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/spawner_demo.json)",
+      "Bash(echo \"spawner_demo: $?\")",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/animation_demo.json)",
+      "Bash(echo \"animation_demo: $?\")",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/physics_demo.json)",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/spawner_demo.json)",
+      "Bash(echo \"spawner_demo: exit $?\")",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/animation_demo.json)",
+      "Bash(echo \"animation_demo: exit $?\")",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/physics_demo.json)",
+      "Bash(echo \"physics_demo: exit $?\")",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/full_showcase.json)"
     ]
   }
 }

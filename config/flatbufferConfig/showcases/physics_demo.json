@@ -1,0 +1,156 @@
+{
+  "name": "Physics Demo",
+  "description": "Demonstrates material-dependent restitution: rubber sphere bounces high, steel sphere thuds low, wood cuboid rolls. Four owner-colour-coded objects are visible. Different integration methods can be compared via the Simulation ImGui menu.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "MainCam",
+      "transform": {
+        "position": { "x": 0.0, "y": 4.0, "z": 14.0 },
+        "orientation": { "yaw": -90.0, "pitch": -15.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 60.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 1200.0 },
+    { "name": "steel",    "density": 7800.0 },
+    { "name": "wood",     "density":  600.0 },
+    { "name": "concrete", "density": 2400.0 }
+  ],
+  "interactions": [
+    {
+      "material_a": "rubber",
+      "material_b": "concrete",
+      "restitution": 0.85,
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4
+    },
+    {
+      "material_a": "steel",
+      "material_b": "concrete",
+      "restitution": 0.15,
+      "static_friction": 0.7,
+      "dynamic_friction": 0.6
+    },
+    {
+      "material_a": "wood",
+      "material_b": "concrete",
+      "restitution": 0.45,
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4
+    }
+  ],
+  "objects": [
+    {
+      "name": "Floor",
+      "transform": {
+        "position":    { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereRubber_Peer1",
+      "transform": {
+        "position":    { "x": -4.5, "y": 6.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.45 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "ONE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereSteel_Peer2",
+      "transform": {
+        "position":    { "x": -1.5, "y": 6.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.45 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "TWO"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "CuboidWood_Peer3",
+      "transform": {
+        "position":    { "x": 1.5, "y": 6.0, "z": 0.0 },
+        "orientation": { "yaw": 15.0, "pitch": 0.0, "roll": 10.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "wood",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 0.7, "y": 0.7, "z": 0.7 } },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 5.0, "y": 10.0, "z": 5.0 }
+        },
+        "owner": "THREE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "CapsuleRubber_Peer4",
+      "transform": {
+        "position":    { "x": 4.5, "y": 6.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Capsule",
+      "shape": { "radius": 0.3, "height": 0.9 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "FOUR"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "StaticPlatform",
+      "transform": {
+        "position":    { "x": 0.0, "y": 0.8, "z": -4.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 6.0, "y": 0.4, "z": 4.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    }
+  ]
+}

@@ -53,6 +53,12 @@ FlatBuffersScenario::FlatBuffersScenario(std::string binaryPath, bool useOwnerCo
 // ===========================================================================
 
 void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
+    // Clear any stale dead-reckoning state from the previous scene
+    // so old entity IDs don't get applied to new scene entities.
+    if (auto* nb = ServiceLocator::GetNetworkBridge()) {
+        nb->ClearRemoteStates();
+    }
+
     // 1. Build the base 8 scenario-scoped pipelines (indices 0–7)
     createMaterialPipelines();
 
@@ -202,6 +208,17 @@ void FlatBuffersScenario::OnUpdate(float /*dt*/, float /*totalTime*/) {
         auto* verts = static_cast<GE::Assets::Vertex*>(cc.mappedVertices);
         for (uint32_t vi = 0U; vi < cc.vertexCount; ++vi) {
             verts[vi].position = cc.particles[vi].position;
+
+            // Heat-based color: cold = cloth color, heating → orange, burned → near-black
+            const float heat = cc.particles[vi].heat;
+            if (cc.particles[vi].burned) {
+                verts[vi].color = glm::vec3{ 0.05f, 0.05f, 0.05f };
+            } else if (heat > 0.0f) {
+                const glm::vec3 orange{ 1.0f, 0.2f, 0.0f };
+                verts[vi].color = glm::mix(cc.color, orange, glm::clamp(heat, 0.0f, 1.0f));
+            } else {
+                verts[vi].color = cc.color;
+            }
         }
     }
 }
@@ -447,6 +464,14 @@ void FlatBuffersScenario::OnGUI() {
             ImGui::TextColored({0.2f, 1.0f, 0.2f, 1.0f}, "Connected (peer %d)", m_localPeerId);
         }
 
+        ImGui::Separator();
+        ImGui::Text("Dead Reckoning");
+        if (bridge != nullptr) {
+            ImGui::Text("Tracked remote entities: %zu", bridge->GetRemoteStateCount());
+        } else {
+            ImGui::TextDisabled("(no network bridge)");
+        }
+
         ImGui::EndMenu();
     }
 
@@ -468,6 +493,31 @@ void FlatBuffersScenario::OnGUI() {
                     ImGui::SliderFloat("Damping",   &cc.damping,  0.0f,     1.0f);
                     ImGui::SliderFloat("Wind X",    &cc.windX,  -10.0f,    10.0f);
                     ImGui::SliderFloat("Wind Z",    &cc.windZ,  -10.0f,    10.0f);
+
+                    ImGui::Separator();
+                    ImGui::Text("Tearing");
+                    ImGui::SliderFloat("Tear Threshold", &cc.tearThreshold, 1.1f, 10.0f);
+                    if (ImGui::Button("Reset Springs")) {
+                        for (auto& s : cc.springs) { s.active = true; }
+                        for (auto& p : cc.particles) { p.heat = 0.0f; p.burned = false; }
+                    }
+
+                    ImGui::Separator();
+                    ImGui::Text("Burning");
+                    ImGui::Checkbox("Enable Burn", &cc.burnActive);
+                    ImGui::SliderFloat("Burn Radius", &cc.burnRadius, 0.1f, 5.0f);
+                    ImGui::SliderFloat("Burn Rate",   &cc.burnRate,   0.1f, 5.0f);
+                    if (ImGui::Button("Place Burn at Centre")) {
+                        if (!cc.particles.empty()) {
+                            glm::vec3 avg{ 0.0f };
+                            for (const auto& p : cc.particles) { avg += p.position; }
+                            cc.burnCenter = avg / static_cast<float>(cc.particles.size());
+                        }
+                    }
+                    ImGui::Text("Burn center: %.1f, %.1f, %.1f",
+                                cc.burnCenter.x, cc.burnCenter.y, cc.burnCenter.z);
+                    ImGui::DragFloat("Burn Center Y", &cc.burnCenter.y, 0.05f);
+
                     ImGui::PopID();
                     if (i + 1U < clothArr.GetCount()) { ImGui::Separator(); }
                 }
@@ -602,7 +652,7 @@ void FlatBuffersScenario::scanSceneDirectory() {
     m_availableScenes.clear();
 
     std::error_code ec;
-    for (const auto& entry : std::filesystem::directory_iterator("./config/flatbufferConfig/", ec)) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator("./config/flatbufferConfig/", ec)) {
         if (ec) { break; }
         if (entry.path().extension() == ".bin") {
             m_availableScenes.push_back(entry.path().string());

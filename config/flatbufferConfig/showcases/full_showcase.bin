@@ -1,0 +1,195 @@
+{
+  "name": "Full Showcase",
+  "description": "Primary teacher demo: cloth panel (Level 2 cloth sim), 40 flocking agents (Level 2 flocking), animated gate platform (Level 1 animation), SEQUENTIAL spawner dropping spheres (Level 1 spawning), and four owner-colour-coded simulated spheres (Level 1 physics + networking). Load this scene first for the demo.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "ShowcaseCam",
+      "transform": {
+        "position": { "x": 2.0, "y": 7.0, "z": 20.0 },
+        "orientation": { "yaw": -90.0, "pitch": -15.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 65.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 1200.0 },
+    { "name": "concrete", "density": 2400.0 },
+    { "name": "steel",    "density": 7800.0 }
+  ],
+  "interactions": [
+    {
+      "material_a": "rubber",
+      "material_b": "concrete",
+      "restitution": 0.6,
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4
+    },
+    {
+      "material_a": "steel",
+      "material_b": "concrete",
+      "restitution": 0.2,
+      "static_friction": 0.6,
+      "dynamic_friction": 0.5
+    }
+  ],
+  "objects": [
+    {
+      "name": "Floor",
+      "transform": {
+        "position":    { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "ClothPanel",
+      "transform": {
+        "position":    { "x": -5.0, "y": 6.0, "z": -2.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "ClothObject",
+      "behaviour": {
+        "rows": 12,
+        "cols": 12,
+        "cell_size": 0.2,
+        "spring_k": 180.0,
+        "shear_k": 90.0,
+        "flexion_k": 45.0,
+        "damping": 0.05,
+        "particle_mass": 0.05,
+        "pin_top_edge": true
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "FlockSpawn",
+      "transform": {
+        "position":    { "x": 5.0, "y": 3.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.01 },
+      "behaviour_type": "FlockAgent",
+      "behaviour": {
+        "agent_count": 40,
+        "sphere_radius": 0.28,
+        "separation_radius": 1.4,
+        "alignment_radius": 3.0,
+        "cohesion_radius": 5.5,
+        "w_separation": 2.0,
+        "w_alignment": 1.0,
+        "w_cohesion": 1.2,
+        "max_speed": 5.5,
+        "max_force": 12.0,
+        "spawn_radius": 5.0
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "AnimatedGate",
+      "transform": {
+        "position":    { "x": 0.0, "y": 2.0, "z": -6.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 6.0, "y": 0.25, "z": 1.5 } },
+      "behaviour_type": "AnimatedObject",
+      "behaviour": {
+        "waypoints": [
+          { "position": { "x": -4.0, "y": 2.0, "z": -6.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 0.0 },
+          { "position": { "x":  4.0, "y": 2.0, "z": -6.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 3.0 },
+          { "position": { "x": -4.0, "y": 2.0, "z": -6.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 6.0 }
+        ],
+        "total_duration": 6.0,
+        "easing": "SMOOTHSTEP",
+        "path_mode": "LOOP"
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "SphereOwnerOne",
+      "transform": {
+        "position":    { "x": -2.0, "y": 2.5, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.4 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x":  1.5, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "ONE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereOwnerTwo",
+      "transform": {
+        "position":    { "x":  2.0, "y": 2.5, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.4 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": -1.5, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "TWO"
+      },
+      "collision_type": "SOLID"
+    }
+  ],
+
+  "spawners_type": ["SphereSpawner"],
+  "spawners": [
+    {
+      "base": {
+        "name": "ShowcaseSpawner",
+        "start_time": 3.0,
+        "spawn_type_type": "RepeatingSpawn",
+        "spawn_type": { "interval": 1.8, "max_count": 16 },
+        "location_type": "RandomBox",
+        "location": {
+          "min": { "x": -3.0, "y": 10.0, "z": -4.0 },
+          "max": { "x":  3.0, "y": 12.0, "z":  2.0 }
+        },
+        "linear_velocity": {
+          "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "max": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "material": "rubber",
+        "owner": "SEQUENTIAL"
+      },
+      "radius_range": { "min": 0.2, "max": 0.45 }
+    }
+  ]
+}

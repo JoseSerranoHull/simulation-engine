@@ -658,6 +658,41 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         ctx.em->AddComponent(id, mr);
         ctx.ownedModels->push_back(std::move(dummyModel));
 
+        // Build explicit spring list used by ClothSystem for tearing support.
+        // kSpring baked at load time; runtime slider changes affect new loads only.
+        if (cc.rows * cc.cols > 65535) {
+            GE_LOG_ERROR("FBSceneAdapter: ClothObject: rows*cols > 65535 — uint16_t indices overflow.");
+        } else {
+            const float restStruct = cc.cellSize;
+            const float restShear  = cc.cellSize * 1.41421356f; // √2
+            const float restFlex   = cc.cellSize * 2.0f;
+            const int R = cc.rows, C = cc.cols;
+
+            // Structural: horizontal + vertical neighbours
+            for (int r = 0; r < R; ++r) {
+                for (int c = 0; c < C; ++c) {
+                    if (c + 1 < C)
+                        cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>(r*C+c+1), restStruct, cc.springK, true });
+                    if (r + 1 < R)
+                        cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>((r+1)*C+c), restStruct, cc.springK, true });
+                }
+            }
+            // Shear: diagonal neighbours
+            for (int r = 0; r < R-1; ++r) {
+                for (int c = 0; c < C-1; ++c) {
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c),   static_cast<uint16_t>((r+1)*C+c+1), restShear, cc.shearK, true });
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c+1), static_cast<uint16_t>((r+1)*C+c),   restShear, cc.shearK, true });
+                }
+            }
+            // Flexion: skip-one horizontal + vertical
+            for (int r = 0; r < R; ++r)
+                for (int c = 0; c < C-2; ++c)
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>(r*C+c+2), restFlex, cc.flexionK, true });
+            for (int r = 0; r < R-2; ++r)
+                for (int c = 0; c < C; ++c)
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>((r+2)*C+c), restFlex, cc.flexionK, true });
+        }
+
         ctx.em->AddComponent(id, cc);
         break;
     }

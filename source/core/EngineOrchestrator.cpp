@@ -143,7 +143,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     // Create the empty skybox shell (waiting for .ini textures)
     initSkybox();
 
-    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/showcases/full_showcase.bin"));
+    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/08_grand_showcase.bin"));
 }
 
 /**

@@ -1,0 +1,300 @@
+{
+  "name": "Grand Showcase",
+  "description": "Curated best-of scene: cloth simulation (back-left), flocking boids (upper-right), animated LOOP platform with sphere, SEQUENTIAL repeating spawner, four owner-coloured spheres with varied physics. Default startup scene for demo walkthrough.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "Overview",
+      "transform": {
+        "position": { "x": 0.0, "y": 10.0, "z": 22.0 },
+        "orientation": { "yaw": -90.0, "pitch": -20.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 65.0, "near": 0.1, "far": 200.0 }
+    },
+    {
+      "name": "Cloth Detail",
+      "transform": {
+        "position": { "x": -6.0, "y": 5.0, "z": -2.0 },
+        "orientation": { "yaw": -45.0, "pitch": -10.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 45.0, "near": 0.1, "far": 100.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 1200.0 },
+    { "name": "steel",    "density": 7800.0 },
+    { "name": "wood",     "density":  600.0 },
+    { "name": "concrete", "density": 2400.0 },
+    { "name": "plastic",  "density":  950.0 }
+  ],
+  "interactions": [
+    { "material_a": "rubber",   "material_b": "concrete", "restitution": 0.75, "static_friction": 0.5, "dynamic_friction": 0.4 },
+    { "material_a": "steel",    "material_b": "concrete", "restitution": 0.2,  "static_friction": 0.6, "dynamic_friction": 0.5 },
+    { "material_a": "wood",     "material_b": "concrete", "restitution": 0.45, "static_friction": 0.4, "dynamic_friction": 0.3 },
+    { "material_a": "plastic",  "material_b": "concrete", "restitution": 0.5,  "static_friction": 0.3, "dynamic_friction": 0.2 },
+    { "material_a": "rubber",   "material_b": "steel",    "restitution": 0.5,  "static_friction": 0.4, "dynamic_friction": 0.3 }
+  ],
+  "objects": [
+    {
+      "name": "Floor",
+      "transform": {
+        "position":    { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "ClothPanel",
+      "transform": {
+        "position":    { "x": -6.0, "y": 5.0, "z": -5.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "ClothObject",
+      "behaviour": {
+        "rows": 12,
+        "cols": 12,
+        "cell_size": 0.15,
+        "spring_k": 200.0,
+        "shear_k": 100.0,
+        "flexion_k": 50.0,
+        "damping": 0.05,
+        "particle_mass": 0.05,
+        "pin_top_edge": true
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "FlockSpawn",
+      "transform": {
+        "position":    { "x": 6.0, "y": 8.0, "z": -4.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "plastic",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.01 },
+      "behaviour_type": "FlockAgent",
+      "behaviour": {
+        "agent_count": 30,
+        "sphere_radius": 0.25,
+        "separation_radius": 1.5,
+        "alignment_radius": 3.0,
+        "cohesion_radius": 5.0,
+        "w_separation": 2.0,
+        "w_alignment": 1.0,
+        "w_cohesion": 1.0,
+        "max_speed": 5.0,
+        "max_force": 12.0,
+        "spawn_radius": 4.0
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "FlockObstacle_A",
+      "transform": {
+        "position":    { "x": 8.0, "y": 8.0, "z": -3.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Sphere",
+      "shape": { "radius": 1.0 },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "FlockObstacle_B",
+      "transform": {
+        "position":    { "x": 4.0, "y": 9.0, "z": -5.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.8 },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "AnimPlatform_LOOP",
+      "transform": {
+        "position":    { "x": 0.0, "y": 1.5, "z": 2.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 2.5, "y": 0.25, "z": 2.5 } },
+      "behaviour_type": "AnimatedObject",
+      "behaviour": {
+        "waypoints": [
+          { "position": { "x": -3.0, "y": 1.5, "z": 2.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 0.0 },
+          { "position": { "x":  3.0, "y": 3.0, "z": 2.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 3.0 },
+          { "position": { "x": -3.0, "y": 1.5, "z": 2.0 }, "rotation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 }, "time": 6.0 }
+        ],
+        "total_duration": 6.0,
+        "easing": "SMOOTHSTEP",
+        "path_mode": "LOOP"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "PlatformSphere",
+      "transform": {
+        "position":    { "x": 0.0, "y": 5.0, "z": 2.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.35 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "ONE"
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "SphereOwner1",
+      "transform": {
+        "position":    { "x": -3.0, "y": 4.0, "z": 5.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.4 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 1.5, "y": 0.0, "z": -0.5 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "ONE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereOwner2",
+      "transform": {
+        "position":    { "x": 3.0, "y": 4.0, "z": 5.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "steel",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.4 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": -1.5, "y": 0.0, "z": -0.5 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "TWO"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "CuboidOwner3",
+      "transform": {
+        "position":    { "x": -1.0, "y": 4.0, "z": 7.0 },
+        "orientation": { "yaw": 20.0, "pitch": 0.0, "roll": 10.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "wood",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 0.6, "y": 0.6, "z": 0.6 } },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.5, "y": 0.0, "z": -1.0 },
+          "angular_velocity": { "x": 3.0, "y": 5.0, "z": 0.0 }
+        },
+        "owner": "THREE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "CapsuleOwner4",
+      "transform": {
+        "position":    { "x": 1.0, "y": 4.0, "z": 7.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Capsule",
+      "shape": { "radius": 0.3, "height": 0.7 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": -0.5, "y": 0.0, "z": -1.0 },
+          "angular_velocity": { "x": 2.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "FOUR"
+      },
+      "collision_type": "SOLID"
+    },
+
+    {
+      "name": "DecorativePedestal",
+      "transform": {
+        "position":    { "x": 5.0, "y": 0.5, "z": 6.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 1.5, "y": 1.0, "z": 1.5 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    }
+  ],
+  "spawners_type": ["SphereSpawner"],
+  "spawners": [
+    {
+      "base": {
+        "name": "SequentialDrops",
+        "start_time": 0.0,
+        "spawn_type_type": "RepeatingSpawn",
+        "spawn_type": { "interval": 3.0, "max_count": 6 },
+        "location_type": "RandomBox",
+        "location": {
+          "min": { "x": -2.0, "y": 8.0, "z": 4.0 },
+          "max": { "x":  2.0, "y": 9.0, "z": 6.0 }
+        },
+        "linear_velocity": {
+          "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "max": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "material": "rubber",
+        "owner": "SEQUENTIAL"
+      },
+      "radius_range": { "min": 0.25, "max": 0.4 }
+    }
+  ]
+}

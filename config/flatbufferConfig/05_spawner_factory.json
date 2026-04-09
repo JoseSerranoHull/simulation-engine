@@ -1,0 +1,208 @@
+{
+  "name": "Spawner Factory",
+  "description": "All five spawner configurations: SphereSpawner (SingleBurst, RandomSphere, Peer 1), CuboidSpawner (Repeating, FixedLocation, Peer 2), SphereSpawner (Repeating, RandomBox, SEQUENTIAL), CylinderSpawner (Repeating, RandomSphere, Peer 3), CapsuleSpawner (SingleBurst, FixedLocation, Peer 4). Use the Spawners ImGui menu to manually fire spawners.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "MainCam",
+      "transform": {
+        "position": { "x": 0.0, "y": 8.0, "z": 20.0 },
+        "orientation": { "yaw": -90.0, "pitch": -15.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 60.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 1200.0 },
+    { "name": "steel",    "density": 7800.0 },
+    { "name": "concrete", "density": 2400.0 },
+    { "name": "plastic",  "density":  950.0 }
+  ],
+  "interactions": [
+    { "material_a": "rubber",  "material_b": "concrete", "restitution": 0.7,  "static_friction": 0.5, "dynamic_friction": 0.4 },
+    { "material_a": "steel",   "material_b": "concrete", "restitution": 0.3,  "static_friction": 0.6, "dynamic_friction": 0.5 },
+    { "material_a": "plastic", "material_b": "concrete", "restitution": 0.55, "static_friction": 0.3, "dynamic_friction": 0.2 }
+  ],
+  "objects": [
+    {
+      "name": "Floor",
+      "transform": {
+        "position":    { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": { "x": 0.0, "y": 1.0, "z": 0.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "WallNorth",
+      "transform": {
+        "position":    { "x": 0.0, "y": 5.0, "z": -8.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 20.0, "y": 10.0, "z": 0.5 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "WallSouth",
+      "transform": {
+        "position":    { "x": 0.0, "y": 5.0, "z": 8.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 20.0, "y": 10.0, "z": 0.5 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "WallWest",
+      "transform": {
+        "position":    { "x": -10.0, "y": 5.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 0.5, "y": 10.0, "z": 16.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "WallEast",
+      "transform": {
+        "position":    { "x": 10.0, "y": 5.0, "z": 0.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 0.5, "y": 10.0, "z": 16.0 } },
+      "behaviour_type": "StaticObject",
+      "behaviour": {},
+      "collision_type": "SOLID"
+    }
+  ],
+  "spawners_type": ["SphereSpawner", "CuboidSpawner", "SphereSpawner", "CylinderSpawner", "CapsuleSpawner"],
+  "spawners": [
+    {
+      "base": {
+        "name": "BurstSpheres_Peer1",
+        "start_time": 2.0,
+        "spawn_type_type": "SingleBurstSpawn",
+        "spawn_type": { "count": 8 },
+        "location_type": "RandomSphere",
+        "location": { "center": { "x": -4.0, "y": 8.0, "z": 0.0 }, "radius": 2.0 },
+        "linear_velocity": {
+          "min": { "x": -1.0, "y": 0.0, "z": -1.0 },
+          "max": { "x":  1.0, "y": 0.0, "z":  1.0 }
+        },
+        "material": "rubber",
+        "owner": "ONE"
+      },
+      "radius_range": { "min": 0.2, "max": 0.4 }
+    },
+    {
+      "base": {
+        "name": "RepeatingCuboids_Peer2",
+        "start_time": 0.0,
+        "spawn_type_type": "RepeatingSpawn",
+        "spawn_type": { "interval": 1.5, "max_count": 10 },
+        "location_type": "FixedLocation",
+        "location": {
+          "transform": {
+            "position": { "x": 4.0, "y": 10.0, "z": 0.0 },
+            "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+            "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+          }
+        },
+        "linear_velocity": {
+          "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "max": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "material": "steel",
+        "owner": "TWO"
+      },
+      "size_range": {
+        "min": { "x": 0.3, "y": 0.3, "z": 0.3 },
+        "max": { "x": 0.7, "y": 0.7, "z": 0.7 }
+      }
+    },
+    {
+      "base": {
+        "name": "SequentialSpheres",
+        "start_time": 0.0,
+        "spawn_type_type": "RepeatingSpawn",
+        "spawn_type": { "interval": 2.0, "max_count": 8 },
+        "location_type": "RandomBox",
+        "location": {
+          "min": { "x": -4.0, "y": 8.0, "z": -3.0 },
+          "max": { "x":  4.0, "y": 10.0, "z":  3.0 }
+        },
+        "linear_velocity": {
+          "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "max": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "material": "rubber",
+        "owner": "SEQUENTIAL"
+      },
+      "radius_range": { "min": 0.3, "max": 0.5 }
+    },
+    {
+      "base": {
+        "name": "RepeatingCylinders_Peer3",
+        "start_time": 1.0,
+        "spawn_type_type": "RepeatingSpawn",
+        "spawn_type": { "interval": 2.5, "max_count": 6 },
+        "location_type": "RandomSphere",
+        "location": { "center": { "x": 0.0, "y": 9.0, "z": -3.0 }, "radius": 2.0 },
+        "linear_velocity": {
+          "min": { "x": -0.5, "y": 0.0, "z": -0.5 },
+          "max": { "x":  0.5, "y": 0.0, "z":  0.5 }
+        },
+        "material": "plastic",
+        "owner": "THREE"
+      },
+      "radius_range": { "min": 0.2, "max": 0.35 },
+      "height_range": { "min": 0.5, "max": 1.0 }
+    },
+    {
+      "base": {
+        "name": "BurstCapsules_Peer4",
+        "start_time": 4.0,
+        "spawn_type_type": "SingleBurstSpawn",
+        "spawn_type": { "count": 6 },
+        "location_type": "FixedLocation",
+        "location": {
+          "transform": {
+            "position": { "x": -4.0, "y": 10.0, "z": 3.0 },
+            "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+            "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+          }
+        },
+        "linear_velocity": {
+          "min": { "x": -1.0, "y": 0.0, "z": -1.0 },
+          "max": { "x":  1.0, "y": 0.0, "z":  1.0 }
+        },
+        "material": "rubber",
+        "owner": "FOUR"
+      },
+      "radius_range": { "min": 0.2, "max": 0.3 },
+      "height_range": { "min": 0.4, "max": 0.8 }
+    }
+  ]
+}

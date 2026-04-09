@@ -11,7 +11,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 **Preconditions:** Engine running, any scene loaded. Ideally run with Vulkan validation layers enabled (Debug build) to check for errors.
 
 **Steps:**
-1. Launch the engine. Wait for the default scene (`full_showcase.bin`) to fully load.
+1. Launch the engine. Wait for the default scene (`08_grand_showcase.bin`) to fully load.
 2. Verify 4 owner-coloured spheres are visible (Red=ONE, Green=TWO, Blue=THREE, Yellow=FOUR).
 3. Open the **Scenario** menu in the top menu bar.
 4. Click **"Reset Current Scenario"**.
@@ -32,7 +32,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-002: Cloth Wind
 
-**Preconditions:** Load `config/flatbufferConfig/cloth_test.bin` via **Scene** menu (or it loads as default).
+**Preconditions:** Load `config/flatbufferConfig/06_cloth_simulation.bin` via **Scene** menu (or it loads as default).
 
 **Steps:**
 1. Wait 1–2 seconds for the cloth to settle under gravity.
@@ -51,14 +51,14 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 - Cloth settles back to purely vertical hang under gravity within a few seconds.
 
 **Common failures:**
-- No movement → cloth particles may all be pinned; check `pin_top_edge` in cloth_test.json (should be `true`, pinning only the top row).
+- No movement → cloth particles may all be pinned; check `pin_top_edge` in 06_cloth_simulation.json (should be `true`, pinning only the top row).
 - Cloth explodes → spring constants too low; press Ctrl+Z won't help here; reload the scene.
 
 ---
 
 ## TC-003: Cloth Tearing
 
-**Preconditions:** Load `config/flatbufferConfig/cloth_test.bin`. Wait for the falling sphere to approach the cloth.
+**Preconditions:** Load `config/flatbufferConfig/06_cloth_simulation.bin`. Wait for the falling sphere to approach the cloth.
 
 **Steps:**
 1. Open **Cloth** menu.
@@ -81,7 +81,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-004: Cloth Burning
 
-**Preconditions:** Load `config/flatbufferConfig/cloth_test.bin`. Wait for cloth to settle (2–3 seconds after load).
+**Preconditions:** Load `config/flatbufferConfig/06_cloth_simulation.bin`. Wait for cloth to settle (2–3 seconds after load).
 
 **Steps:**
 1. Open **Cloth** menu.
@@ -106,7 +106,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-005: Flocking — Spatial Mode Comparison
 
-**Preconditions:** Load `config/flatbufferConfig/flock_test.bin`.
+**Preconditions:** Load `config/flatbufferConfig/07_flocking_boids.bin`.
 
 **Steps:**
 1. Open **Flocking** menu.
@@ -135,7 +135,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-006: Spawner with Single-Instance Ownership
 
-**Preconditions:** Load `config/flatbufferConfig/showcases/spawner_demo.bin`. Open the **Network** menu and set **Local Peer ID = 1**.
+**Preconditions:** Load `config/flatbufferConfig/05_spawner_factory.bin`. Open the **Network** menu and set **Local Peer ID = 1**.
 
 **Steps:**
 1. Wait for **t = 2.0 s** after scene load (watch log or count).
@@ -155,14 +155,14 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 4. On Instance B: Spawner 2 fires every 1.5s. Instance A should see the boxes appear.
 
 **Common failures:**
-- Spheres appear but fly through the floor → material interaction not loaded; check `materials` and `interactions` sections in spawner_demo.json.
+- Spheres appear but fly through the floor → material interaction not loaded; check `materials` and `interactions` sections in 05_spawner_factory.json.
 - Network peer sees nothing → `BroadcastSpawnObject()` may not be called; verify SpawnerSystem fires only for local owner and broadcasts.
 
 ---
 
 ## TC-007: Animated Objects + Collision Momentum Transfer
 
-**Preconditions:** Load `config/flatbufferConfig/showcases/animation_demo.bin`.
+**Preconditions:** Load `config/flatbufferConfig/04_animation_platforms.bin`.
 
 **Steps:**
 1. Identify the three platforms:
@@ -244,16 +244,16 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 **Steps:**
 1. Both instances start on the default scene.
-2. On **Instance A**: open **Scene** menu → select **cloth_test.bin**.
+2. On **Instance A**: open **Scene** menu → select **06_cloth_simulation.bin**.
 
 **Expected:**
-- Instance A switches to cloth_test immediately.
-- Instance B also switches to cloth_test within ~300ms (scene change is broadcast 3× for UDP reliability).
+- Instance A switches to 06_cloth_simulation immediately.
+- Instance B also switches to 06_cloth_simulation within ~300ms (scene change is broadcast 3× for UDP reliability).
 
-3. On **Instance B**: open **Scene** menu → select **flock_test.bin**.
+3. On **Instance B**: open **Scene** menu → select **07_flocking_boids.bin**.
 
 **Expected:**
-- Both instances switch to flock_test.
+- Both instances switch to 07_flocking_boids.
 
 4. On **Instance A**: open **Network** menu → confirm toggle "Show Owner Colors" does NOT change on Instance B (this is local-only UI, not broadcast).
 
@@ -266,7 +266,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-011: Display Mode Toggle (Local-Only)
 
-**Preconditions:** Engine running, any FlatBuffers scene loaded (e.g. `full_showcase.bin`). Optionally two instances connected for network verification.
+**Preconditions:** Engine running, any FlatBuffers scene loaded (e.g. `08_grand_showcase.bin`). Optionally two instances connected for network verification.
 
 **Steps:**
 1. Open the **Display** menu in the top menu bar.
@@ -291,7 +291,7 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-012: Gravity Toggle
 
-**Preconditions:** Load `config/flatbufferConfig/showcases/full_showcase.bin`. Wait for spheres to settle on the floor.
+**Preconditions:** Load `config/flatbufferConfig/08_grand_showcase.bin`. Wait for spheres to settle on the floor.
 
 **Steps:**
 1. Open the **Simulation** menu.

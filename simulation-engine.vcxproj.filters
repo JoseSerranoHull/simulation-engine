@@ -519,6 +519,30 @@
     <None Include="config\simulation_scripts_demo.ini">
       <Filter>Config Files</Filter>
     </None>
+    <None Include="config\flatbufferConfig\01_shapes_and_collisions.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\02_materials_and_physics.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\03_cameras_and_views.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\04_animation_platforms.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\05_spawner_factory.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\06_cloth_simulation.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\07_flocking_boids.json">
+      <Filter>Config Files</Filter>
+    </None>
+    <None Include="config\flatbufferConfig\08_grand_showcase.json">
+      <Filter>Config Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <!-- core headers -->

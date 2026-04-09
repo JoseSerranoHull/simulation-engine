@@ -31,16 +31,36 @@ This is a real-time 3D simulation engine built on Vulkan. The architecture combi
 ```
 simulation-engine/
 ├── simulation-engine.sln / .vcxproj   # Visual Studio 2022 solution & project
-├── config/                             # Scenario .ini config files
-│   ├── snow_globe.ini
+├── config/                             # Scenario config files
+│   ├── snow_globe.ini                  # Legacy .ini scenarios (GenericScenario / SceneLoader)
 │   ├── simulation_lab2.ini
-│   └── simulation_lab3.ini
+│   ├── simulation_lab3.ini
+│   └── flatbufferConfig/               # FlatBuffers binary scenes (FlatBuffersScenario)
+│       ├── test_fb_scene.bin/.json
+│       ├── cloth_test.bin/.json
+│       ├── flock_test.bin/.json
+│       └── showcases/                  # Demo scenes for assessment
+│           ├── spawner_demo.bin/.json
+│           ├── animation_demo.bin/.json
+│           ├── physics_demo.bin/.json
+│           └── full_showcase.bin/.json
+├── flatbuffers/                        # FlatBuffers schema + generated header
+│   ├── Scene.fbs                       # Schema source — edit this to extend scene format
+│   └── Scene_generated.h               # Patched by hand (do NOT regenerate via flatc — version mismatch)
 ├── include/                            # Headers organised by domain subfolder
-│   ├── core/         Common.h, Logger.h, libs.h, ServiceLocator.h, EngineOrchestrator.h
+│   ├── core/         Common.h, Logger.h, libs.h, ServiceLocator.h, EngineOrchestrator.h,
+│   │                 NetworkBridge.h, SimulationState.h
 │   ├── ecs/          Entity.h, EntityManager.h, ComponentArray.h, IComponentArray.h, ComponentType.h, IECSystem.h
-│   ├── components/   Transform.h, Tag.h, Components.h, PhysicsComponents.h, ParticleComponent.h, SkyboxComponent.h
-│   ├── systems/      TransformSystem.h, PhysicsSystem.h, ParticleEmitterSystem.h, EngineServiceRegistry.h
-│   ├── scene/        Scene.h, SceneLoader.h, Scenario.h, GenericScenario.h, SnowGlobeScenario.h
+│   ├── components/   Transform.h, Tag.h, Components.h, PhysicsComponents.h, ParticleComponent.h,
+│   │                 SkyboxComponent.h, ClothComponent.h, FlockingComponent.h, AnimationComponents.h,
+│   │                 ScriptComponent.h
+│   ├── systems/      TransformSystem.h, PhysicsSystem.h, ParticleEmitterSystem.h, EngineServiceRegistry.h,
+│   │                 ClothSystem.h, FlockingSystem.h, AnimationSystem.h, SpawnerSystem.h,
+│   │                 SpringSystem.h, ColliderVisualizerSystem.h, ScriptSystem.h
+│   ├── scene/        Scene.h, SceneLoader.h, Scenario.h, GenericScenario.h, SnowGlobeScenario.h,
+│   │                 FlatBuffersScenario.h, FlatBuffersLoader.h, ISceneAdapter.h, EntityFactory.h
+│   │   └── fb/       FBSceneAdapter.h, FBSceneContext.h, Scene_generated.h
+│   ├── networking/   NetworkService.h, Packets.h
 │   ├── graphics/     VulkanContext.h, VulkanDevice.h, GpuResourceManager.h, SwapChain.h, FrameSyncManager.h,
 │   │                 GraphicsPipeline.h, ShaderModule.h, Renderer.h, PostProcessBackend.h, Skybox.h, Cubemap.h,
 │   │                 GpuImage.h, Texture.h, RenderPass.h
@@ -51,7 +71,11 @@ simulation-engine/
 │   ├── services/     TimeService.h, InputService.h, PerformanceTracker.h, DebugOverlay.h, ClimateService.h
 │   └── memory/       SimpleAllocator.h
 ├── source/                             # Mirrors include/ subfolder structure
-│   └── main.cpp                        # Entry point → EngineOrchestrator
+│   ├── main.cpp                        # Entry point → EngineOrchestrator
+│   ├── core/         EngineOrchestrator.cpp, NetworkBridge.cpp, Logger.cpp
+│   ├── systems/      PhysicsSystem.cpp, ClothSystem.cpp, FlockingSystem.cpp, AnimationSystem.cpp,
+│   │                 SpawnerSystem.cpp, SpringSystem.cpp, TransformSystem.cpp, ...
+│   └── networking/   NetworkService.cpp
 ├── shaders/                            # GLSL sources + compiled .spv (committed)
 │   ├── compile.bat                     # Batch script to recompile all shaders
 │   ├── Lighting: phong.vert/frag, gouraud.vert/frag
@@ -74,15 +98,22 @@ simulation-engine/
 
 `main.cpp` → `EngineOrchestrator` (RAII master orchestrator) owns all subsystems:
 - Initializes `VulkanDevice` → `VulkanContext` → `GpuResourceManager`
-- Loads a `Scenario` via `SceneLoader` (reads `.ini` config files)
-- Runs the main loop: input → update systems → render
+- Loads a `Scenario` (`.ini` via `SceneLoader` / `.bin` via `FlatBuffersScenario` + `FBSceneAdapter`)
+- Runs **three threads**:
+  - **Graphics thread** (main): input → `drawFrame()` → render. Consumes the front `SimulationState` snapshot.
+  - **Physics jthread**: fixed-timestep loop — `SpringSystem` → `EntityManager::UpdateCpuStages()` → `NetworkBridge::BroadcastOwnedStates()` → `NetworkBridge::UpdateRemoteEntities()` → snapshot to back-buffer `SimulationState`.
+  - **Networking jthread**: `NetworkService::Poll()` loop, pinned to Cores 2–3 via `SetThreadAffinityMask`.
+- Double-buffered `SimulationState` (front/back swap) decouples physics and render rates.
 - Shadow pipeline is engine-scoped (`m_shadowPipeline`); material pipelines are scenario-scoped via `Scenario::GetPipelines()`
+
+**Scene-change safety rule (CRITICAL):** Always call `requestScenarioChange(path)` to queue a deferred scene switch. It is processed inside `drawFrame()` after `vkDeviceWaitIdle()`, making it GPU-safe. Never call `changeScenario()` directly from ImGui callbacks or any non-render context — it destroys Vulkan pipelines synchronously and causes validation errors.
 
 ### ECS Core (`include/ecs/EntityManager.h`)
 
 - `EntityManager` manages entity lifecycles and component arrays
-- Components are plain structs: `Transform`, `MeshRenderer`, `LightComponent`, `PhysicsComponent`, `ParticleComponent`, `SkyboxComponent`
-- Systems implement `IECSystem` and are registered via `EngineServiceRegistry` (registry pattern)
+- Components are plain structs: `Transform`, `MeshRenderer`, `LightComponent`, `RigidBody`, `PhysicsComponent`, `ParticleComponent`, `SkyboxComponent`, `ClothComponent`, `FlockingComponent`, `AnimatedObjectComponent`, `SpawnerComponent`
+- Systems implement **`ICpuSystem`** (CPU-only work, overrides `OnUpdate(float dt)`) or **`IGpuSystem`** (GPU work, overrides `OnUpdate(float dt, VkCommandBuffer cb)`). Both are sub-interfaces of `IECSystem`. Never subclass `IECSystem` directly.
+- Systems are registered via `EngineServiceRegistry` (registry pattern); scenario-specific systems are registered in `Scenario::OnLoad()` and unregistered in `Scenario::OnUnload()`.
 - Namespace: `GE::ECS::`
 
 ### Rendering Pipeline (`include/graphics/Renderer.h`)
@@ -96,11 +127,13 @@ Multi-pass forward renderer, ECS-aware (queries component arrays each frame):
 
 ### Scenario & Scene System
 
-- `Scenario` — abstract base (State Pattern); `GenericScenario` and `SnowGlobeScenario` are concrete implementations
+- `Scenario` — abstract base (State Pattern); concrete implementations: `GenericScenario`, `SnowGlobeScenario`, `FlatBuffersScenario`
 - Each `Scenario` owns its material pipelines (`m_pipelines`, `m_shaderModules`) — created in `createMaterialPipelines()`
-- `SceneLoader` parses `.ini` files in `/config/` and instantiates entities
-- `Scene` maps named entities to `EntityID`s and drives procedural animations
-- Active scenario config files: `config/snow_globe.ini`, `config/simulation_lab2.ini`, `config/simulation_lab3.ini`
+- **Legacy path:** `SceneLoader` parses `.ini` files → `GenericScenario` / `SnowGlobeScenario`
+- **FlatBuffers path (primary):** `FlatBuffersScenario` reads `.bin` files via `FlatBuffersLoader`, then `FBSceneAdapter::Adapt()` converts FlatBuffers tables into ECS entities. The schema is `flatbuffers/Scene.fbs`; `Scene_generated.h` is patched by hand (do not regenerate — flatc version mismatch produces incompatible enum style).
+- `FlatBuffersScenario` registers scenario-specific systems (`ClothSystem`, `FlockingSystem`, `AnimationSystem`, `SpawnerSystem`, `PhysicsSystem`) in `OnLoad()` and unregisters them in `OnUnload()`.
+- `.bin` scenes are loaded from `config/flatbufferConfig/` (including subdirectories — the scanner uses `recursive_directory_iterator`).
+- `Scene` maps named entities to `EntityID`s for `.ini`-based scenarios only.
 
 ### Service Locator
 
@@ -108,7 +141,7 @@ Multi-pass forward renderer, ECS-aware (queries component arrays each frame):
 
 ## Code Conventions
 
-- **Namespaces:** `GE::` (engine root), `GE::ECS::`, `GE::Components::`, `GE::Graphics::`, `GE::Systems::`, `GE::Scene::`, `GE::Assets::`, `GE::Physics::`
+- **Namespaces:** `GE::` (engine root), `GE::ECS::`, `GE::Components::`, `GE::Graphics::`, `GE::Systems::`, `GE::Scene::`, `GE::Assets::`, `GE::Physics::`, `GE::Networking::`
 - **Naming:** `CamelCase` for classes/methods, `m_camelCase` for member variables, `UPPER_SNAKE_CASE` for constants
 - **Vocabulary:** `System` = IECSystem subclass; `Backend` = GPU compute/render backend; `Service` = stateless engine service; `Source` = scene illumination object
 - **Memory:** RAII throughout; prefer `std::unique_ptr`. Custom `SimpleAllocator` (TLSF) used for GPU memory
@@ -119,18 +152,25 @@ Multi-pass forward renderer, ECS-aware (queries component arrays each frame):
 
 | Subsystem | Entry Point | Notes |
 |---|---|---|
-| Physics | `systems/PhysicsSystem.h/.cpp` | Gravity, AABB collisions, `Physics.h` for math |
+| Physics | `systems/PhysicsSystem.h/.cpp` | Gravity, RigidBody (mass/inertia/torque), Euler/Semi-Implicit/RK4, sphere-sphere + sphere-plane impulse response, MaterialInteractionRegistry |
+| Cloth sim | `systems/ClothSystem.h/.cpp`, `components/ClothComponent.h` | Verlet integration, explicit spring list (structural/shear/flexion), tearing, burning with heat accumulation |
+| Flocking | `systems/FlockingSystem.h/.cpp`, `components/FlockingComponent.h` | Reynolds boids (sep+align+cohesion), obstacle avoidance; spatial modes: BruteForce / UniformGrid / Octree |
+| Animation | `systems/AnimationSystem.h/.cpp`, `components/AnimationComponents.h` | Waypoint interpolation, LINEAR/SMOOTHSTEP easing, STOP/LOOP/REVERSE path modes |
+| Spawner | `systems/SpawnerSystem.h/.cpp` | Entity pool pre-creation, SingleBurst / Repeating, FixedLocation / RandomBox / RandomSphere, owner-assigned peer |
+| Spring | `systems/SpringSystem.h/.cpp` | Hooke + damping springs between entity pairs |
+| Networking | `networking/NetworkService.h`, `core/NetworkBridge.h`, `networking/Packets.h` | Winsock2 UDP P2P (4 peers), dead reckoning + blend correction (120ms), scene-change sync |
+| FlatBuffers | `scene/FlatBuffersScenario.h`, `scene/fb/FBSceneAdapter.h` | Data-driven scene loading from `.bin`; schema in `flatbuffers/Scene.fbs` |
 | Particles | `particles/GpuParticleBackend.h`, `systems/ParticleEmitterSystem.h` | GPU compute shaders (snow, rain, fire, dust, smoke) |
 | Camera | `graphics/Camera.h` | Projection/view matrices |
 | Input | `services/InputService.h/.cpp` | GLFW callbacks |
-| UI | `services/DebugOverlay.h/.cpp` | ImGui debug overlay |
+| UI | `services/DebugOverlay.h/.cpp` | ImGui debug overlay — use `requestScenarioChange()` here, never `changeScenario()` |
 | Assets | `assets/AssetManager.h/.cpp` | OBJ loading, texture caching |
 | Climate | `services/ClimateService.h` | Wind/temperature driving particle behaviour |
 | Lighting | `lighting/LightSource.h`, `PointLightSource.h` | Scene illumination objects |
 | Logging | `core/Logger.h/.cpp` | Severity-level logging |
 | Common defs | `core/Common.h` | Global constants, error codes, UBO structs |
 | Post-process | `graphics/PostProcessBackend.h` | Offscreen + composite passes |
-| Orchestrator | `core/EngineOrchestrator.h` | RAII master; owns all subsystems |
+| Orchestrator | `core/EngineOrchestrator.h` | RAII master; owns all subsystems; 3-thread model |
 
 ## Markdown Reference Documents
 
@@ -138,21 +178,27 @@ All lab and workshop documents are in `markdown/`. Images are in `markdown-resou
 
 | File | Purpose |
 |---|---|
-| `SimulationWorshops.md` | Workshop briefs for 700105_A25_T2 (Simulation & Concurrency). Workshop 2.2: sandbox creation (state pattern, primitives, start/stop/pause, timestep). Workshop 3.2: add velocity, integration methods, basic collision. |
+| `SimulationWorkshops.md` | Workshop briefs for 700105_A25_T2 (Simulation & Concurrency). Workshop 2.2: sandbox creation (state pattern, primitives, start/stop/pause, timestep). Workshop 3.2: add velocity, integration methods, basic collision. |
 | `SimulationLab2.md` | Lab 2 brief — ECS foundations, scenario switching, snow globe. |
-| `SimulationLab3.md` | Lab 3 brief (due 26/02/26) — PhysicsObject class (and/or with use of a RigidBody component), ball movement with integration methods (Euler/Semi-Implicit/RK4), gravity, sphere-plane collision detection. |
-| `SimulationLab4.md` | Lab 4 brief (due 05/03/26) — Collision response via impulse: fixed-object, same-mass and different-mass ball-ball collisions, elasticity. |
-| `Claude - Refactor Plan.md` | Full 21-step refactoring plan (our active execution guide). Phases 1 & 2 complete; Phase 3 in progress. |
-| `Gemini - Refactor Plan.md` | Broader 4-phase architectural roadmap (replaced original MasterPlan.md). |
-| `Final Lab README.md` | Submission README for the final lab books. |
+| `SimulationLab3.md` | Lab 3 brief — PhysicsObject/RigidBody, integration methods (Euler/Semi-Implicit/RK4), gravity, sphere-plane collision. |
+| `SimulationLab4.md` | Lab 4 brief — Collision response via impulse: fixed-object, same/different-mass ball-ball, elasticity. |
+| `Simulation and Concurrency - Final Lab.md` | **Primary final lab brief** for 700105. Specifies Level 1/2/3 targets, threading requirements, networking requirements, cloth and flocking Level 2 features. |
+| `Test Cases.md` | **TC-001–TC-010** step-by-step test cases covering scene reset, cloth wind/tearing/burning, flocking, spawner networking, animation, dead reckoning, affinity, and scene switching. |
+| `Claude - Refactor Plan.md` | Full 21-step refactoring plan. Phases 1 & 2 complete; Phase 3 mostly complete (only Steps 17 & 18 remain). |
+| `Gemini - Refactor Plan.md` | Broader 4-phase architectural roadmap. |
+| `C++ Programming and Design - Real-time Graphics - Final Lab README.md` | Submission README for the other module's final lab. |
 
 ## Refactoring Status
 
-The engine has undergone a 3-phase refactor. **Phases 1 and 2 are complete** (Steps 1–15). **Phase 3 is in progress** (Step 16 done).
+The engine has undergone a 3-phase refactor. **Phases 1, 2, and most of Phase 3 are complete.**
 
-See `markdown/Claude - Refactor Plan.md` for the full 21-step plan. Remaining Phase 3 steps (17–21):
-- **Step 17**: Fix `ParticleComponent` to use `uint32_t` emitter index instead of `shared_ptr<GpuParticleBackend>`
-- **Step 18**: Fix `Transform::m_children` from `vector<uint32_t>` to a parent-index field
-- **Step 19**: `SceneLoader` handler-map OCP refactor
-- **Step 20**: Split `IECSystem` into `ICpuSystem` / `IGpuSystem` (ISP fix)
-- **Step 21**: Wrap `Scenario::OnLoad` Vulkan parameters into a `GpuUploadContext` struct
+See `markdown/Claude - Refactor Plan.md` for the full 21-step plan.
+
+**Done:** Steps 1–21 except 17 and 18. Notably:
+- Step 19 (`SceneLoader` handler-map OCP refactor) — done via `FBSceneAdapter` replacing the old inline switch
+- Step 20 (`ICpuSystem` / `IGpuSystem` ISP split) — **done**; `IECSystem.h` contains both sub-interfaces
+- Step 21 (`GpuUploadContext` struct wrapping `Scenario::OnLoad` Vulkan params) — **done**
+
+**Remaining technical debt (Steps 17 & 18 only):**
+- **Step 17**: `ParticleComponent` still holds `shared_ptr<GpuParticleBackend>` — pointer chase every particle tick; change to `uint32_t` emitter index
+- **Step 18**: `Transform::m_children` is `vector<uint32_t>` — heap alloc per entity in packed component array; change to a parent-index field

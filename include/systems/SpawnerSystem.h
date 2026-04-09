@@ -24,6 +24,9 @@ namespace GE::Systems {
         void       OnUpdate(float dt) override;
         ERROR_CODE Shutdown()         override;
 
+        /** @brief Manually activate one pending entity from the spawner, bypassing the time check. */
+        void ForceSpawnOne(GE::Components::SpawnerComponent& sc);
+
     private:
         std::mt19937 m_rng;
 

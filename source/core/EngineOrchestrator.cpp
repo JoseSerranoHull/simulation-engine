@@ -143,7 +143,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     // Create the empty skybox shell (waiting for .ini textures)
     initSkybox();
 
-    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/test_fb_scene.bin"));
+    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/showcases/full_showcase.bin"));
 }
 
 /**
@@ -274,12 +274,14 @@ void EngineOrchestrator::drawFrame() {
         vkDeviceWaitIdle(ctx->device);
 
         std::string path = m_pendingScenarioPath;
+        const bool useOwnerColors = m_pendingUseOwnerColors;
         m_pendingScenarioPath = "";
+        m_pendingUseOwnerColors = true;
 
         const bool isFlatBuffers = path.size() > 4U &&
                                   path.substr(path.size() - 4U) == ".bin";
         changeScenario(isFlatBuffers
-            ? std::unique_ptr<GE::Scenario>(std::make_unique<GE::FlatBuffersScenario>(path))
+            ? std::unique_ptr<GE::Scenario>(std::make_unique<GE::FlatBuffersScenario>(path, useOwnerColors))
             : std::unique_ptr<GE::Scenario>(std::make_unique<GE::GenericScenario>(path)));
 
         // CRITICAL: We MUST return here to ensure we don't proceed to draw

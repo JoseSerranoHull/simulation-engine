@@ -11,13 +11,15 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 **Preconditions:** Engine running, any scene loaded. Ideally run with Vulkan validation layers enabled (Debug build) to check for errors.
 
 **Steps:**
-1. Launch the engine. Wait for the default scene to fully load.
-2. Open the **Scenario** menu in the top menu bar.
-3. Click **"Reset Current Scenario"**.
-4. Watch the log output at the bottom of the window.
+1. Launch the engine. Wait for the default scene (`full_showcase.bin`) to fully load.
+2. Verify 4 owner-coloured spheres are visible (Red=ONE, Green=TWO, Blue=THREE, Yellow=FOUR).
+3. Open the **Scenario** menu in the top menu bar.
+4. Click **"Reset Current Scenario"**.
+5. Watch the log output at the bottom of the window.
 
 **Expected:**
 - Scene reloads within ~1 second.
+- All 4 owner-coloured spheres reappear in their initial positions.
 - No Vulkan validation errors in the log (`VK_ERROR_DEVICE_LOST`, `vkCmdBindPipeline invalid`, etc. must be absent).
 - Frame rate returns to normal after reload.
 
@@ -171,15 +173,17 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 2. Confirm Platform A stops after 4 seconds and stays at its end position.
 3. Confirm Platform B decelerates noticeably near each waypoint (SMOOTHSTEP makes the motion ease in/out). Compare against Platform C which moves at constant speed.
 4. A rubber sphere (SphereB, green) is dropped above Platform B. When the platform is moving upward and hits the sphere, the sphere should receive an upward velocity boost (momentum transfer from the animated platform's velocity).
+5. Verify the sphere bounces **higher** than it would off a static surface — this confirms kinematic velocity from `AnimatedObjectComponent::prevPosition` is used in the impulse calculation (sphere-AABB collision, Pass C in `PhysicsSystem::ResolveCollisions()`).
 
 **Expected:**
 - Platform A: moves once, stops.
 - Platform B: smooth deceleration visible at each waypoint. LOOP — returns to start indefinitely.
 - Platform C: constant-speed ping-pong (REVERSE mode).
-- SphereB receives visible upward impulse when struck by the rising platform.
+- SphereB receives visible upward impulse when struck by the rising platform (noticeably higher bounce than a static surface collision).
 
 **Common failures:**
-- Spheres fall through platforms → AnimatedObjectComponent entities need a collider (cuboid); ensure `adaptShape()` runs for animated objects and adds a `CuboidCollider`.
+- Spheres fall through platforms → BoxCollider not added; ensure `adaptShape()` runs for animated objects and adds a `BoxCollider`.
+- Sphere bounces but no momentum transfer → `AnimatedObjectComponent` not checked in sphere-box pass; verify `bAOC` kinematic velocity calculation.
 - Platform B doesn't decelerate visibly → confirm `easing: "SMOOTHSTEP"` in the JSON.
 
 ---
@@ -257,3 +261,54 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 - Instance B doesn't switch scenes → `BroadcastSceneChange()` not called, or `PollPendingSceneChange()` not called each frame in `EngineOrchestrator::drawFrame()`.
 - Both instances switch but cloth sim crashes → `ClearRemoteStates()` not called in `FlatBuffersScenario::OnLoad()`; stale entity IDs collide with new scene entities.
 - Scene path not found on Instance B → both instances must have the same relative path to `config/flatbufferConfig/`. Ensure you're running from the project root directory.
+
+---
+
+## TC-011: Display Mode Toggle (Local-Only)
+
+**Preconditions:** Engine running, any FlatBuffers scene loaded (e.g. `full_showcase.bin`). Optionally two instances connected for network verification.
+
+**Steps:**
+1. Open the **Display** menu in the top menu bar.
+2. Click **"Material Colors"**.
+3. Observe the scene.
+
+**Expected:**
+- All non-cloth entities switch from owner colours (Red/Green/Blue/Yellow) to material-based grey.
+- Scene reloads via deferred path (brief stall acceptable) but NO network broadcast occurs — connected peers do NOT switch display mode.
+
+4. Click **"Owner Colors"** to toggle back.
+
+**Expected:**
+- Entities return to owner colours.
+- Again, no network broadcast — this is a local-only UI toggle.
+
+**Common failures:**
+- Connected peer also switches display → `BroadcastSceneChange()` was called in the Display toggle path; verify `requestScenarioChange(path, useOwnerColors)` overload is used, not the default one followed by a broadcast.
+- Vulkan validation errors on toggle → `changeScenario()` called directly from ImGui callback; must use deferred `requestScenarioChange()`.
+
+---
+
+## TC-012: Gravity Toggle
+
+**Preconditions:** Load `config/flatbufferConfig/showcases/full_showcase.bin`. Wait for spheres to settle on the floor.
+
+**Steps:**
+1. Open the **Simulation** menu.
+2. Uncheck **"Gravity"** checkbox.
+3. Observe all simulated spheres and the cloth panel.
+
+**Expected:**
+- Spheres that were resting on the floor remain stationary (no gravity pull, but also no upward force).
+- Any spawned entities entering the scene float instead of falling.
+- Cloth panel stops sagging further (existing sag from before the toggle remains, but no new gravitational force is applied).
+
+4. Recheck **"Gravity"**.
+
+**Expected:**
+- All simulated objects immediately resume falling under gravity.
+- Cloth resumes normal gravitational draping.
+
+**Common failures:**
+- Gravity toggle has no effect → `m_gravityEnabled` not wired into `PhysicsSystem::Integrate()`; verify the flag guards the `rb.forceAccum += GRAVITY * rb.mass` line.
+- Cloth unaffected → ClothSystem applies gravity independently; this is expected (ClothSystem has its own gravity constant). The toggle only affects RigidBody-based entities.

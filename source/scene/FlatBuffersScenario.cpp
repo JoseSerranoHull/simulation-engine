@@ -309,13 +309,14 @@ void FlatBuffersScenario::OnGUI() {
         ImGui::EndMenu();
     }
 
-    // --- Display mode menu ---
+    // --- Display mode menu (LOCAL-ONLY toggle — no network broadcast) ---
     if (ImGui::BeginMenu("Display")) {
         if (ImGui::MenuItem("Owner Colors",    nullptr,  m_useOwnerColors)) {
             if (!m_useOwnerColors) {
                 auto* exp = ServiceLocator::GetExperience();
                 if (exp != nullptr) {
-                    exp->requestScenarioChange(m_configPath);
+                    // Deferred local-only reload with owner colors ON
+                    exp->requestScenarioChange(m_configPath, true);
                 }
             }
         }
@@ -323,7 +324,8 @@ void FlatBuffersScenario::OnGUI() {
             if (m_useOwnerColors) {
                 auto* exp = ServiceLocator::GetExperience();
                 if (exp != nullptr) {
-                    exp->requestScenarioChange(m_configPath);
+                    // Deferred local-only reload with owner colors OFF
+                    exp->requestScenarioChange(m_configPath, false);
                 }
             }
         }
@@ -337,6 +339,21 @@ void FlatBuffersScenario::OnGUI() {
             ImGui::SliderFloat("Physics Hz",  &exp->m_physicsHz,  1.0f,   2000.0f, "%.0f Hz");
             ImGui::SliderFloat("Graphics Hz", &exp->m_graphicsHz, 0.0f,    300.0f, "%.0f Hz");
             ImGui::TextDisabled("Graphics Hz = 0 means uncapped");
+
+            ImGui::Separator();
+            ImGui::Text("Actual graphics: %.1f Hz", static_cast<double>(ImGui::GetIO().Framerate));
+            ImGui::Text("Actual physics:  %.0f Hz", static_cast<double>(exp->m_physicsHz));
+        }
+
+        if (m_physicsSystem != nullptr) {
+            ImGui::Separator();
+            ImGui::Checkbox("Gravity", &m_physicsSystem->m_gravityEnabled);
+
+            static const char* intMethodNames[] = { "Euler", "Semi-Implicit", "RK4" };
+            int methodIdx = static_cast<int>(m_physicsSystem->m_integrationMethod);
+            if (ImGui::Combo("Integration", &methodIdx, intMethodNames, 3)) {
+                m_physicsSystem->m_integrationMethod = static_cast<GE::Systems::IntegrationMethod>(methodIdx);
+            }
         }
         ImGui::EndMenu();
     }
@@ -573,6 +590,28 @@ void FlatBuffersScenario::OnGUI() {
                         }
                     }
                 }
+            }
+            ImGui::EndMenu();
+        }
+    }
+
+    // --- Spawners menu ---
+    {
+        GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+        if (m_spawnerSystem != nullptr && em != nullptr && ImGui::BeginMenu("Spawners")) {
+            auto& spawnerArr = em->GetCompArr<GE::Components::SpawnerComponent>();
+            for (uint32_t i = 0; i < spawnerArr.GetCount(); ++i) {
+                auto& sc = spawnerArr.Data()[i];
+                ImGui::PushID(static_cast<int>(i));
+                ImGui::Text("Spawner %u (%zu pending)", i, sc.pendingIds.size());
+                ImGui::SameLine();
+                if (!sc.pendingIds.empty() && ImGui::SmallButton("Fire")) {
+                    m_spawnerSystem->ForceSpawnOne(sc);
+                }
+                ImGui::PopID();
+            }
+            if (spawnerArr.GetCount() == 0U) {
+                ImGui::TextDisabled("No spawners in scene");
             }
             ImGui::EndMenu();
         }

@@ -90,6 +90,22 @@ namespace GE::Systems {
     }
 
     // -------------------------------------------------------------------------
+    // ForceSpawnOne — manual trigger from ImGui
+    // -------------------------------------------------------------------------
+
+    void SpawnerSystem::ForceSpawnOne(GE::Components::SpawnerComponent& sc) {
+        if (sc.pendingIds.empty()) return;
+
+        auto* em = ServiceLocator::GetEntityManager();
+        if (!em) return;
+
+        const glm::vec3 pos    = pickLocation(sc);
+        const glm::vec3 linVel = randomInRange(sc.linVelMin, sc.linVelMax);
+        const glm::vec3 angVel = randomInRange(sc.angVelMin, sc.angVelMax);
+        activateEntity(em, sc, pos, linVel, angVel);
+    }
+
+    // -------------------------------------------------------------------------
     // OnUpdate
     // -------------------------------------------------------------------------
 

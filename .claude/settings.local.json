@@ -84,7 +84,9 @@
       "Bash(echo \"animation_demo: exit $?\")",
       "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/physics_demo.json)",
       "Bash(echo \"physics_demo: exit $?\")",
-      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/full_showcase.json)"
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/full_showcase.json)",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe:*)",
+      "Bash(xxd)"
     ]
   }
 }

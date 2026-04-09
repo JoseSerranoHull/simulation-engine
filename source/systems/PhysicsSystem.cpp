@@ -81,7 +81,7 @@ namespace GE::Systems {
             // --- 1. Force Accumulation ---
             // Fulfills Q3: accumulate gravity as a force (F = m * g), then derive
             // acceleration via a = F * (1/m) = F * inverseMass.
-            if (rb.useGravity) {
+            if (m_gravityEnabled && rb.useGravity) {
                 rb.forceAccum += GRAVITY * rb.mass;
             }
 
@@ -211,6 +211,7 @@ namespace GE::Systems {
         auto* em = ServiceLocator::GetEntityManager();
         auto& sphereArray = em->GetCompArr<GE::Components::SphereCollider>();
         auto& planeArray  = em->GetCompArr<GE::Components::PlaneCollider>();
+        auto& boxArray    = em->GetCompArr<GE::Components::BoxCollider>();
 
         // -----------------------------------------------------------------
         // Pass A: Sphere-Plane collisions
@@ -387,6 +388,103 @@ namespace GE::Systems {
                             if (aRB && !aRB->isStatic && !aIsAnimated) aRB->velocity += j * invMassA * n;
                             if (bRB && !bRB->isStatic && !bIsAnimated) bRB->velocity -= j * invMassB * n;
                         }
+                    }
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass C: Sphere-Box (AABB) collisions — enables animated cuboid
+        // platforms to collide with and transfer momentum to spheres.
+        // -----------------------------------------------------------------
+        for (uint32_t sIdx = 0; sIdx < sphereArray.GetCount(); ++sIdx) {
+            const auto  sID    = sphereArray.Index()[sIdx];
+            auto&       sCol   = sphereArray.Data()[sIdx];
+            auto* const sTrans = em->TryGetTIComponent<GE::Components::Transform>(sID);
+            auto* const sRB    = em->TryGetTIComponent<GE::Components::RigidBody>(sID);
+
+            if (!sTrans || (sRB && sRB->isStatic)) continue;
+
+            for (uint32_t bIdx = 0; bIdx < boxArray.GetCount(); ++bIdx) {
+                const auto  bID    = boxArray.Index()[bIdx];
+                const auto& bCol   = boxArray.Data()[bIdx];
+                auto* const bTrans = em->TryGetTIComponent<GE::Components::Transform>(bID);
+
+                if (!bTrans || sID == bID) continue;
+
+                // Build AABB from box centre (transform position) and half-extents
+                const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
+                const glm::vec3& boxCenter = bTrans->m_position;
+
+                // Closest point on AABB to sphere centre
+                const glm::vec3 closest{
+                    glm::clamp(sTrans->m_position.x, boxCenter.x - halfExt.x, boxCenter.x + halfExt.x),
+                    glm::clamp(sTrans->m_position.y, boxCenter.y - halfExt.y, boxCenter.y + halfExt.y),
+                    glm::clamp(sTrans->m_position.z, boxCenter.z - halfExt.z, boxCenter.z + halfExt.z)
+                };
+
+                const glm::vec3 diff = sTrans->m_position - closest;
+                const float distSq = glm::dot(diff, diff);
+
+                if (distSq >= sCol.radius * sCol.radius || distSq < 1e-12f) continue;
+
+                const float dist = std::sqrt(distSq);
+                const glm::vec3 normal = diff / dist;  // Points from box toward sphere
+                const float penetration = sCol.radius - dist;
+
+                // Trigger check
+                if (sCol.isTrigger || bCol.isTrigger) {
+                    GE::Scripts::EntityPair pair{ std::min(sID, bID), std::max(sID, bID) };
+                    m_currentTriggers.insert(pair);
+                    continue;
+                }
+
+                // Contact event
+                {
+                    GE::Scripts::EntityPair pair{ std::min(sID, bID), std::max(sID, bID) };
+                    GE::Scripts::CollisionInfo info;
+                    info.otherEntity  = bID;
+                    info.contactPoint = closest;
+                    info.normal       = normal;
+                    info.penetration  = penetration;
+                    m_currentContacts.insert(pair);
+                    m_currentContactInfos[pair] = info;
+                }
+
+                // Positional correction — push sphere out
+                sTrans->m_position += normal * penetration;
+
+                // Impulse response
+                if (sRB) {
+                    const auto* bRB  = em->TryGetTIComponent<GE::Components::RigidBody>(bID);
+                    const auto* bAOC = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(bID);
+
+                    // Box is treated as infinite mass (static or animated)
+                    glm::vec3 boxVel{ 0.0f };
+                    if (bAOC && m_lastDt > 1e-6f) {
+                        boxVel = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                    }
+
+                    float e = sRB->restitution;
+                    if (m_restitutionOverride >= 0.0f) {
+                        e = m_restitutionOverride;
+                    } else if (m_registry) {
+                        const auto* matS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                        const auto* matB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                        if (matS && matB) {
+                            GE::Physics::MaterialInteractionRecord rec;
+                            if (m_registry->Lookup(matS->name, matB->name, rec)) { e = rec.restitution; }
+                        }
+                    }
+
+                    const glm::vec3 relVel = sRB->velocity - boxVel;
+                    const float vRelN = glm::dot(relVel, normal);
+                    if (vRelN < 0.0f) {
+                        sRB->velocity -= (1.0f + e) * vRelN * normal;
+                    }
+
+                    if (glm::length(sRB->velocity) < 0.05f) {
+                        sRB->velocity = glm::vec3(0.0f);
                     }
                 }
             }

@@ -202,82 +202,16 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
             if (experience->GetCurrentScenario() != nullptr) {
                 if (ImGui::MenuItem("Reset Current Scenario", "F5")) {
                     std::string currentPath = experience->GetCurrentScenario()->GetConfigPath();
-
-                    // Use the deferred path so vkDeviceWaitIdle() is called before
-                    // pipelines are destroyed — prevents Vulkan validation errors.
                     experience->requestScenarioChange(currentPath);
-
                     GE_LOG_INFO("UI: Resetting scenario from " + currentPath);
                 }
-                ImGui::Separator();
-            }
-
-            // Fulfills Requirement: Load/Unload easily
-            if (ImGui::MenuItem("Snow Globe Scenario")) {
-                experience->requestScenarioChange("./config/snow_globe.ini");
-            }
-            if (ImGui::MenuItem("Simulation Lab 2 Scenario")) {
-                experience->requestScenarioChange("./config/simulation_lab2.ini");
-            }
-            if (ImGui::MenuItem("Simulation Lab 3 Scenario")) {
-                experience->requestScenarioChange("./config/simulation_lab3.ini");
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Lab 4: Q1 + Q5")) {
-                experience->requestScenarioChange("./config/simulation_lab4.ini");
-            }
-            if (ImGui::MenuItem("Lab 4: Q2 Same Mass")) {
-                experience->requestScenarioChange("./config/simulation_lab4_SameMass.ini");
-            }
-            if (ImGui::MenuItem("Lab 4: Q3 Different Mass")) {
-                experience->requestScenarioChange("./config/simulation_lab4_DiffMass.ini");
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Lab 5: Q1 Angular Displacement")) {
-                experience->requestScenarioChange("./config/simulation_lab5_orientation.ini");
-            }
-            if (ImGui::MenuItem("Lab 5: Q2 Angular Velocity")) {
-                experience->requestScenarioChange("./config/simulation_lab5_angular_velocity.ini");
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Lab 6: Q1+Q2 Torque & Sphere Inertia")) {
-                experience->requestScenarioChange("./config/simulation_lab6_q1_torque.ini");
-            }
-            if (ImGui::MenuItem("Lab 6: Q3 Cylinder Inertia Tensor")) {
-                experience->requestScenarioChange("./config/simulation_lab6_q3_cylinder.ini");
-            }
-            if (ImGui::MenuItem("Lab 6: Q5 World-Space Inertia")) {
-                experience->requestScenarioChange("./config/simulation_lab6_q5_worldspace.ini");
-            }
-            if (ImGui::MenuItem("Lab 6: Q6 Cuboid Inertia Tensor")) {
-                experience->requestScenarioChange("./config/simulation_lab6_q6_cuboid.ini");
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Lab 7: Q1+Q2 Spring & Damper")) {
-                experience->requestScenarioChange("./config/simulation_lab7_q1q2_spring.ini");
-            }
-            if (ImGui::MenuItem("Lab 7: Q3 Rope")) {
-                experience->requestScenarioChange("./config/simulation_lab7_q3_rope.ini");
-            }
-            if (ImGui::MenuItem("Lab 7: Q4 Cloth")) {
-                experience->requestScenarioChange("./config/simulation_lab7_q4_cloth.ini");
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Scripts Demo")) {
-                experience->requestScenarioChange("./config/simulation_scripts_demo.ini");
             }
 
             ImGui::Separator();
 
-            // --- FLATBUFFERS SCENES ---
+            // --- FlatBuffers scenes (primary — shown first for demo) ---
             m_fbScenes = GE::Scene::FlatBuffersLoader::scanDirectory("./config/flatbufferConfig/");
-
-            if (ImGui::MenuItem("Load FlatBuffers Scene...")) {
-                m_openFbDialog = true;
-            }
-
             if (!m_fbScenes.empty()) {
-                ImGui::Separator();
                 for (const auto& path : m_fbScenes) {
                     const std::string label =
                         std::filesystem::path(path).filename().string();
@@ -288,6 +222,70 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                         experience->requestScenarioChange(path);
                     }
                 }
+            }
+
+            if (ImGui::MenuItem("Load FlatBuffers Scene...")) {
+                m_openFbDialog = true;
+            }
+
+            ImGui::Separator();
+
+            // --- Legacy lab scenarios (collapsible submenu) ---
+            if (ImGui::BeginMenu("Legacy Lab Scenarios")) {
+                if (ImGui::MenuItem("Snow Globe Scenario")) {
+                    experience->requestScenarioChange("./config/snow_globe.ini");
+                }
+                if (ImGui::MenuItem("Simulation Lab 2 Scenario")) {
+                    experience->requestScenarioChange("./config/simulation_lab2.ini");
+                }
+                if (ImGui::MenuItem("Simulation Lab 3 Scenario")) {
+                    experience->requestScenarioChange("./config/simulation_lab3.ini");
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Lab 4: Q1 + Q5")) {
+                    experience->requestScenarioChange("./config/simulation_lab4.ini");
+                }
+                if (ImGui::MenuItem("Lab 4: Q2 Same Mass")) {
+                    experience->requestScenarioChange("./config/simulation_lab4_SameMass.ini");
+                }
+                if (ImGui::MenuItem("Lab 4: Q3 Different Mass")) {
+                    experience->requestScenarioChange("./config/simulation_lab4_DiffMass.ini");
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Lab 5: Q1 Angular Displacement")) {
+                    experience->requestScenarioChange("./config/simulation_lab5_orientation.ini");
+                }
+                if (ImGui::MenuItem("Lab 5: Q2 Angular Velocity")) {
+                    experience->requestScenarioChange("./config/simulation_lab5_angular_velocity.ini");
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Lab 6: Q1+Q2 Torque & Sphere Inertia")) {
+                    experience->requestScenarioChange("./config/simulation_lab6_q1_torque.ini");
+                }
+                if (ImGui::MenuItem("Lab 6: Q3 Cylinder Inertia Tensor")) {
+                    experience->requestScenarioChange("./config/simulation_lab6_q3_cylinder.ini");
+                }
+                if (ImGui::MenuItem("Lab 6: Q5 World-Space Inertia")) {
+                    experience->requestScenarioChange("./config/simulation_lab6_q5_worldspace.ini");
+                }
+                if (ImGui::MenuItem("Lab 6: Q6 Cuboid Inertia Tensor")) {
+                    experience->requestScenarioChange("./config/simulation_lab6_q6_cuboid.ini");
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Lab 7: Q1+Q2 Spring & Damper")) {
+                    experience->requestScenarioChange("./config/simulation_lab7_q1q2_spring.ini");
+                }
+                if (ImGui::MenuItem("Lab 7: Q3 Rope")) {
+                    experience->requestScenarioChange("./config/simulation_lab7_q3_rope.ini");
+                }
+                if (ImGui::MenuItem("Lab 7: Q4 Cloth")) {
+                    experience->requestScenarioChange("./config/simulation_lab7_q4_cloth.ini");
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Scripts Demo")) {
+                    experience->requestScenarioChange("./config/simulation_scripts_demo.ini");
+                }
+                ImGui::EndMenu();
             }
 
             ImGui::EndMenu();

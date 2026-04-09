@@ -101,7 +101,13 @@ public:
     GE::Graphics::Skybox* GetSkybox() const { return skybox.get(); }
 
     /** @brief Requests a scenario transition to be performed at the start of the next frame. */
-    void requestScenarioChange(const std::string& path) { m_pendingScenarioPath = path; }
+    void requestScenarioChange(const std::string& path) { m_pendingScenarioPath = path; m_pendingUseOwnerColors = true; }
+
+    /** @brief Requests a scenario transition with explicit owner-color flag (for local display toggle). */
+    void requestScenarioChange(const std::string& path, bool useOwnerColors) {
+        m_pendingScenarioPath = path;
+        m_pendingUseOwnerColors = useOwnerColors;
+    }
 
     // --- Thread Frequency Controls (read/written by ImGui on main thread) ---
     float m_physicsHz  { 120.0f };  ///< Physics fixed-step rate (1–2000 Hz)
@@ -154,6 +160,7 @@ private:
     std::vector<VkFence> imagesInFlight;
     uint32_t currentFrame;
     std::string m_pendingScenarioPath = ""; // Stores the path for the next frame
+    bool m_pendingUseOwnerColors { true }; // Owner-color flag for pending FlatBuffers scenario
 
     // --- Thread Architecture (Stage 2.2) ---
     /// Double-buffered physics snapshot: physics writes back, renderer reads front.

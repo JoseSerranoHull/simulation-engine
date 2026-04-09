@@ -12,6 +12,16 @@
       },
       "camera_type_type": "PerspectiveCamera",
       "camera_type": { "fov": 65.0, "near": 0.1, "far": 200.0 }
+    },
+    {
+      "name": "ClothCam",
+      "transform": {
+        "position": { "x": -5.0, "y": 8.0, "z": 5.0 },
+        "orientation": { "yaw": -120.0, "pitch": -30.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 55.0, "near": 0.1, "far": 200.0 }
     }
   ],
   "materials": [
@@ -164,6 +174,46 @@
           "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
         },
         "owner": "TWO"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereOwnerThree",
+      "transform": {
+        "position":    { "x": 0.0, "y": 2.5, "z": 3.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.4 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": -1.5 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "THREE"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "SphereOwnerFour",
+      "transform": {
+        "position":    { "x": 0.0, "y": 2.5, "z": -3.0 },
+        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
+        "scale":       { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.4 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": {
+        "initial_state": {
+          "linear_velocity":  { "x": 0.0, "y": 0.0, "z": 1.5 },
+          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
+        },
+        "owner": "FOUR"
       },
       "collision_type": "SOLID"
     }

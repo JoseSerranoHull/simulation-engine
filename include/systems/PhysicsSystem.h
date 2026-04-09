@@ -49,6 +49,9 @@ namespace GE::Systems {
         /** Q4: When true, collision impulse is applied as a force over dt instead of directly to velocity. */
         bool  m_useForceBasedImpulse{ false };
 
+        /** Global gravity toggle — when false, no gravity force is applied to any RigidBody. */
+        bool  m_gravityEnabled{ true };
+
         /** Q5: When >= 0.0f, overrides every body's restitution during collision resolution. -1 = disabled. */
         float m_restitutionOverride{ -1.0f };
 

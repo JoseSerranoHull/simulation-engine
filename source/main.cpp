@@ -18,7 +18,7 @@ int main() {
         // 2. Centralized Window Initialization Constants
         static constexpr uint32_t WINDOW_WIDTH = 1280U;
         static constexpr uint32_t WINDOW_HEIGHT = 720U;
-        static constexpr char const* WINDOW_TITLE = "Vulkan Lab: Sandy-Snow Globe (Audited)";
+        static constexpr char const* WINDOW_TITLE = "Simulation and Concurrency Lab: Simulation-Engine";
 
         // 3. Initialize the EngineOrchestrator
         // RAII: The 'app' object owns all sub-systems. Construction handles

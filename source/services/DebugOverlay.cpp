@@ -2,6 +2,8 @@
 #include "scene/GenericScenario.h"
 #include "scene/FlatBuffersLoader.h"
 #include "core/EngineOrchestrator.h"
+#include "core/NetworkBridge.h"
+#include "core/ServiceLocator.h"
 #include "components/Tag.h"
 #include "components/Transform.h"
 
@@ -220,6 +222,9 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                                             currentScenario->GetConfigPath() == path);
                     if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent)) {
                         experience->requestScenarioChange(path);
+                        // Broadcast scene change to all connected peers
+                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
+                        if (nb != nullptr) { nb->BroadcastSceneChange(path); }
                     }
                 }
             }
@@ -295,6 +300,11 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
         // Fulfills Requirement: Orthographic/Perspective Toggle
         if (ImGui::BeginMenu("Camera")) {
             Camera* activeCam = input->getActiveCamera();
+
+            const glm::vec3& cp = activeCam->getPosition();
+            ImGui::Text("Pos  X:%.2f  Y:%.2f  Z:%.2f", static_cast<double>(cp.x), static_cast<double>(cp.y), static_cast<double>(cp.z));
+            ImGui::Text("Rot  Pitch:%.1f  Yaw:%.1f", static_cast<double>(activeCam->getPitch()), static_cast<double>(activeCam->getYaw()));
+            ImGui::Separator();
 
             bool isOrtho = (activeCam->getProjectionMode() == Camera::ProjectionMode::ORTHOGRAPHIC);
             if (ImGui::MenuItem("Toggle Orthographic", nullptr, &isOrtho)) {

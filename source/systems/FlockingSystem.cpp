@@ -52,6 +52,19 @@ void FlockingSystem::OnUpdate(float dt) {
     const uint32_t agentCount = fkArr.GetCount();
     if (agentCount == 0U) { return; }
 
+    // Freeze mode: zero all velocities and skip steering
+    if (m_frozen) {
+        for (uint32_t i = 0U; i < agentCount; ++i) {
+            const GE::ECS::EntityID eid = fkArr.Index()[i];
+            auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
+            if (rb != nullptr) { rb->velocity = glm::vec3(0.0f); }
+        }
+        m_neighbourChecksLastFrame = 0;
+        const auto t1 = std::chrono::high_resolution_clock::now();
+        m_lastUpdateMs = std::chrono::duration<float, std::milli>(t1 - t0).count();
+        return;
+    }
+
     // --- 1. Build agent cache ---
     m_agents.clear();
     m_agents.reserve(agentCount);

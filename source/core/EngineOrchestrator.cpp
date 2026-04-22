@@ -143,7 +143,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     // Create the empty skybox shell (waiting for .ini textures)
     initSkybox();
 
-    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/08_grand_showcase.bin"));
+    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/01_multiplayer.bin"));
 }
 
 /**
@@ -727,8 +727,9 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
         const float realDt = std::chrono::duration_cast<FloatSec>(now - prevTime).count();
         prevTime = now;
 
-        // Guard against spiral-of-death on hitches (clamp to 4 missed ticks)
-        const float clampedDt  = std::min(realDt, 4.0f / m_physicsHz);
+        // Guard against spiral-of-death on hitches (clamp to 8 missed ticks).
+        // At high Hz (e.g. 2000) this prevents accumulator from growing unbounded.
+        const float clampedDt  = std::min(realDt, 8.0f / std::max(m_physicsHz, 1.0f));
         accumulator += clampedDt;
 
         // Read Hz once per outer loop iteration so ImGui changes take effect next cycle
@@ -784,6 +785,11 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
             }
 
             accumulator -= fixedDt;
+
+            // Yield between ticks so the render thread can acquire m_simMutex.
+            // Without this, at high Hz the physics thread can starve the renderer
+            // by re-acquiring the lock immediately after releasing it.
+            std::this_thread::yield();
         }
 
         // Sleep for the remainder of the fixed step to avoid busy-spinning.

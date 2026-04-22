@@ -80,7 +80,7 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         VK_NULL_HANDLE,                              // no Set 1 material layout
         m_shaderModules[12].get(),
         m_shaderModules[13].get(),
-        true, false, true, msaa,
+        false, false, true, msaa,                    // culling OFF — double-sided geometry
         static_cast<uint32_t>(sizeof(glm::mat4)),
         VK_SHADER_STAGE_VERTEX_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -194,10 +194,54 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
 // SECTION 3: OnUpdate
 // ===========================================================================
 
-void FlatBuffersScenario::OnUpdate(float /*dt*/, float /*totalTime*/) {
-    // Refresh cloth vertex buffers from current particle positions (HOST_COHERENT — no flush needed).
+void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
     if (em == nullptr) { return; }
+
+    // --- Player input: velocity-based control for the entity owned by local peer ---
+    {
+        InputService* input = ServiceLocator::GetInput();
+        if (input != nullptr) {
+            const int peerId = m_localPeerId;
+            if (peerId >= 1 && peerId <= 4) {
+                const auto localOwner = static_cast<GE::Components::OwnerType>(peerId - 1);
+                auto& ownerArr = em->GetCompArr<GE::Components::OwnerComponent>();
+                for (uint32_t i = 0U; i < ownerArr.GetCount(); ++i) {
+                    if (ownerArr.Data()[i].owner != localOwner) { continue; }
+                    const auto eid = ownerArr.Index()[i];
+                    auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
+                    if (rb == nullptr || rb->isStatic) { continue; }
+
+                    constexpr float moveSpeed   = 5.0f;
+                    constexpr float jumpImpulse = 6.0f;
+                    constexpr float hDamping    = 0.85f;
+
+                    glm::vec3 inputVel{ 0.0f };
+                    bool anyInput = false;
+
+                    if (input->IsKeyDown(GLFW_KEY_UP))    { inputVel.z -= moveSpeed; anyInput = true; }
+                    if (input->IsKeyDown(GLFW_KEY_DOWN))  { inputVel.z += moveSpeed; anyInput = true; }
+                    if (input->IsKeyDown(GLFW_KEY_LEFT))  { inputVel.x -= moveSpeed; anyInput = true; }
+                    if (input->IsKeyDown(GLFW_KEY_RIGHT)) { inputVel.x += moveSpeed; anyInput = true; }
+
+                    if (anyInput) {
+                        rb->velocity.x = inputVel.x;
+                        rb->velocity.z = inputVel.z;
+                    } else {
+                        rb->velocity.x *= hDamping;
+                        rb->velocity.z *= hDamping;
+                    }
+
+                    // Jump: impulse on Y only when grounded; gravity integration is untouched
+                    if (input->IsKeyDown(GLFW_KEY_SPACE) && glm::abs(rb->velocity.y) < 0.5f) {
+                        rb->velocity.y = jumpImpulse;
+                    }
+                }
+            }
+        }
+    }
+
+    // Refresh cloth vertex buffers from current particle positions (HOST_COHERENT — no flush needed).
 
     auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
     const uint32_t count = clothArr.GetCount();
@@ -355,6 +399,20 @@ void FlatBuffersScenario::OnGUI() {
                 m_physicsSystem->m_integrationMethod = static_cast<GE::Systems::IntegrationMethod>(methodIdx);
             }
         }
+
+        ImGui::Separator();
+        bool paused = IsPaused();
+        if (ImGui::Checkbox("Pause Simulation", &paused)) {
+            SetPaused(paused);
+        }
+        if (IsPaused()) {
+            ImGui::SameLine();
+            auto* exp = ServiceLocator::GetExperience();
+            if (exp != nullptr && ImGui::Button("Step")) {
+                exp->stepSimulation(1.0f / std::max(exp->m_physicsHz, 1.0f));
+            }
+        }
+
         ImGui::EndMenu();
     }
 
@@ -454,6 +512,12 @@ void FlatBuffersScenario::OnGUI() {
         const bool canConnect = (svc != nullptr);
         if (!canConnect) { ImGui::BeginDisabled(); }
         if (ImGui::Button("Connect")) {
+            // If the socket is already bound (persists across scene changes),
+            // skip Init() and just update peers / local peer ID.
+            if (svc->IsConnected()) {
+                m_netInitialised = true;
+                svc->SetLocalPeerId(static_cast<uint8_t>(m_localPeerId));
+            }
             if (!m_netInitialised) {
                 m_netInitialised = svc->Init(static_cast<uint16_t>(m_localPort));
                 if (m_netInitialised) {
@@ -545,8 +609,15 @@ void FlatBuffersScenario::OnGUI() {
 
     // --- Flocking menu ---
     {
-        if (m_flockingSystem != nullptr && ImGui::BeginMenu("Flocking")) {
+        if (ImGui::BeginMenu("Flocking")) {
             GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+            auto& fkArrCheck = em->GetCompArr<GE::Components::FlockingComponent>();
+            if (m_flockingSystem == nullptr || fkArrCheck.GetCount() == 0U) {
+                ImGui::TextDisabled("No flocking agents in scene");
+            } else {
+
+            ImGui::Checkbox("Freeze Agents", &m_flockingSystem->m_frozen);
+            ImGui::Separator();
 
             // Spatial mode selector
             static const char* modeNames[] = { "Brute Force", "Uniform Grid", "Octree" };
@@ -591,54 +662,38 @@ void FlatBuffersScenario::OnGUI() {
                     }
                 }
             }
+            } // end else (has agents)
             ImGui::EndMenu();
         }
     }
 
     // --- Spawners menu ---
     {
-        GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
-        if (m_spawnerSystem != nullptr && em != nullptr && ImGui::BeginMenu("Spawners")) {
-            auto& spawnerArr = em->GetCompArr<GE::Components::SpawnerComponent>();
-            for (uint32_t i = 0; i < spawnerArr.GetCount(); ++i) {
-                auto& sc = spawnerArr.Data()[i];
-                ImGui::PushID(static_cast<int>(i));
-                ImGui::Text("Spawner %u (%zu pending)", i, sc.pendingIds.size());
-                ImGui::SameLine();
-                if (!sc.pendingIds.empty() && ImGui::SmallButton("Fire")) {
-                    m_spawnerSystem->ForceSpawnOne(sc);
-                }
-                ImGui::PopID();
-            }
-            if (spawnerArr.GetCount() == 0U) {
+        if (ImGui::BeginMenu("Spawners")) {
+            GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+            if (em == nullptr || m_spawnerSystem == nullptr) {
                 ImGui::TextDisabled("No spawners in scene");
+            } else {
+                auto& spawnerArr = em->GetCompArr<GE::Components::SpawnerComponent>();
+                if (spawnerArr.GetCount() == 0U) {
+                    ImGui::TextDisabled("No spawners in scene");
+                } else {
+                    for (uint32_t i = 0; i < spawnerArr.GetCount(); ++i) {
+                        auto& sc = spawnerArr.Data()[i];
+                        ImGui::PushID(static_cast<int>(i));
+                        ImGui::Text("Spawner %u (%zu pending)", i, sc.pendingIds.size());
+                        ImGui::SameLine();
+                        if (!sc.pendingIds.empty() && ImGui::SmallButton("Fire")) {
+                            m_spawnerSystem->ForceSpawnOne(sc);
+                        }
+                        ImGui::PopID();
+                    }
+                }
             }
             ImGui::EndMenu();
         }
     }
 
-    // --- Scene switcher menu ---
-    if (ImGui::BeginMenu("Scene")) {
-        for (const auto& path : m_availableScenes) {
-            const std::string label = std::filesystem::path(path).filename().string();
-            const bool isCurrent = (path == m_configPath);
-            if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent)) {
-                auto* exp = ServiceLocator::GetExperience();
-                if (exp != nullptr) {
-                    exp->requestScenarioChange(path);
-                }
-                // Broadcast to all peers so they switch simultaneously
-                GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
-                if (nb != nullptr) {
-                    nb->BroadcastSceneChange(path);
-                }
-            }
-        }
-        if (m_availableScenes.empty()) {
-            ImGui::TextDisabled("No .bin files in ./config/flatbufferConfig/");
-        }
-        ImGui::EndMenu();
-    }
 }
 
 // ===========================================================================

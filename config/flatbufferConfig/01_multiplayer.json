@@ -1,0 +1,134 @@
+{
+  "name": "Multiplayer Arena",
+  "description": "Four-player arena with open-box containment, animated platform, and force-based player movement. Demonstrates distributed ownership and networking.",
+  "gravity_on": true,
+  "cameras": [
+    {
+      "name": "Overview",
+      "transform": {
+        "position": { "x": 0.0, "y": 8.5, "z": 8.5 },
+        "orientation": { "yaw": -90.0, "pitch": -45.0, "roll": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": { "fov": 60.0, "near": 0.1, "far": 200.0 }
+    }
+  ],
+  "materials": [
+    { "name": "rubber",   "density": 3000.0 },
+    { "name": "concrete", "density": 2400.0 },
+    { "name": "stone",    "density": 2500.0 }
+  ],
+  "interactions": [
+    { "material_a": "rubber", "material_b": "concrete", "restitution": 0.3, "static_friction": 0.0, "dynamic_friction": 0.0 },
+    { "material_a": "rubber", "material_b": "stone",    "restitution": 0.3, "static_friction": 0.0, "dynamic_friction": 0.0 }
+  ],
+  "objects": [
+    {
+      "name": "Floor",
+      "transform": { "position": {"x":0,"y":0,"z":0}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "concrete",
+      "shape_type": "Plane",
+      "shape": { "normal": {"x":0,"y":1,"z":0} },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+    },
+    {
+      "name": "WallNorth",
+      "transform": { "position": {"x":0,"y":5,"z":-10}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": {"x":20,"y":10,"z":0.5} },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+    },
+    {
+      "name": "WallSouth",
+      "transform": { "position": {"x":0,"y":5,"z":10}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": {"x":20,"y":10,"z":0.5} },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+    },
+    {
+      "name": "WallEast",
+      "transform": { "position": {"x":10,"y":5,"z":0}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": {"x":0.5,"y":10,"z":20} },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+    },
+    {
+      "name": "WallWest",
+      "transform": { "position": {"x":-10,"y":5,"z":0}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "concrete",
+      "shape_type": "Cuboid",
+      "shape": { "size": {"x":0.5,"y":10,"z":20} },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+    },
+    {
+      "name": "PlayerRed",
+      "transform": { "position": {"x":-3,"y":1,"z":-3}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.5 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "ONE" },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "PlayerGreen",
+      "transform": { "position": {"x":3,"y":1,"z":-3}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.5 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "TWO" },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "PlayerBlue",
+      "transform": { "position": {"x":-3,"y":1,"z":3}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.5 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "THREE" },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "PlayerYellow",
+      "transform": { "position": {"x":3,"y":1,"z":3}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "rubber",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.5 },
+      "behaviour_type": "SimulatedObject",
+      "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "FOUR" },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "MovingPlatform",
+      "transform": { "position": {"x":-4,"y":0.5,"z":0}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "stone",
+      "shape_type": "Cuboid",
+      "shape": { "size": {"x":3,"y":0.5,"z":3} },
+      "behaviour_type": "AnimatedObject",
+      "behaviour": {
+        "waypoints": [
+          { "position": {"x":-4,"y":0.5,"z":0}, "rotation": {"yaw":0,"pitch":0,"roll":0}, "time": 0.0 },
+          { "position": {"x":4,"y":0.5,"z":0},  "rotation": {"yaw":0,"pitch":0,"roll":0}, "time": 3.0 }
+        ],
+        "total_duration": 6.0,
+        "path_mode": "LOOP",
+        "easing": "SMOOTHSTEP"
+      },
+      "collision_type": "SOLID"
+    },
+    {
+      "name": "StaticPlatform",
+      "transform": { "position": {"x":0,"y":2,"z":-5}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "material": "stone",
+      "shape_type": "Cuboid",
+      "shape": { "size": {"x":4,"y":0.5,"z":2} },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+    }
+  ]
+}

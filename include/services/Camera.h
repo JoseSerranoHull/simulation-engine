@@ -148,6 +148,9 @@ public:
     float getMouseSensitivity() const { return MouseSensitivity; }
     void setMouseSensitivity(float s) { MouseSensitivity = s; }
 
+    float getYaw()   const { return Yaw; }
+    float getPitch() const { return Pitch; }
+
     void setYaw(float yaw) {
         Yaw = yaw;
         updateCameraVectors();

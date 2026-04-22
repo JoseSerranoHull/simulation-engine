@@ -489,5 +489,204 @@ namespace GE::Systems {
                 }
             }
         }
+
+        // -----------------------------------------------------------------
+        // Pass D: Box-Plane collisions — enables cuboid shapes to rest on
+        // floors and bounce off plane surfaces.
+        // -----------------------------------------------------------------
+        auto& cylArray     = em->GetCompArr<GE::Components::CylinderCollider>();
+        auto& capsuleArray = em->GetCompArr<GE::Components::CapsuleCollider>();
+
+        for (uint32_t bIdx = 0; bIdx < boxArray.GetCount(); ++bIdx) {
+            const auto  bID    = boxArray.Index()[bIdx];
+            const auto& bCol   = boxArray.Data()[bIdx];
+            auto* const bTrans = em->TryGetTIComponent<GE::Components::Transform>(bID);
+            auto* const bRB    = em->TryGetTIComponent<GE::Components::RigidBody>(bID);
+
+            if (!bTrans || !bRB || bRB->isStatic) continue;
+
+            const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
+
+            for (uint32_t pIdx = 0; pIdx < planeArray.GetCount(); ++pIdx) {
+                const auto& pCol = planeArray.Data()[pIdx];
+                const auto  pID  = planeArray.Index()[pIdx];
+
+                GE::Physics::Plane plane(pCol.normal * pCol.offset, pCol.normal);
+                const glm::vec3& pn = plane.GetNormal();
+
+                // Find the corner with minimum signed distance to the plane.
+                // The support point in the -normal direction gives deepest penetration.
+                const glm::vec3 support{
+                    (pn.x >= 0.0f) ? -halfExt.x : halfExt.x,
+                    (pn.y >= 0.0f) ? -halfExt.y : halfExt.y,
+                    (pn.z >= 0.0f) ? -halfExt.z : halfExt.z
+                };
+                const glm::vec3 deepestPoint = bTrans->m_position + support;
+                const float dist = plane.DistanceToPoint(deepestPoint);
+
+                if (dist < 0.0f) {
+                    const float penetration = -dist;
+                    bTrans->m_position += pn * penetration;
+
+                    float e = bRB->restitution;
+                    if (m_restitutionOverride >= 0.0f) {
+                        e = m_restitutionOverride;
+                    } else if (m_registry) {
+                        const auto* matB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                        const auto* matP = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(pID);
+                        if (matB && matP) {
+                            GE::Physics::MaterialInteractionRecord rec;
+                            if (m_registry->Lookup(matB->name, matP->name, rec)) { e = rec.restitution; }
+                        }
+                    }
+
+                    glm::vec3 planeVel{ 0.0f };
+                    const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
+                    const auto* aoc    = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
+                    if (aoc && pTrans && m_lastDt > 1e-6f) {
+                        planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                    }
+
+                    const glm::vec3 relVel = bRB->velocity - planeVel;
+                    const float     vRelN  = glm::dot(relVel, pn);
+                    if (vRelN < 0.0f) {
+                        bRB->velocity -= (1.0f + e) * vRelN * pn;
+                    }
+
+                    if (glm::length(bRB->velocity) < 0.05f) {
+                        bRB->velocity = glm::vec3(0.0f);
+                    }
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass E: Capsule-Plane collisions — capsule = line segment + radius.
+        // Find closest point on the capsule axis to the plane, then treat as
+        // sphere of capsule radius at that point.
+        // -----------------------------------------------------------------
+        for (uint32_t cIdx = 0; cIdx < capsuleArray.GetCount(); ++cIdx) {
+            const auto  cID    = capsuleArray.Index()[cIdx];
+            const auto& cCol   = capsuleArray.Data()[cIdx];
+            auto* const cTrans = em->TryGetTIComponent<GE::Components::Transform>(cID);
+            auto* const cRB    = em->TryGetTIComponent<GE::Components::RigidBody>(cID);
+
+            if (!cTrans || !cRB || cRB->isStatic) continue;
+
+            // Capsule axis endpoints (Y-aligned)
+            const float halfH = cCol.height * 0.5f;
+            const glm::vec3 top    = cTrans->m_position + glm::vec3(0.0f, +halfH, 0.0f);
+            const glm::vec3 bottom = cTrans->m_position + glm::vec3(0.0f, -halfH, 0.0f);
+
+            for (uint32_t pIdx = 0; pIdx < planeArray.GetCount(); ++pIdx) {
+                const auto& pCol = planeArray.Data()[pIdx];
+                const auto  pID  = planeArray.Index()[pIdx];
+
+                GE::Physics::Plane plane(pCol.normal * pCol.offset, pCol.normal);
+                const glm::vec3& pn = plane.GetNormal();
+
+                // Find the capsule axis endpoint closest to (most penetrating into) the plane
+                const float distTop    = plane.DistanceToPoint(top);
+                const float distBottom = plane.DistanceToPoint(bottom);
+                const float minDist    = glm::min(distTop, distBottom);
+
+                if (minDist < cCol.radius) {
+                    const float penetration = cCol.radius - minDist;
+                    cTrans->m_position += pn * penetration;
+
+                    float e = cRB->restitution;
+                    if (m_restitutionOverride >= 0.0f) {
+                        e = m_restitutionOverride;
+                    } else if (m_registry) {
+                        const auto* matC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cID);
+                        const auto* matP = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(pID);
+                        if (matC && matP) {
+                            GE::Physics::MaterialInteractionRecord rec;
+                            if (m_registry->Lookup(matC->name, matP->name, rec)) { e = rec.restitution; }
+                        }
+                    }
+
+                    glm::vec3 planeVel{ 0.0f };
+                    const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
+                    const auto* aoc    = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
+                    if (aoc && pTrans && m_lastDt > 1e-6f) {
+                        planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                    }
+
+                    const glm::vec3 relVel = cRB->velocity - planeVel;
+                    const float     vRelN  = glm::dot(relVel, pn);
+                    if (vRelN < 0.0f) {
+                        cRB->velocity -= (1.0f + e) * vRelN * pn;
+                    }
+
+                    if (glm::length(cRB->velocity) < 0.05f) {
+                        cRB->velocity = glm::vec3(0.0f);
+                    }
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass F: Cylinder-Plane collisions — approximated as capsule
+        // (line segment axis + radius). Uses the same approach as Pass E.
+        // -----------------------------------------------------------------
+        for (uint32_t cIdx = 0; cIdx < cylArray.GetCount(); ++cIdx) {
+            const auto  cID    = cylArray.Index()[cIdx];
+            const auto& cCol   = cylArray.Data()[cIdx];
+            auto* const cTrans = em->TryGetTIComponent<GE::Components::Transform>(cID);
+            auto* const cRB    = em->TryGetTIComponent<GE::Components::RigidBody>(cID);
+
+            if (!cTrans || !cRB || cRB->isStatic) continue;
+
+            const float halfH = cCol.height * 0.5f;
+            const glm::vec3 top    = cTrans->m_position + glm::vec3(0.0f, +halfH, 0.0f);
+            const glm::vec3 bottom = cTrans->m_position + glm::vec3(0.0f, -halfH, 0.0f);
+
+            for (uint32_t pIdx = 0; pIdx < planeArray.GetCount(); ++pIdx) {
+                const auto& pCol = planeArray.Data()[pIdx];
+                const auto  pID  = planeArray.Index()[pIdx];
+
+                GE::Physics::Plane plane(pCol.normal * pCol.offset, pCol.normal);
+                const glm::vec3& pn = plane.GetNormal();
+
+                const float distTop    = plane.DistanceToPoint(top);
+                const float distBottom = plane.DistanceToPoint(bottom);
+                const float minDist    = glm::min(distTop, distBottom);
+
+                if (minDist < cCol.radius) {
+                    const float penetration = cCol.radius - minDist;
+                    cTrans->m_position += pn * penetration;
+
+                    float e = cRB->restitution;
+                    if (m_restitutionOverride >= 0.0f) {
+                        e = m_restitutionOverride;
+                    } else if (m_registry) {
+                        const auto* matC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cID);
+                        const auto* matP = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(pID);
+                        if (matC && matP) {
+                            GE::Physics::MaterialInteractionRecord rec;
+                            if (m_registry->Lookup(matC->name, matP->name, rec)) { e = rec.restitution; }
+                        }
+                    }
+
+                    glm::vec3 planeVel{ 0.0f };
+                    const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
+                    const auto* aoc    = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
+                    if (aoc && pTrans && m_lastDt > 1e-6f) {
+                        planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                    }
+
+                    const glm::vec3 relVel = cRB->velocity - planeVel;
+                    const float     vRelN  = glm::dot(relVel, pn);
+                    if (vRelN < 0.0f) {
+                        cRB->velocity -= (1.0f + e) * vRelN * pn;
+                    }
+
+                    if (glm::length(cRB->velocity) < 0.05f) {
+                        cRB->velocity = glm::vec3(0.0f);
+                    }
+                }
+            }
+        }
     }
 }

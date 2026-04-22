@@ -86,7 +86,19 @@
       "Bash(echo \"physics_demo: exit $?\")",
       "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe --binary --raw-binary -o /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases /c/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs -- /c/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/full_showcase.json)",
       "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe:*)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(cp 04_animation_platforms.json 03_animation_platforms.json)",
+      "Bash(cp 05_spawner_factory.json 04_spawner_factory.json)",
+      "Bash(cp 06_cloth_simulation.json 05_cloth_simulation.json)",
+      "Bash(cp 07_flocking_boids.json 06_flocking_boids.json)",
+      "Bash(C:/Users/javie/flatbuffers/Release/flatc.exe *)",
+      "Bash(xxd config/flatbufferConfig/01_multiplayer.bin)",
+      "Bash(xxd config/flatbufferConfig/04_animation_platforms.bin)",
+      "Bash(xxd \"config/flatbufferConfig/01_shapes_and_collisions.bin\")",
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o config/flatbufferConfig/ flatbuffers/Scene.fbs -- config/flatbufferConfig/01_multiplayer.json)",
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary --raw-binary -o config/flatbufferConfig/ flatbuffers/Scene.fbs config/flatbufferConfig/01_multiplayer.json)",
+      "Bash(\"/c/Users/javie/OneDrive - hull.ac.uk/Documents/Windows.flatc.binary/flatc.exe\" --binary -o config/flatbufferConfig flatbuffers/Scene.fbs config/flatbufferConfig/01_multiplayer.json)",
+      "PowerShell(& \"C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe\" --binary -o \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\flatbuffers\\\\Scene.fbs\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\01_multiplayer.json\"; Write-Host \"Exit: $LASTEXITCODE\")"
     ]
   }
 }

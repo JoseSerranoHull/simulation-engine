@@ -41,8 +41,8 @@ void NetworkBridge::BroadcastOwnedStates() {
 
         const uint32_t entityId = ownerArr.Index()[i];
 
-        auto* tr = m_entityManager->GetTIComponent<GE::Components::Transform>(entityId);
-        auto* rb = m_entityManager->GetTIComponent<GE::Components::RigidBody>(entityId);
+        auto* tr = m_entityManager->TryGetTIComponent<GE::Components::Transform>(entityId);
+        auto* rb = m_entityManager->TryGetTIComponent<GE::Components::RigidBody>(entityId);
         if ((tr == nullptr) || (rb == nullptr)) { continue; }
 
         Networking::Packets::StateUpdate pkt{};
@@ -130,11 +130,11 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
 
     // Apply angularVelocity and orientation immediately
     // (rotation is not dead-reckoned — too complex for rotation blending).
-    auto* rb = m_entityManager->GetTIComponent<GE::Components::RigidBody>(pkt.entityId);
+    auto* rb = m_entityManager->TryGetTIComponent<GE::Components::RigidBody>(pkt.entityId);
     if (rb != nullptr) {
         rb->angularVelocity = pkt.angularVelocity;
     }
-    auto* tr = m_entityManager->GetTIComponent<GE::Components::Transform>(pkt.entityId);
+    auto* tr = m_entityManager->TryGetTIComponent<GE::Components::Transform>(pkt.entityId);
     if (tr != nullptr) {
         const glm::quat q(pkt.orientation[3],   // w
                           pkt.orientation[0],   // x

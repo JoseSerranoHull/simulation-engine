@@ -35,6 +35,9 @@ public:
     uint64_t m_neighbourChecksLastFrame { 0 };
     float    m_lastUpdateMs             { 0.0f };
 
+    // Freeze toggle: when true, zero all velocities and skip steering
+    bool m_frozen { false };
+
 private:
     // ---- Agent cache (rebuilt each frame) ----
     struct AgentEntry {

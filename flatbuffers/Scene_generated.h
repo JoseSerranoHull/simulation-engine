@@ -1071,15 +1071,21 @@ inline ::flatbuffers::Offset<Sphere> CreateSphere(
 struct Plane FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef PlaneBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NORMAL = 4
+    VT_NORMAL = 4,
+    VT_WIDTH  = 6,
+    VT_DEPTH  = 8
   };
   const Simulation::Vec3 *normal() const {
     return GetStruct<const Simulation::Vec3 *>(VT_NORMAL);
   }
+  float width() const { return GetField<float>(VT_WIDTH, 20.0f); }
+  float depth() const { return GetField<float>(VT_DEPTH, 20.0f); }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<Simulation::Vec3>(verifier, VT_NORMAL, 4) &&
+           VerifyField<float>(verifier, VT_WIDTH, 4) &&
+           VerifyField<float>(verifier, VT_DEPTH, 4) &&
            verifier.EndTable();
   }
 };
@@ -1090,6 +1096,12 @@ struct PlaneBuilder {
   ::flatbuffers::uoffset_t start_;
   void add_normal(const Simulation::Vec3 *normal) {
     fbb_.AddStruct(Plane::VT_NORMAL, normal);
+  }
+  void add_width(float width) {
+    fbb_.AddElement<float>(Plane::VT_WIDTH, width, 20.0f);
+  }
+  void add_depth(float depth) {
+    fbb_.AddElement<float>(Plane::VT_DEPTH, depth, 20.0f);
   }
   explicit PlaneBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -1104,8 +1116,12 @@ struct PlaneBuilder {
 
 inline ::flatbuffers::Offset<Plane> CreatePlane(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    const Simulation::Vec3 *normal = nullptr) {
+    const Simulation::Vec3 *normal = nullptr,
+    float width = 20.0f,
+    float depth = 20.0f) {
   PlaneBuilder builder_(_fbb);
+  builder_.add_depth(depth);
+  builder_.add_width(width);
   builder_.add_normal(normal);
   return builder_.Finish();
 }
@@ -1679,7 +1695,9 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_SHAPE = 12,
     VT_BEHAVIOUR_TYPE = 14,
     VT_BEHAVIOUR = 16,
-    VT_COLLISION_TYPE = 18
+    VT_COLLISION_TYPE = 18,
+    VT_SCRIPT_TYPE = 20,
+    VT_PARENT = 22
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -1737,6 +1755,12 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   Simulation::CollisionType collision_type() const {
     return static_cast<Simulation::CollisionType>(GetField<int8_t>(VT_COLLISION_TYPE, 0));
   }
+  const ::flatbuffers::String *script_type() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_SCRIPT_TYPE);
+  }
+  const ::flatbuffers::String *parent() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_PARENT);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -1752,6 +1776,10 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyOffset(verifier, VT_BEHAVIOUR) &&
            VerifyBehaviour(verifier, behaviour(), behaviour_type()) &&
            VerifyField<int8_t>(verifier, VT_COLLISION_TYPE, 1) &&
+           VerifyOffset(verifier, VT_SCRIPT_TYPE) &&
+           verifier.VerifyString(script_type()) &&
+           VerifyOffset(verifier, VT_PARENT) &&
+           verifier.VerifyString(parent()) &&
            verifier.EndTable();
   }
 };
@@ -1823,6 +1851,12 @@ struct ObjectBuilder {
   }
   void add_collision_type(Simulation::CollisionType collision_type) {
     fbb_.AddElement<int8_t>(Object::VT_COLLISION_TYPE, static_cast<int8_t>(collision_type), 0);
+  }
+  void add_script_type(::flatbuffers::Offset<::flatbuffers::String> script_type) {
+    fbb_.AddOffset(Object::VT_SCRIPT_TYPE, script_type);
+  }
+  void add_parent(::flatbuffers::Offset<::flatbuffers::String> parent_) {
+    fbb_.AddOffset(Object::VT_PARENT, parent_);
   }
   explicit ObjectBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {

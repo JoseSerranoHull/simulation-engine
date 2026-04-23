@@ -11,6 +11,7 @@
 #include "systems/FlockingSystem.h"
 #include "systems/PhysicsSystem.h"
 #include "systems/SpawnerSystem.h"
+#include "systems/ScriptSystem.h"
 #include "graphics/ShaderModule.h"
 #include "graphics/GraphicsPipeline.h"
 #include "graphics/GpuUploadContext.h"
@@ -143,7 +144,12 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     m_flockingSystem = fks;
     em->RegisterSystem(fks);
 
-    // 10c. Register PhysicsSystem and wire up the interaction registry
+    // 10c. Register ScriptSystem (GameLogic stage — runs after FlockingSystem)
+    auto* scs = new GE::Systems::ScriptSystem(nullptr);  // PhysicsSystem ptr provided after registration
+    m_scriptSystem = scs;
+    em->RegisterSystem(scs);
+
+    // 10d. Register PhysicsSystem and wire up the interaction registry
     auto* ps = new GE::Systems::PhysicsSystem();
     ps->SetRegistry(&m_interactionRegistry);
     m_physicsSystem = ps;
@@ -197,49 +203,6 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
 void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
     if (em == nullptr) { return; }
-
-    // --- Player input: velocity-based control for the entity owned by local peer ---
-    {
-        InputService* input = ServiceLocator::GetInput();
-        if (input != nullptr) {
-            const int peerId = m_localPeerId;
-            if (peerId >= 1 && peerId <= 4) {
-                const auto localOwner = static_cast<GE::Components::OwnerType>(peerId - 1);
-                auto& ownerArr = em->GetCompArr<GE::Components::OwnerComponent>();
-                for (uint32_t i = 0U; i < ownerArr.GetCount(); ++i) {
-                    if (ownerArr.Data()[i].owner != localOwner) { continue; }
-                    const auto eid = ownerArr.Index()[i];
-                    auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
-                    if (rb == nullptr || rb->isStatic) { continue; }
-
-                    constexpr float moveSpeed   = 5.0f;
-                    constexpr float jumpImpulse = 6.0f;
-                    constexpr float hDamping    = 0.85f;
-
-                    glm::vec3 inputVel{ 0.0f };
-                    bool anyInput = false;
-
-                    if (input->IsKeyDown(GLFW_KEY_UP))    { inputVel.z -= moveSpeed; anyInput = true; }
-                    if (input->IsKeyDown(GLFW_KEY_DOWN))  { inputVel.z += moveSpeed; anyInput = true; }
-                    if (input->IsKeyDown(GLFW_KEY_LEFT))  { inputVel.x -= moveSpeed; anyInput = true; }
-                    if (input->IsKeyDown(GLFW_KEY_RIGHT)) { inputVel.x += moveSpeed; anyInput = true; }
-
-                    if (anyInput) {
-                        rb->velocity.x = inputVel.x;
-                        rb->velocity.z = inputVel.z;
-                    } else {
-                        rb->velocity.x *= hDamping;
-                        rb->velocity.z *= hDamping;
-                    }
-
-                    // Jump: impulse on Y only when grounded; gravity integration is untouched
-                    if (input->IsKeyDown(GLFW_KEY_SPACE) && glm::abs(rb->velocity.y) < 0.5f) {
-                        rb->velocity.y = jumpImpulse;
-                    }
-                }
-            }
-        }
-    }
 
     // Refresh cloth vertex buffers from current particle positions (HOST_COHERENT — no flush needed).
 
@@ -295,6 +258,11 @@ void FlatBuffersScenario::OnUnload() {
                 }
             }
         }
+    }
+
+    if ((m_scriptSystem != nullptr) && (em != nullptr)) {
+        em->UnregisterSystemByID(m_scriptSystem->GetID());
+        m_scriptSystem = nullptr;
     }
 
     if ((m_clothSystem != nullptr) && (em != nullptr)) {

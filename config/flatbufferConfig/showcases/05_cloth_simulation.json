@@ -6,8 +6,8 @@
     {
       "name": "MainCam",
       "transform": {
-        "position": { "x": 1.5, "y": 2.5, "z": 6.0 },
-        "orientation": { "yaw": -90.0, "pitch": -10.0, "roll": 0.0 },
+        "position": { "x": 1.0, "y": 7.5, "z": 4.5 },
+        "orientation": { "yaw": -90.0, "pitch": -30.0, "roll": 0.0 },
         "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
       },
       "camera_type_type": "PerspectiveCamera",
@@ -63,29 +63,9 @@
       "collision_type": "SOLID"
     },
     {
-      "name": "FallingSphere",
-      "transform": {
-        "position": { "x": 1.0, "y": 4.5, "z": 1.0 },
-        "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
-        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
-      },
-      "material": "rubber",
-      "shape_type": "Sphere",
-      "shape": { "radius": 0.35 },
-      "behaviour_type": "SimulatedObject",
-      "behaviour": {
-        "initial_state": {
-          "linear_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 },
-          "angular_velocity": { "x": 0.0, "y": 0.0, "z": 0.0 }
-        },
-        "owner": "ONE"
-      },
-      "collision_type": "SOLID"
-    },
-    {
       "name": "Floor",
       "transform": {
-        "position": { "x": 0.0, "y": -1.0, "z": 0.0 },
+        "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
         "orientation": { "yaw": 0.0, "pitch": 0.0, "roll": 0.0 },
         "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
       },

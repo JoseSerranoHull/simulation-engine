@@ -9,7 +9,7 @@
 #include "scene/fb/FBSceneContext.h"      // for FBCameraRecord
 #include "physics/MaterialInteractionRegistry.h"
 
-namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; }
+namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class ScriptSystem; }
 
 namespace GE {
 
@@ -57,6 +57,7 @@ namespace GE {
         GE::Systems::SpawnerSystem*   m_spawnerSystem   { nullptr };
         GE::Systems::ClothSystem*     m_clothSystem     { nullptr };
         GE::Systems::FlockingSystem*  m_flockingSystem  { nullptr };
+        GE::Systems::ScriptSystem*    m_scriptSystem    { nullptr };
 
         // --- Material interaction registry (populated at load, passed to PhysicsSystem) ---
         GE::Physics::MaterialInteractionRegistry m_interactionRegistry;

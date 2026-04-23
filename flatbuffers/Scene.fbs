@@ -77,7 +77,11 @@ union Shape {
 }
 
 table Sphere { radius: float; }
-table Plane { normal: Vec3; } // local-space normal, rotated by object transform
+table Plane {
+  normal: Vec3;    // local-space normal, rotated by object transform
+  width:  float = 20.0;  // visual mesh extent along X (does not affect physics — PlaneCollider is infinite)
+  depth:  float = 20.0;  // visual mesh extent along Z
+}
 table Capsule { radius: float; height: float; }
 table Cylinder { radius: float; height: float; }
 table Cuboid { size: Vec3; }
@@ -165,7 +169,9 @@ table Object {
   material: string;
   shape: Shape;
   behaviour: Behaviour;
-  collision_type: CollisionType = SOLID; 
+  collision_type: CollisionType = SOLID;
+  script_type: string;   // optional C++ script class name attached to this entity (e.g. "PlayerController")
+  parent: string;        // optional name of parent Object; null = root entity
 }
 
 // =======================

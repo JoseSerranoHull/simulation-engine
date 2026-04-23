@@ -25,12 +25,18 @@
   ],
   "objects": [
     {
+      "name": "GameMap",
+      "transform": { "position": {"x":0,"y":0,"z":0}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
+      "collision_type": "SOLID"
+    },
+    {
       "name": "Floor",
       "transform": { "position": {"x":0,"y":0,"z":0}, "orientation": {"yaw":0,"pitch":0,"roll":0}, "scale": {"x":1,"y":1,"z":1} },
       "material": "concrete",
       "shape_type": "Plane",
-      "shape": { "normal": {"x":0,"y":1,"z":0} },
-      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+      "shape": { "normal": {"x":0,"y":1,"z":0}, "width": 20.0, "depth": 20.0 },
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID",
+      "parent": "GameMap"
     },
     {
       "name": "WallNorth",
@@ -38,7 +44,8 @@
       "material": "concrete",
       "shape_type": "Cuboid",
       "shape": { "size": {"x":20,"y":10,"z":0.5} },
-      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID",
+      "parent": "GameMap"
     },
     {
       "name": "WallSouth",
@@ -46,7 +53,8 @@
       "material": "concrete",
       "shape_type": "Cuboid",
       "shape": { "size": {"x":20,"y":10,"z":0.5} },
-      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID",
+      "parent": "GameMap"
     },
     {
       "name": "WallEast",
@@ -54,7 +62,8 @@
       "material": "concrete",
       "shape_type": "Cuboid",
       "shape": { "size": {"x":0.5,"y":10,"z":20} },
-      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID",
+      "parent": "GameMap"
     },
     {
       "name": "WallWest",
@@ -62,7 +71,8 @@
       "material": "concrete",
       "shape_type": "Cuboid",
       "shape": { "size": {"x":0.5,"y":10,"z":20} },
-      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID"
+      "behaviour_type": "StaticObject", "behaviour": {}, "collision_type": "SOLID",
+      "parent": "GameMap"
     },
     {
       "name": "PlayerRed",
@@ -72,7 +82,8 @@
       "shape": { "radius": 0.5 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "ONE" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
     {
       "name": "PlayerGreen",
@@ -82,7 +93,8 @@
       "shape": { "radius": 0.5 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "TWO" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
     {
       "name": "PlayerBlue",
@@ -92,7 +104,8 @@
       "shape": { "radius": 0.5 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "THREE" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
     {
       "name": "PlayerYellow",
@@ -102,7 +115,8 @@
       "shape": { "radius": 0.5 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "FOUR" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
     {
       "name": "MovingPlatform",

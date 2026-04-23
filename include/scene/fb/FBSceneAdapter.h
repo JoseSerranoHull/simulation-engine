@@ -56,6 +56,7 @@ namespace GE::Scene::FB {
         void adaptObjects     (FBSceneContext& ctx) const;
         void adaptInteractions(FBSceneContext& ctx) const;
         void adaptSpawners    (FBSceneContext& ctx) const;
+        void adaptParentLinks (FBSceneContext& ctx) const;
 
         void adaptObject     (const Simulation::Object*              obj, FBSceneContext& ctx) const;
         void adaptShape      (const Simulation::Object*              obj, GE::ECS::EntityID id,

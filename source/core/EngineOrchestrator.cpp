@@ -143,7 +143,7 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     // Create the empty skybox shell (waiting for .ini textures)
     initSkybox();
 
-    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/01_multiplayer.bin"));
+    changeScenario(std::make_unique<GE::FlatBuffersScenario>("./config/flatbufferConfig/showcases/01_multiplayer.bin"));
 }
 
 /**
@@ -362,7 +362,7 @@ void EngineOrchestrator::drawFrame() {
             const int frontIdx = m_frontSimIdx.load(std::memory_order_acquire);
             std::lock_guard<std::mutex> snapLock(m_simBuffers[frontIdx].mutex);
             for (const auto& snap : m_simBuffers[frontIdx].snapshots) {
-                auto* tr = em->GetTIComponent<GE::Components::Transform>(snap.id);
+                auto* tr = em->TryGetTIComponent<GE::Components::Transform>(snap.id);
                 if (tr != nullptr) {
                     tr->m_worldMatrix = snap.worldMatrix;
                 }
@@ -556,6 +556,10 @@ void EngineOrchestrator::changeScenario(std::unique_ptr<GE::Scenario> newScenari
         scene->clearEntities();
         if (entityManager) {
             entityManager->ClearAllEntities();
+        }
+        for (auto& buf : m_simBuffers) {
+            std::lock_guard<std::mutex> lk(buf.mutex);
+            buf.snapshots.clear();
         }
     }
 

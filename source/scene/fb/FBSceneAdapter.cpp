@@ -30,6 +30,8 @@
 #include "graphics/VulkanUtils.h"
 #include "assets/Vertex.h"
 #include "core/Logger.h"
+#include "components/ScriptComponent.h"
+#include "scripts/ScriptFactory.h"
 
 // Flat-color pipeline index within m_pipelines (appended after createMaterialPipelines())
 static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX = 8U;
@@ -116,6 +118,7 @@ void FBSceneAdapter::adaptToECS(FBSceneContext& ctx) {
     if (m_scene->materials()    != nullptr) { adaptMaterials(ctx);    }
     if (m_scene->interactions() != nullptr) { adaptInteractions(ctx); }
     if (m_scene->objects()      != nullptr) { adaptObjects(ctx);      }
+    if (m_scene->objects()      != nullptr) { adaptParentLinks(ctx);  }
     if (m_scene->spawners()     != nullptr &&
         m_scene->spawners_type() != nullptr) { adaptSpawners(ctx);    }
 }
@@ -253,15 +256,27 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
 
     // --- Shape → Mesh + Collider ---
     // ClothObject and FlockAgent build their own geometry; skip the static adaptShape() path.
+    // Objects with no shape (NONE) are empty containers (e.g. GameMap) — skip silently.
+    const bool hasShape     = (obj->shape_type() != Simulation::Shape::NONE);
     const bool isCloth      = (obj->behaviour_type() == Simulation::Behaviour::ClothObject);
     const bool isFlockAgent = (obj->behaviour_type() == Simulation::Behaviour::FlockAgent);
     const bool isContainer  = (obj->collision_type() == Simulation::CollisionType::CONTAINER);
-    if (!isCloth && !isFlockAgent) {
+    if (hasShape && !isCloth && !isFlockAgent) {
         adaptShape(obj, id, color, isContainer, ctx);
     }
 
     // --- Behaviour → RigidBody / AnimatedObjectComponent / ClothComponent ---
     adaptBehaviour(obj, id, ctx);
+
+    // --- Script attachment (data-driven via script_type field) ---
+    if (obj->script_type() != nullptr) {
+        const std::string typeName = obj->script_type()->str();
+        auto script = GE::Scripts::CreateScript(typeName);
+        if (script != nullptr) {
+            script->SetEntityID(id);
+            ctx.em->AddComponent(id, GE::Components::ScriptComponent{ std::move(script) });
+        }
+    }
 }
 
 // ===========================================================================
@@ -299,8 +314,9 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
     }
     case Simulation::Shape::Plane: {
         const auto* p = obj->shape_as_Plane();
-        meshData = GeometryUtils::generatePlane(10.0f, 10.0f);
-        // Bake the vertex color into plane mesh (generatePlane doesn't accept color; tint via material)
+        const float planeW = (p != nullptr) ? p->width() : 20.0f;
+        const float planeD = (p != nullptr) ? p->depth() : 20.0f;
+        meshData = GeometryUtils::generatePlane(planeW, planeD);
         for (auto& v : meshData.vertices) { v.color = color; }
         glm::vec3 normal{ 0.0f, 1.0f, 0.0f };
         if (p != nullptr && p->normal() != nullptr) { normal = toVec3(*p->normal()); }
@@ -1127,6 +1143,37 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
         if (!rec.entityIds.empty()) {
             ctx.spawners.push_back(std::move(rec));
         }
+    }
+}
+
+// ===========================================================================
+// SECTION 10: adaptParentLinks() — wires Transform::m_parentEntityID by name
+// ===========================================================================
+
+void FBSceneAdapter::adaptParentLinks(FBSceneContext& ctx) const {
+    if (m_scene->objects() == nullptr) { return; }
+
+    for (const auto* obj : *m_scene->objects()) {
+        if (obj == nullptr || obj->parent() == nullptr) { continue; }
+        if (obj->name()   == nullptr) { continue; }
+
+        const std::string childName  = obj->name()->str();
+        const std::string parentName = obj->parent()->str();
+
+        if (!ctx.scene->hasEntity(childName) || !ctx.scene->hasEntity(parentName)) {
+            GE_LOG_WARN("FBSceneAdapter: parent link '" + childName
+                        + "' -> '" + parentName + "' — entity not found, skipped.");
+            continue;
+        }
+
+        const GE::ECS::EntityID childId  = ctx.scene->getEntityID(childName);
+        const GE::ECS::EntityID parentId = ctx.scene->getEntityID(parentName);
+
+        auto* childTr = ctx.em->TryGetTIComponent<GE::Components::Transform>(childId);
+        if (childTr == nullptr) { continue; }
+
+        childTr->m_parentEntityID = parentId;
+        childTr->m_state = GE::Components::Transform::TransformState::Dirty;
     }
 }
 

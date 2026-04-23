@@ -98,7 +98,17 @@
       "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o config/flatbufferConfig/ flatbuffers/Scene.fbs -- config/flatbufferConfig/01_multiplayer.json)",
       "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary --raw-binary -o config/flatbufferConfig/ flatbuffers/Scene.fbs config/flatbufferConfig/01_multiplayer.json)",
       "Bash(\"/c/Users/javie/OneDrive - hull.ac.uk/Documents/Windows.flatc.binary/flatc.exe\" --binary -o config/flatbufferConfig flatbuffers/Scene.fbs config/flatbufferConfig/01_multiplayer.json)",
-      "PowerShell(& \"C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe\" --binary -o \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\flatbuffers\\\\Scene.fbs\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\01_multiplayer.json\"; Write-Host \"Exit: $LASTEXITCODE\")"
+      "PowerShell(& \"C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe\" --binary -o \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\flatbuffers\\\\Scene.fbs\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\01_multiplayer.json\"; Write-Host \"Exit: $LASTEXITCODE\")",
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"config/flatbufferConfig\" \"flatbuffers/Scene.fbs\" \"config/flatbufferConfig/01_multiplayer.json\")",
+      "Bash(C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe *)",
+      "PowerShell(msbuild *)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m 2>&1 | Select-Object -Last 25)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m 2>&1 | Select-Object -Last 15)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m 2>&1 | Select-Object -Last 8)",
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/03_animation_platforms.json\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/04_spawner_factory.json\")",
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/05_cloth_simulation.json\")"
     ]
   }
 }

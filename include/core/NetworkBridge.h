@@ -93,9 +93,13 @@ namespace GE {
          */
         void ClearRemoteStates();
 
-        // --- Accessors used by EngineOrchestrator / ImGui ---
+        // --- Accessors used by EngineOrchestrator / ImGui / Scripts ---
 
         Networking::NetworkService* GetService() const { return m_service; }
+
+        uint8_t GetLocalPeerId() const {
+            return (m_service != nullptr) ? m_service->GetLocalPeerId() : 0U;
+        }
 
         std::size_t GetRemoteStateCount() const {
             std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_remoteStatesMutex));

@@ -522,7 +522,8 @@ namespace GE::Systems {
                     (pn.z >= 0.0f) ? -halfExt.z : halfExt.z
                 };
                 const glm::vec3 deepestPoint = bTrans->m_position + support;
-                const float dist = plane.DistanceToPoint(deepestPoint);
+                // Signed distance: negative means deepestPoint has crossed the plane.
+                const float dist = glm::dot(pn, deepestPoint - plane.GetPoint());
 
                 if (dist < 0.0f) {
                     const float penetration = -dist;
@@ -685,6 +686,245 @@ namespace GE::Systems {
                     if (glm::length(cRB->velocity) < 0.05f) {
                         cRB->velocity = glm::vec3(0.0f);
                     }
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass G: Capsule-Box collisions.
+        // Find the closest point on the capsule axis segment to the box
+        // centre, then run a sphere-box test at that point with capsule radius.
+        // Box is treated as infinite mass (same convention as Pass C).
+        // -----------------------------------------------------------------
+        for (uint32_t cIdx = 0; cIdx < capsuleArray.GetCount(); ++cIdx) {
+            const auto  cID    = capsuleArray.Index()[cIdx];
+            const auto& cCol   = capsuleArray.Data()[cIdx];
+            auto* const cTrans = em->TryGetTIComponent<GE::Components::Transform>(cID);
+            auto* const cRB    = em->TryGetTIComponent<GE::Components::RigidBody>(cID);
+
+            if (!cTrans || !cRB || cRB->isStatic) continue;
+
+            const float halfH    = cCol.height * 0.5f;
+            const glm::vec3 capBot = cTrans->m_position - glm::vec3(0.0f, halfH, 0.0f);
+            const glm::vec3 axis   = glm::vec3(0.0f, cCol.height, 0.0f); // capTop - capBot
+            const float axisLenSq  = cCol.height * cCol.height;
+
+            for (uint32_t bIdx = 0; bIdx < boxArray.GetCount(); ++bIdx) {
+                const auto  bID    = boxArray.Index()[bIdx];
+                const auto& bCol   = boxArray.Data()[bIdx];
+                auto* const bTrans = em->TryGetTIComponent<GE::Components::Transform>(bID);
+
+                if (!bTrans || cID == bID) continue;
+
+                const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
+                const glm::vec3& boxCenter = bTrans->m_position;
+
+                // Closest point on capsule segment to box centre
+                const float t = glm::clamp(glm::dot(boxCenter - capBot, axis) / axisLenSq, 0.0f, 1.0f);
+                const glm::vec3 closestOnAxis = capBot + t * axis;
+
+                // Closest point on AABB to that segment point
+                const glm::vec3 closest{
+                    glm::clamp(closestOnAxis.x, boxCenter.x - halfExt.x, boxCenter.x + halfExt.x),
+                    glm::clamp(closestOnAxis.y, boxCenter.y - halfExt.y, boxCenter.y + halfExt.y),
+                    glm::clamp(closestOnAxis.z, boxCenter.z - halfExt.z, boxCenter.z + halfExt.z)
+                };
+
+                const glm::vec3 diff   = closestOnAxis - closest;
+                const float     distSq = glm::dot(diff, diff);
+
+                if (distSq >= cCol.radius * cCol.radius || distSq < 1e-12f) continue;
+
+                const float     dist        = std::sqrt(distSq);
+                const glm::vec3 normal      = diff / dist;   // box → capsule
+                const float     penetration = cCol.radius - dist;
+
+                cTrans->m_position += normal * penetration;
+
+                float e = cRB->restitution;
+                if (m_restitutionOverride >= 0.0f) {
+                    e = m_restitutionOverride;
+                } else if (m_registry) {
+                    const auto* matC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cID);
+                    const auto* matB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                    if (matC && matB) {
+                        GE::Physics::MaterialInteractionRecord rec;
+                        if (m_registry->Lookup(matC->name, matB->name, rec)) { e = rec.restitution; }
+                    }
+                }
+
+                const auto* bAOC = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(bID);
+                glm::vec3 boxVel{ 0.0f };
+                if (bAOC && m_lastDt > 1e-6f) {
+                    boxVel = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                }
+
+                const glm::vec3 relVel = cRB->velocity - boxVel;
+                const float     vRelN  = glm::dot(relVel, normal);
+                if (vRelN < 0.0f) {
+                    cRB->velocity -= (1.0f + e) * vRelN * normal;
+                }
+
+                if (glm::length(cRB->velocity) < 0.05f) {
+                    cRB->velocity = glm::vec3(0.0f);
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass H: Sphere-Capsule collisions.
+        // Find the closest point on the capsule axis to the sphere centre,
+        // then treat as sphere-sphere with the capsule radius.
+        // Both bodies receive impulses (general two-body, like Pass B).
+        // -----------------------------------------------------------------
+        for (uint32_t sIdx = 0; sIdx < sphereArray.GetCount(); ++sIdx) {
+            const auto  sID    = sphereArray.Index()[sIdx];
+            auto&       sCol   = sphereArray.Data()[sIdx];
+            auto* const sTrans = em->TryGetTIComponent<GE::Components::Transform>(sID);
+            auto* const sRB    = em->TryGetTIComponent<GE::Components::RigidBody>(sID);
+
+            if (!sTrans || (sRB && sRB->isStatic)) continue;
+
+            for (uint32_t cIdx = 0; cIdx < capsuleArray.GetCount(); ++cIdx) {
+                const auto  cID    = capsuleArray.Index()[cIdx];
+                const auto& cCol   = capsuleArray.Data()[cIdx];
+                auto* const cTrans = em->TryGetTIComponent<GE::Components::Transform>(cID);
+                auto* const cRB    = em->TryGetTIComponent<GE::Components::RigidBody>(cID);
+
+                if (!cTrans || sID == cID) continue;
+
+                const float halfH      = cCol.height * 0.5f;
+                const glm::vec3 capBot = cTrans->m_position - glm::vec3(0.0f, halfH, 0.0f);
+                const glm::vec3 axis   = glm::vec3(0.0f, cCol.height, 0.0f);
+                const float axisLenSq  = cCol.height * cCol.height;
+
+                // Closest point on capsule axis to sphere centre
+                const float t = glm::clamp(glm::dot(sTrans->m_position - capBot, axis) / axisLenSq, 0.0f, 1.0f);
+                const glm::vec3 closestOnAxis = capBot + t * axis;
+
+                const glm::vec3 diff      = sTrans->m_position - closestOnAxis;
+                const float     distSq    = glm::dot(diff, diff);
+                const float     sumRadius = sCol.radius + cCol.radius;
+
+                if (distSq >= sumRadius * sumRadius || distSq < 1e-12f) continue;
+
+                const float     dist        = std::sqrt(distSq);
+                const glm::vec3 normal      = diff / dist;   // capsule → sphere
+                const float     penetration = sumRadius - dist;
+
+                const float invMassS     = (sRB && !sRB->isStatic) ? sRB->inverseMass : 0.0f;
+                const float invMassC     = (cRB && !cRB->isStatic) ? cRB->inverseMass : 0.0f;
+                const float totalInvMass = invMassS + invMassC;
+
+                if (totalInvMass > 0.0f) {
+                    const glm::vec3 correction = (penetration / totalInvMass) * normal;
+                    if (sRB && !sRB->isStatic) sTrans->m_position += correction * invMassS;
+                    if (cRB && !cRB->isStatic) cTrans->m_position -= correction * invMassC;
+                }
+
+                if (totalInvMass > 0.0f) {
+                    float e = 0.6f;
+                    if (m_restitutionOverride >= 0.0f) {
+                        e = m_restitutionOverride;
+                    } else if (m_registry) {
+                        const auto* matS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                        const auto* matC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cID);
+                        if (matS && matC) {
+                            GE::Physics::MaterialInteractionRecord rec;
+                            if (m_registry->Lookup(matS->name, matC->name, rec)) { e = rec.restitution; }
+                        }
+                    }
+
+                    const glm::vec3 velS = sRB ? sRB->velocity : glm::vec3{ 0.0f };
+                    const glm::vec3 velC = cRB ? cRB->velocity : glm::vec3{ 0.0f };
+                    const float     vRel = glm::dot(velS - velC, normal);
+                    if (vRel < 0.0f) {
+                        const float j = -(1.0f + e) * vRel / totalInvMass;
+                        if (sRB && !sRB->isStatic) sRB->velocity += j * invMassS * normal;
+                        if (cRB && !cRB->isStatic) cRB->velocity -= j * invMassC * normal;
+                    }
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass I: Box-Box (AABB) collisions — SAT on the three world axes.
+        // Both bodies may be dynamic; static boxes act as infinite mass.
+        // -----------------------------------------------------------------
+        for (uint32_t aIdx = 0; aIdx < boxArray.GetCount(); ++aIdx) {
+            const auto  aID    = boxArray.Index()[aIdx];
+            const auto& aCol   = boxArray.Data()[aIdx];
+            auto* const aTrans = em->TryGetTIComponent<GE::Components::Transform>(aID);
+            auto* const aRB    = em->TryGetTIComponent<GE::Components::RigidBody>(aID);
+
+            if (!aTrans) continue;
+            const bool aStatic = (!aRB || aRB->isStatic);
+
+            const glm::vec3 hA{ aCol.sizeX * 0.5f, aCol.sizeY * 0.5f, aCol.sizeZ * 0.5f };
+
+            for (uint32_t bIdx = aIdx + 1; bIdx < boxArray.GetCount(); ++bIdx) {
+                const auto  bID    = boxArray.Index()[bIdx];
+                const auto& bCol   = boxArray.Data()[bIdx];
+                auto* const bTrans = em->TryGetTIComponent<GE::Components::Transform>(bID);
+                auto* const bRB    = em->TryGetTIComponent<GE::Components::RigidBody>(bID);
+
+                if (!bTrans) continue;
+                const bool bStatic = (!bRB || bRB->isStatic);
+                if (aStatic && bStatic) continue;
+
+                const glm::vec3 hB{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
+                const glm::vec3 delta = bTrans->m_position - aTrans->m_position;
+
+                const float ox = hA.x + hB.x - std::abs(delta.x);
+                const float oy = hA.y + hB.y - std::abs(delta.y);
+                const float oz = hA.z + hB.z - std::abs(delta.z);
+
+                if (ox <= 0.0f || oy <= 0.0f || oz <= 0.0f) continue;
+
+                // Minimum overlap axis
+                glm::vec3 normal;
+                float penetration;
+                if (ox <= oy && ox <= oz) {
+                    penetration = ox;
+                    normal = glm::vec3(delta.x < 0.0f ? -1.0f : 1.0f, 0.0f, 0.0f);
+                } else if (oy <= ox && oy <= oz) {
+                    penetration = oy;
+                    normal = glm::vec3(0.0f, delta.y < 0.0f ? -1.0f : 1.0f, 0.0f);
+                } else {
+                    penetration = oz;
+                    normal = glm::vec3(0.0f, 0.0f, delta.z < 0.0f ? -1.0f : 1.0f);
+                }
+
+                const float invMassA     = aStatic ? 0.0f : aRB->inverseMass;
+                const float invMassB     = bStatic ? 0.0f : bRB->inverseMass;
+                const float totalInvMass = invMassA + invMassB;
+                if (totalInvMass <= 0.0f) continue;
+
+                // Positional correction
+                const glm::vec3 correction = (penetration / totalInvMass) * normal;
+                if (!aStatic) aTrans->m_position -= correction * invMassA;
+                if (!bStatic) bTrans->m_position += correction * invMassB;
+
+                // Impulse response
+                float e = 0.3f;
+                if (m_restitutionOverride >= 0.0f) {
+                    e = m_restitutionOverride;
+                } else if (m_registry) {
+                    const auto* matA = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(aID);
+                    const auto* matB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                    if (matA && matB) {
+                        GE::Physics::MaterialInteractionRecord rec;
+                        if (m_registry->Lookup(matA->name, matB->name, rec)) { e = rec.restitution; }
+                    }
+                }
+
+                const glm::vec3 velA = aRB ? aRB->velocity : glm::vec3{ 0.0f };
+                const glm::vec3 velB = bRB ? bRB->velocity : glm::vec3{ 0.0f };
+                const float     vRel = glm::dot(velB - velA, normal);
+                if (vRel < 0.0f) {
+                    const float j = -(1.0f + e) * vRel / totalInvMass;
+                    if (!aStatic) aRB->velocity -= j * invMassA * normal;
+                    if (!bStatic) bRB->velocity += j * invMassB * normal;
                 }
             }
         }

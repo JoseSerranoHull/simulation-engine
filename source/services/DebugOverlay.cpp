@@ -212,7 +212,7 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
             ImGui::Separator();
 
             // --- FlatBuffers scenes (primary — shown first for demo) ---
-            m_fbScenes = GE::Scene::FlatBuffersLoader::scanDirectory("./config/flatbufferConfig/");
+            m_fbScenes = GE::Scene::FlatBuffersLoader::scanDirectory("./config/flatbufferConfig/showcases/");
             if (!m_fbScenes.empty()) {
                 for (const auto& path : m_fbScenes) {
                     const std::string label =
@@ -289,6 +289,20 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                 ImGui::Separator();
                 if (ImGui::MenuItem("Scripts Demo")) {
                     experience->requestScenarioChange("./config/simulation_scripts_demo.ini");
+                }
+                ImGui::Separator();
+                // FlatBuffers test/legacy scenes
+                auto legacyFb = GE::Scene::FlatBuffersLoader::scanDirectory("./config/flatbufferConfig/tests/");
+                for (const auto& path : legacyFb) {
+                    const std::string label = std::filesystem::path(path).filename().string();
+                    const auto* currentScenario = experience->GetCurrentScenario();
+                    const bool isCurrent = (currentScenario != nullptr &&
+                                            currentScenario->GetConfigPath() == path);
+                    if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent)) {
+                        experience->requestScenarioChange(path);
+                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
+                        if (nb != nullptr) { nb->BroadcastSceneChange(path); }
+                    }
                 }
                 ImGui::EndMenu();
             }

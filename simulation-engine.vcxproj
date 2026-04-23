@@ -171,6 +171,8 @@
     <ClCompile Include="source\systems\SpawnerSystem.cpp" />
     <ClCompile Include="source\systems\SpringSystem.cpp" />
     <ClCompile Include="source\scripts\GameScriptComponent.cpp" />
+    <ClCompile Include="source\scripts\PlayerController.cpp" />
+    <ClCompile Include="source\scripts\ScriptFactory.cpp" />
     <ClCompile Include="source\lighting\PointLightSource.cpp" />
     <ClCompile Include="source\graphics\PostProcessBackend.cpp" />
     <ClCompile Include="source\graphics\Renderer.cpp" />
@@ -197,14 +199,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CLAUDE.md" />
-    <None Include="config\flatbufferConfig\01_shapes_and_collisions.json" />
-    <None Include="config\flatbufferConfig\02_materials_and_physics.json" />
-    <None Include="config\flatbufferConfig\03_cameras_and_views.json" />
-    <None Include="config\flatbufferConfig\04_animation_platforms.json" />
-    <None Include="config\flatbufferConfig\05_spawner_factory.json" />
-    <None Include="config\flatbufferConfig\06_cloth_simulation.json" />
-    <None Include="config\flatbufferConfig\07_flocking_boids.json" />
-    <None Include="config\flatbufferConfig\08_grand_showcase.json" />
+    <None Include="config\flatbufferConfig\showcases\01_multiplayer.json" />
+    <None Include="config\flatbufferConfig\showcases\02_shapes_and_materials.json" />
+    <None Include="config\flatbufferConfig\showcases\03_animation_platforms.json" />
+    <None Include="config\flatbufferConfig\showcases\04_spawner_factory.json" />
+    <None Include="config\flatbufferConfig\showcases\05_cloth_simulation.json" />
+    <None Include="config\flatbufferConfig\showcases\06_flocking_boids.json" />
+    <None Include="config\flatbufferConfig\tests\cloth_test.json" />
+    <None Include="config\flatbufferConfig\tests\flock_test.json" />
+    <None Include="config\flatbufferConfig\tests\test_fb_scene.json" />
     <None Include="config\simulation_lab2.ini" />
     <None Include="config\simulation_lab3.ini" />
     <None Include="config\simulation_lab4.ini" />
@@ -371,6 +374,8 @@
     <ClInclude Include="include\graphics\VulkanUtils.h" />
     <ClInclude Include="include\scripts\CollisionInfo.h" />
     <ClInclude Include="include\scripts\GameScriptComponent.h" />
+    <ClInclude Include="include\scripts\PlayerController.h" />
+    <ClInclude Include="include\scripts\ScriptFactory.h" />
     <ClInclude Include="include\components\ScriptComponent.h" />
     <ClInclude Include="include\systems\ScriptSystem.h" />
     <ClInclude Include="include\game-scripts\DemoPlayerScript.h" />

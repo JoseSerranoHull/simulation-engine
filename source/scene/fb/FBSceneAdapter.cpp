@@ -581,6 +581,14 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             }
         }
 
+        // Default burn center: lower-middle of the hanging cloth.
+        // X/Z = centre of the grid span; Y estimated as bottom of fully-hung cloth.
+        cc.burnCenter = {
+            origin.x + (cc.cols - 1) * 0.5f * cc.cellSize,
+            origin.y - (cc.rows - 1) * cc.cellSize,
+            origin.z + (cc.rows - 1) * 0.5f * cc.cellSize
+        };
+
         // Resolve owner color
         cc.color = resolveColor(obj, ctx);
 

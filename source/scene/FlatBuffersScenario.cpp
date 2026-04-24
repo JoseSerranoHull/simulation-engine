@@ -228,6 +228,40 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
             }
         }
     }
+
+    // Rebuild index buffer: replace quads that have any burned corner with degenerate
+    // triangles (all indices = 0) so the GPU discards them, creating a visible hole.
+    // Buffer is HOST_VISIBLE | HOST_COHERENT — no vkFlushMappedMemoryRanges needed.
+    for (uint32_t i = 0U; i < count; ++i) {
+        GE::Components::ClothComponent& cc = clothArr.Data()[i];
+        if (cc.mappedVertices == nullptr || cc.indexCount == 0U) { continue; }
+
+        const int R = cc.rows, C = cc.cols;
+        auto* idxPtr = reinterpret_cast<uint32_t*>(
+            static_cast<uint8_t*>(cc.mappedVertices) + cc.indexOffset);
+
+        uint32_t w = 0U;
+        for (int r = 0; r < R - 1; ++r) {
+            for (int c = 0; c < C - 1; ++c) {
+                const uint32_t tl  = static_cast<uint32_t>(r * C + c);
+                const uint32_t tr_ = tl + 1U;
+                const uint32_t bl  = static_cast<uint32_t>((r + 1) * C + c);
+                const uint32_t br  = bl + 1U;
+
+                const bool anyBurned =
+                    cc.particles[tl].burned  || cc.particles[tr_].burned ||
+                    cc.particles[bl].burned  || cc.particles[br].burned;
+
+                if (anyBurned) {
+                    idxPtr[w++]=0U; idxPtr[w++]=0U; idxPtr[w++]=0U;
+                    idxPtr[w++]=0U; idxPtr[w++]=0U; idxPtr[w++]=0U;
+                } else {
+                    idxPtr[w++]=tl;  idxPtr[w++]=bl;  idxPtr[w++]=tr_;
+                    idxPtr[w++]=tr_; idxPtr[w++]=bl;  idxPtr[w++]=br;
+                }
+            }
+        }
+    }
 }
 
 // ===========================================================================
@@ -563,9 +597,7 @@ void FlatBuffersScenario::OnGUI() {
                             cc.burnCenter = avg / static_cast<float>(cc.particles.size());
                         }
                     }
-                    ImGui::Text("Burn center: %.1f, %.1f, %.1f",
-                                cc.burnCenter.x, cc.burnCenter.y, cc.burnCenter.z);
-                    ImGui::DragFloat("Burn Center Y", &cc.burnCenter.y, 0.05f);
+                    ImGui::DragFloat3("Burn Center", &cc.burnCenter.x, 0.05f);
 
                     ImGui::PopID();
                     if (i + 1U < clothArr.GetCount()) { ImGui::Separator(); }

@@ -108,7 +108,12 @@
       "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/03_animation_platforms.json\")",
       "Bash(echo \"Exit: $?\")",
       "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/04_spawner_factory.json\")",
-      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/05_cloth_simulation.json\")"
+      "Bash(\"C:/Users/javie/flatbuffers/Release/flatc.exe\" --binary -o \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases\" \"C:/Users/javie/GitHub/simulation-engine/flatbuffers/Scene.fbs\" \"C:/Users/javie/GitHub/simulation-engine/config/flatbufferConfig/showcases/05_cloth_simulation.json\")",
+      "WebFetch(domain:code.tutsplus.com)",
+      "WebFetch(domain:www.gamedev.net)",
+      "WebFetch(domain:pikuma.com)",
+      "WebFetch(domain:graphics.stanford.edu)",
+      "WebFetch(domain:pdfs.semanticscholar.org)"
     ]
   }
 }

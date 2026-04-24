@@ -75,7 +75,12 @@ void ClothSystem::OnUpdate(float dt) {
         // 1. Accumulate external forces
         // ---------------------------------------------------------------
         for (auto& p : cc.particles) {
-            if (p.pinned || p.burned) { p.force = glm::vec3{ 0.0f }; continue; }
+            if (p.pinned) { p.force = glm::vec3{ 0.0f }; continue; }
+            // Burned particles receive gravity only (springs already gone, no wind drag)
+            if (p.burned) {
+                p.force = glm::vec3{ 0.0f, GRAVITY * cc.particleMass, 0.0f };
+                continue;
+            }
             p.force  = glm::vec3{ 0.0f,
                                   GRAVITY * cc.particleMass,
                                   0.0f };
@@ -111,7 +116,7 @@ void ClothSystem::OnUpdate(float dt) {
         // ---------------------------------------------------------------
         const float dampFactor = 1.0f - cc.damping * dt;
         for (auto& p : cc.particles) {
-            if (p.pinned || p.burned) { continue; }  // burned particles freeze in place
+            if (p.pinned) { continue; }  // burned particles fall freely under gravity
             const glm::vec3 acc    = p.force / cc.particleMass;
             const glm::vec3 newPos = p.position
                                    + (p.position - p.prevPosition) * dampFactor

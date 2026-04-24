@@ -96,6 +96,20 @@ private:
     VkDeviceMemory m_boxIdxMem { VK_NULL_HANDLE };
     uint32_t       m_boxIdxCount{ 0U };
 
+    // --- Wire cylinder (2 rings + 4 struts): shared by CylinderCollider and CapsuleCollider body ---
+    VkBuffer       m_cylVertBuf { VK_NULL_HANDLE };
+    VkDeviceMemory m_cylVertMem { VK_NULL_HANDLE };
+    VkBuffer       m_cylIdxBuf  { VK_NULL_HANDLE };
+    VkDeviceMemory m_cylIdxMem  { VK_NULL_HANDLE };
+    uint32_t       m_cylIdxCount{ 0U };
+
+    // --- Wire hemisphere (equatorial ring + 2 arcs): used 2x per CapsuleCollider ---
+    VkBuffer       m_hemiVertBuf { VK_NULL_HANDLE };
+    VkDeviceMemory m_hemiVertMem { VK_NULL_HANDLE };
+    VkBuffer       m_hemiIdxBuf  { VK_NULL_HANDLE };
+    VkDeviceMemory m_hemiIdxMem  { VK_NULL_HANDLE };
+    uint32_t       m_hemiIdxCount{ 0U };
+
     // --- Spring line buffer (host-coherent, persistently mapped, rebuilt each frame) ---
     // Stores up to m_springLineMaxVerts paired endpoints as yellow LINE_LIST vertices.
     VkBuffer         m_springLineVertBuf  { VK_NULL_HANDLE };

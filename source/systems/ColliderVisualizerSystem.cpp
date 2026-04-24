@@ -37,6 +37,18 @@ ColliderVisualizerSystem::ColliderVisualizerSystem(GE::Graphics::GpuUploadContex
     uploadGeometry(ctx, boxData.vertices, boxData.indices,
         m_boxVertBuf, m_boxVertMem, m_boxIdxBuf, m_boxIdxMem);
 
+    // Wire cylinder shell (2 rings + 4 struts) — shared by CylinderCollider and CapsuleCollider body
+    const auto cylData = GE::Assets::GeometryUtils::generateWireCylinder(24U, WIRE_COLOR);
+    m_cylIdxCount = static_cast<uint32_t>(cylData.indices.size());
+    uploadGeometry(ctx, cylData.vertices, cylData.indices,
+        m_cylVertBuf, m_cylVertMem, m_cylIdxBuf, m_cylIdxMem);
+
+    // Wire hemisphere (equatorial ring + 2 arcs) — drawn 2x per CapsuleCollider
+    const auto hemiData = GE::Assets::GeometryUtils::generateWireHemisphere(24U, WIRE_COLOR);
+    m_hemiIdxCount = static_cast<uint32_t>(hemiData.indices.size());
+    uploadGeometry(ctx, hemiData.vertices, hemiData.indices,
+        m_hemiVertBuf, m_hemiVertMem, m_hemiIdxBuf, m_hemiIdxMem);
+
     // --- Allocate host-coherent spring line buffer (persistently mapped) ---
     {
         GE::Graphics::VulkanContext* vkCtx = ServiceLocator::GetContext();
@@ -69,6 +81,16 @@ ColliderVisualizerSystem::~ColliderVisualizerSystem() {
     vkFreeMemory   (ctx->device, m_boxVertMem,  nullptr);
     vkDestroyBuffer(ctx->device, m_boxIdxBuf,   nullptr);
     vkFreeMemory   (ctx->device, m_boxIdxMem,   nullptr);
+
+    vkDestroyBuffer(ctx->device, m_cylVertBuf,  nullptr);
+    vkFreeMemory   (ctx->device, m_cylVertMem,  nullptr);
+    vkDestroyBuffer(ctx->device, m_cylIdxBuf,   nullptr);
+    vkFreeMemory   (ctx->device, m_cylIdxMem,   nullptr);
+
+    vkDestroyBuffer(ctx->device, m_hemiVertBuf, nullptr);
+    vkFreeMemory   (ctx->device, m_hemiVertMem, nullptr);
+    vkDestroyBuffer(ctx->device, m_hemiIdxBuf,  nullptr);
+    vkFreeMemory   (ctx->device, m_hemiIdxMem,  nullptr);
 
     if (m_springLineVertBuf != VK_NULL_HANDLE) {
         vkUnmapMemory  (ctx->device, m_springLineVertMem);
@@ -267,6 +289,100 @@ void ColliderVisualizerSystem::RecordPass(
                 static_cast<uint32_t>(sizeof(glm::mat4)), &model);
 
             vkCmdDrawIndexed(cb, m_boxIdxCount, 1U, 0U, 0, 0U);
+        }
+    }
+
+    // --- CylinderColliders (wire cylinder body: 2 rings + 4 struts) ---
+    auto& cylArr = em->GetCompArr<GE::Components::CylinderCollider>();
+    if (cylArr.GetCount() > 0U) {
+        vkCmdBindVertexBuffers(cb, 0U, 1U, &m_cylVertBuf, &zeroOffset);
+        vkCmdBindIndexBuffer(cb, m_cylIdxBuf, 0U, VK_INDEX_TYPE_UINT32);
+
+        for (uint32_t i = 0U; i < cylArr.GetCount(); ++i) {
+            const auto& cyl = cylArr.Data()[i];
+            const GE::ECS::EntityID id = cylArr.Index()[i];
+            const auto* tr = em->GetTIComponent<GE::Components::Transform>(id);
+            if (tr == nullptr) { continue; }
+
+            const glm::vec3 worldPos = glm::vec3(tr->m_worldMatrix[3]);
+            glm::mat3 rotOnly = glm::mat3(tr->m_worldMatrix);
+            rotOnly[0] = glm::normalize(rotOnly[0]);
+            rotOnly[1] = glm::normalize(rotOnly[1]);
+            rotOnly[2] = glm::normalize(rotOnly[2]);
+
+            glm::mat4 model = glm::mat4(rotOnly);
+            model[3] = glm::vec4(worldPos, 1.0f);
+            // Unit cylinder half-height = 1; scale Y to actual half-height, X/Z to radius
+            model = glm::scale(model, glm::vec3(cyl.radius, cyl.height * 0.5f, cyl.radius));
+
+            vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                static_cast<uint32_t>(sizeof(glm::mat4)), &model);
+            vkCmdDrawIndexed(cb, m_cylIdxCount, 1U, 0U, 0, 0U);
+        }
+    }
+
+    // --- CapsuleColliders (body + 2 hemisphere caps, 3 draw calls per entity) ---
+    auto& capArr = em->GetCompArr<GE::Components::CapsuleCollider>();
+    if (capArr.GetCount() > 0U) {
+        for (uint32_t i = 0U; i < capArr.GetCount(); ++i) {
+            const auto& cap = capArr.Data()[i];
+            const GE::ECS::EntityID id = capArr.Index()[i];
+            const auto* tr = em->GetTIComponent<GE::Components::Transform>(id);
+            if (tr == nullptr) { continue; }
+
+            const glm::vec3 worldPos = glm::vec3(tr->m_worldMatrix[3]);
+            glm::mat3 rotOnly = glm::mat3(tr->m_worldMatrix);
+            rotOnly[0] = glm::normalize(rotOnly[0]);
+            rotOnly[1] = glm::normalize(rotOnly[1]);
+            rotOnly[2] = glm::normalize(rotOnly[2]);
+            const glm::mat4 rot4 = glm::mat4(rotOnly);
+
+            const float halfH = cap.height * 0.5f;
+            const float r     = cap.radius;
+
+            // Body: unit cylinder (y in [-1,+1]) → scale Y to halfH, XZ to radius
+            {
+                vkCmdBindVertexBuffers(cb, 0U, 1U, &m_cylVertBuf, &zeroOffset);
+                vkCmdBindIndexBuffer(cb, m_cylIdxBuf, 0U, VK_INDEX_TYPE_UINT32);
+
+                glm::mat4 model = rot4;
+                model[3] = glm::vec4(worldPos, 1.0f);
+                model = glm::scale(model, glm::vec3(r, halfH, r));
+
+                vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                    static_cast<uint32_t>(sizeof(glm::mat4)), &model);
+                vkCmdDrawIndexed(cb, m_cylIdxCount, 1U, 0U, 0, 0U);
+            }
+
+            // Top + bottom caps: unit hemisphere (y in [0,+1]) — rebind once, draw twice
+            vkCmdBindVertexBuffers(cb, 0U, 1U, &m_hemiVertBuf, &zeroOffset);
+            vkCmdBindIndexBuffer(cb, m_hemiIdxBuf, 0U, VK_INDEX_TYPE_UINT32);
+
+            // Top cap: translate +halfH in local Y, scale uniformly by r
+            {
+                glm::mat4 model = rot4;
+                model[3] = glm::vec4(worldPos + glm::vec3(rot4[1]) * halfH, 1.0f);
+                model = glm::scale(model, glm::vec3(r));
+
+                vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                    static_cast<uint32_t>(sizeof(glm::mat4)), &model);
+                vkCmdDrawIndexed(cb, m_hemiIdxCount, 1U, 0U, 0, 0U);
+            }
+
+            // Bottom cap: translate -halfH in local Y, negate Y scale to flip hemisphere downward
+            {
+                glm::mat4 model = rot4;
+                model[3] = glm::vec4(worldPos - glm::vec3(rot4[1]) * halfH, 1.0f);
+                model = glm::scale(model, glm::vec3(r, -r, r));
+
+                vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                    static_cast<uint32_t>(sizeof(glm::mat4)), &model);
+                vkCmdDrawIndexed(cb, m_hemiIdxCount, 1U, 0U, 0, 0U);
+            }
         }
     }
 

@@ -12,6 +12,7 @@
 #include "systems/PhysicsSystem.h"
 #include "systems/SpawnerSystem.h"
 #include "systems/ScriptSystem.h"
+#include "systems/ColliderVisualizerSystem.h"
 #include "graphics/ShaderModule.h"
 #include "graphics/GraphicsPipeline.h"
 #include "graphics/GpuUploadContext.h"
@@ -187,6 +188,12 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     m_spawnerSystem = ss;
     em->RegisterSystem(ss);
 
+    // 13. Register ColliderVisualizerSystem (debug wireframe overlay; on by default)
+    auto* vs = new GE::Systems::ColliderVisualizerSystem(ctx);
+    vs->m_enabled = true;   // toggle via Simulation → Show Collider Wireframes
+    m_visualizerSystem = vs;
+    em->RegisterSystem(vs);
+
     // Initialise default peer IDs for the three remote slots (2, 3, 4)
     for (int i = 0; i < 3; ++i) {
         m_peerEntries[i].peerId = i + 2;
@@ -324,6 +331,11 @@ void FlatBuffersScenario::OnUnload() {
         m_spawnerSystem = nullptr;
     }
 
+    if ((m_visualizerSystem != nullptr) && (em != nullptr)) {
+        em->UnregisterSystemByID(m_visualizerSystem->GetID());
+        m_visualizerSystem = nullptr;
+    }
+
     m_interactionRegistry.Clear();
     m_cameras.clear();
     m_availableScenes.clear();
@@ -413,6 +425,11 @@ void FlatBuffersScenario::OnGUI() {
             if (exp != nullptr && ImGui::Button("Step")) {
                 exp->stepSimulation(1.0f / std::max(exp->m_physicsHz, 1.0f));
             }
+        }
+
+        if (m_visualizerSystem != nullptr) {
+            ImGui::Separator();
+            ImGui::Checkbox("Show Collider Wireframes", &m_visualizerSystem->m_enabled);
         }
 
         ImGui::EndMenu();

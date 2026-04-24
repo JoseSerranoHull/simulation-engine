@@ -101,6 +101,30 @@ public:
         float halfSize = 5.0f,
         const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f)
     );
+
+    /**
+     * @brief Generates a wire cylinder shell: two rings at y=±1 plus 4 vertical struts.
+     * Half-height = 1, radius = 1; caller applies non-uniform scale via model matrix.
+     * Reused for CylinderCollider (1 draw call) and CapsuleCollider body (1 of 3 draw calls).
+     * @param segments Number of ring segments (default 24).
+     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     */
+    static GE::Assets::OBJLoader::MeshData generateWireCylinder(
+        uint32_t segments = 24U,
+        const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f)
+    );
+
+    /**
+     * @brief Generates a wire hemisphere: equatorial ring at y=0 plus two semicircular arcs
+     * (XY plane and ZY plane) rising from y=0 to y=+1. Radius = 1.
+     * For a capsule: draw with scale(r,r,r) translated ±halfH in Y; flip Y scale for lower cap.
+     * @param segments Number of ring segments; arcs use segments/2 edges (default 24).
+     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     */
+    static GE::Assets::OBJLoader::MeshData generateWireHemisphere(
+        uint32_t segments = 24U,
+        const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f)
+    );
 };
 
 } // namespace GE::Assets

@@ -57,7 +57,8 @@ public:
         const uint32_t pushConstantSize   = static_cast<uint32_t>(sizeof(glm::mat4)),
         const VkShaderStageFlags pushConstantStages = VK_SHADER_STAGE_VERTEX_BIT,
         const VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        const bool includeMaterialSet = true
+        const bool includeMaterialSet = true,
+        const VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS
     ) :  materialLayout(inMaterialLayout)
     {
         // 1. Shader Stages Initialization
@@ -112,7 +113,7 @@ public:
         VkPipelineDepthStencilStateCreateInfo depthStencil{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
         depthStencil.depthTestEnable = VK_TRUE;
         depthStencil.depthWriteEnable = enableDepthWrite ? VK_TRUE : VK_FALSE;
-        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        depthStencil.depthCompareOp = depthCompareOp;
 
         // 7. Color Blending Logic
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};

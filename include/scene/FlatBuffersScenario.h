@@ -9,7 +9,7 @@
 #include "scene/fb/FBSceneContext.h"      // for FBCameraRecord
 #include "physics/MaterialInteractionRegistry.h"
 
-namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class ScriptSystem; }
+namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class ScriptSystem; class ColliderVisualizerSystem; }
 
 namespace GE {
 
@@ -29,8 +29,12 @@ namespace GE {
         void OnUnload()                                    override;
         void OnGUI   ()                                    override;
 
-        // Wire/checker pipeline accessors — not used by this scenario; return nullptr
-        const GE::Graphics::GraphicsPipeline* GetWirePipeline() const override { return nullptr; }
+        const GE::Graphics::GraphicsPipeline* GetWirePipeline() const override {
+            return (m_pipelines.size() > 7U) ? m_pipelines[7U].get() : nullptr;
+        }
+        GE::Systems::ColliderVisualizerSystem* GetVisualizerSystem() const override {
+            return m_visualizerSystem;
+        }
 
     private:
         bool        m_useOwnerColors { true };
@@ -57,7 +61,8 @@ namespace GE {
         GE::Systems::SpawnerSystem*   m_spawnerSystem   { nullptr };
         GE::Systems::ClothSystem*     m_clothSystem     { nullptr };
         GE::Systems::FlockingSystem*  m_flockingSystem  { nullptr };
-        GE::Systems::ScriptSystem*    m_scriptSystem    { nullptr };
+        GE::Systems::ScriptSystem*              m_scriptSystem      { nullptr };
+        GE::Systems::ColliderVisualizerSystem*  m_visualizerSystem  { nullptr };
 
         // --- Material interaction registry (populated at load, passed to PhysicsSystem) ---
         GE::Physics::MaterialInteractionRegistry m_interactionRegistry;

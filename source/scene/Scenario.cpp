@@ -58,12 +58,14 @@ void Scenario::createMaterialPipelines() {
     // Checkerboard (index 6) — culling disabled so plane is visible from both sides
     m_pipelines.push_back(std::make_unique<GraphicsPipeline>(offscreenPass, ctx->materialSetLayout, m_shaderModules[8].get(), m_shaderModules[9].get(), false, false, true,  msaa, CHECKER_PC_SIZE, CHECKER_PC_STAGES)); // [6] Checkerboard
     // Wire (index 7) — LINE_LIST, depth test ON / write OFF, no material set
+    // Uses LESS_OR_EQUAL so wire lines drawn exactly at the mesh surface remain visible.
     m_pipelines.push_back(std::make_unique<GraphicsPipeline>(
         offscreenPass, VK_NULL_HANDLE,
         m_shaderModules[10].get(), m_shaderModules[11].get(),
         false, false, false, msaa,
         static_cast<uint32_t>(sizeof(glm::mat4)), VK_SHADER_STAGE_VERTEX_BIT,
-        VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false)); // [7] Wire
+        VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false,
+        VK_COMPARE_OP_LESS_OR_EQUAL)); // [7] Wire
 }
 
 } // namespace GE

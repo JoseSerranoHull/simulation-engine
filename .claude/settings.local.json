@@ -113,7 +113,10 @@
       "WebFetch(domain:www.gamedev.net)",
       "WebFetch(domain:pikuma.com)",
       "WebFetch(domain:graphics.stanford.edu)",
-      "WebFetch(domain:pdfs.semanticscholar.org)"
+      "WebFetch(domain:pdfs.semanticscholar.org)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo /v:minimal 2>&1 | Select-Object -Last 30)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo /v:minimal 2>&1 | Select-Object -Last 20)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo /v:minimal 2>&1 | Select-Object -Last 10)"
     ]
   }
 }

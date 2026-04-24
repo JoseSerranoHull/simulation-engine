@@ -11,10 +11,11 @@ namespace GE::Networking::Packets {
     // Packet type tags
     // -------------------------------------------------------------------------
     enum class PacketType : uint8_t {
-        Heartbeat    = 0,
-        StateUpdate  = 1,
-        SceneChange  = 2,
-        SpawnObject  = 3,
+        Heartbeat      = 0,
+        StateUpdate    = 1,
+        SceneChange    = 2,
+        SpawnObject    = 3,
+        AnimationSync  = 4,
     };
 
     // -------------------------------------------------------------------------
@@ -62,6 +63,17 @@ namespace GE::Networking::Packets {
         glm::vec3  scale           { 1.0f };
         glm::vec3  linearVelocity  { 0.0f };
         float      mass            { 1.0f };
+    };
+
+    // -------------------------------------------------------------------------
+    // AnimationSync — syncs animated object timer state to remote peers
+    // -------------------------------------------------------------------------
+    struct AnimationSync {
+        Header   header   {};
+        uint32_t entityId { 0 };
+        float    elapsed  { 0.0f };
+        uint8_t  reversed { 0 };   // 0 = forward, 1 = reversed
+        uint8_t  _pad[3]  {};
     };
 
     // -------------------------------------------------------------------------

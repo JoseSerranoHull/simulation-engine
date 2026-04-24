@@ -91,6 +91,9 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
     case Networking::Packets::PacketType::SpawnObject:
         handleSpawnObject(data, size);
         break;
+    case Networking::Packets::PacketType::AnimationSync:
+        handleAnimationSync(data, size);
+        break;
     default:
         break;  // Heartbeat and unknown types are silently ignored
     }
@@ -335,6 +338,46 @@ std::optional<std::string> NetworkBridge::PollPendingSceneChange()
     std::string path = std::move(m_pendingNetworkScene);
     m_pendingNetworkScene.clear();
     return path;
+}
+
+// ---------------------------------------------------------------------------
+// BroadcastAnimationStates — one-shot sync of all animated object timers
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::BroadcastAnimationStates()
+{
+    if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
+    if (m_entityManager == nullptr) { return; }
+
+    auto& animArr = m_entityManager->GetCompArr<GE::Components::AnimatedObjectComponent>();
+    for (uint32_t i = 0U; i < animArr.GetCount(); ++i) {
+        const auto& ac = animArr.Data()[i];
+        Networking::Packets::AnimationSync pkt{};
+        pkt.header.type     = Networking::Packets::PacketType::AnimationSync;
+        pkt.header.senderId = m_service->GetLocalPeerId();
+        pkt.header.sequence = m_outSequence++;
+        pkt.entityId        = animArr.Index()[i];
+        pkt.elapsed         = ac.elapsed;
+        pkt.reversed        = ac.reversed ? 1U : 0U;
+        m_service->Broadcast(&pkt, sizeof(pkt));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// handleAnimationSync — apply remote animation timer to local component
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::handleAnimationSync(const uint8_t* data, std::size_t size)
+{
+    if (size < sizeof(Networking::Packets::AnimationSync)) { return; }
+    Networking::Packets::AnimationSync pkt{};
+    std::memcpy(&pkt, data, sizeof(pkt));
+
+    auto* ac = m_entityManager->TryGetTIComponent<
+        GE::Components::AnimatedObjectComponent>(pkt.entityId);
+    if (ac == nullptr) { return; }
+    ac->elapsed  = pkt.elapsed;
+    ac->reversed = (pkt.reversed != 0U);
 }
 
 } // namespace GE

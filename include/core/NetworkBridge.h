@@ -14,6 +14,7 @@
 #include "networking/NetworkService.h"
 #include "networking/Packets.h"
 #include "ecs/EntityManager.h"
+#include "components/AnimationComponents.h"
 #include "components/PhysicsComponents.h"
 #include "components/Transform.h"
 
@@ -62,6 +63,13 @@ namespace GE {
          * Call site: main thread (ImGui Scene menu).
          */
         void BroadcastSceneChange(const std::string& path);
+
+        /**
+         * @brief Broadcasts the current elapsed/reversed state for every
+         *        AnimatedObjectComponent so remote peers can snap their local
+         *        animation timers to match. Call once after connecting.
+         */
+        void BroadcastAnimationStates();
 
         /**
          * @brief Packs and broadcasts a SpawnObject packet.
@@ -139,9 +147,10 @@ namespace GE {
         std::mutex  m_pendingNetworkSceneMutex;
 
         // --- Per-type packet handlers (called by ApplyReceivedState) ---
-        void handleStateUpdate(uint8_t senderId, const uint8_t* data, std::size_t size);
-        void handleSceneChange(const uint8_t* data, std::size_t size);
-        void handleSpawnObject(const uint8_t* data, std::size_t size);
+        void handleStateUpdate  (uint8_t senderId, const uint8_t* data, std::size_t size);
+        void handleSceneChange  (const uint8_t* data, std::size_t size);
+        void handleSpawnObject  (const uint8_t* data, std::size_t size);
+        void handleAnimationSync(const uint8_t* data, std::size_t size);
     };
 
 } // namespace GE

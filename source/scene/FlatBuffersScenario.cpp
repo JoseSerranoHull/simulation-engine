@@ -538,6 +538,10 @@ void FlatBuffersScenario::OnGUI() {
                         m_peerEntries[i].connected = true;
                     }
                 }
+                // Sync animated object timers so remote peers snap to the same
+                // point in the animation cycle as the peer who pressed Connect.
+                GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
+                if (nb != nullptr) { nb->BroadcastAnimationStates(); }
             }
         }
         if (!canConnect) { ImGui::EndDisabled(); }

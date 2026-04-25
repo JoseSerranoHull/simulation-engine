@@ -23,8 +23,8 @@ class ColliderVisualizerSystem final : public ECS::ICpuSystem {
 public:
     /// Wire colour: #83d42b green, baked into vertex buffer at construction time.
     static constexpr glm::vec3 WIRE_COLOR{ 0.514f, 0.831f, 0.169f };
-    /// Visual half-extent of the plane quad in world units.
-    static constexpr float WIRE_PLANE_HALF_SIZE = 5.0f;
+    /// Half-extent used for infinite-plane visual indicator (when sizeX/sizeZ == 0).
+    static constexpr float WIRE_PLANE_HALF_SIZE = 20.0f;
 
     /**
      * @brief Constructs the system and uploads wire geometry to the GPU.

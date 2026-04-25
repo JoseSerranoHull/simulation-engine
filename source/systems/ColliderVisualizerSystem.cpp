@@ -21,7 +21,7 @@ ColliderVisualizerSystem::ColliderVisualizerSystem(GE::Graphics::GpuUploadContex
     m_state  = SystemState::Running;
 
     const auto sphereData = GE::Assets::GeometryUtils::generateWireSphere(32U, WIRE_COLOR);
-    const auto planeData  = GE::Assets::GeometryUtils::generateWirePlane(WIRE_PLANE_HALF_SIZE, WIRE_COLOR);
+    const auto planeData  = GE::Assets::GeometryUtils::generateWirePlane(1.0f, WIRE_COLOR);
 
     m_sphereIdxCount = static_cast<uint32_t>(sphereData.indices.size());
     m_planeIdxCount  = static_cast<uint32_t>(planeData.indices.size());
@@ -244,11 +244,15 @@ void ColliderVisualizerSystem::RecordPass(
             const glm::vec3 right   = glm::normalize(glm::cross(worldUp, norm));
             const glm::vec3 forward = glm::normalize(glm::cross(norm, right));
 
+            // When sizeX/sizeZ are set, show exact bounded extent; otherwise show large indicator.
+            const float halfX = (plane.sizeX > 0.0f) ? (plane.sizeX * 0.5f) : WIRE_PLANE_HALF_SIZE;
+            const float halfZ = (plane.sizeZ > 0.0f) ? (plane.sizeZ * 0.5f) : WIRE_PLANE_HALF_SIZE;
+
             const glm::mat4 model(
-                glm::vec4(right,   0.0f),
-                glm::vec4(norm,    0.0f),
-                glm::vec4(forward, 0.0f),
-                glm::vec4(center,  1.0f)
+                glm::vec4(right   * halfX, 0.0f),
+                glm::vec4(norm,            0.0f),
+                glm::vec4(forward * halfZ, 0.0f),
+                glm::vec4(center,          1.0f)
             );
 
             vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),

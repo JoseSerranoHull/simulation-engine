@@ -320,7 +320,14 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         for (auto& v : meshData.vertices) { v.color = color; }
         glm::vec3 normal{ 0.0f, 1.0f, 0.0f };
         if (p != nullptr && p->normal() != nullptr) { normal = toVec3(*p->normal()); }
-        ctx.em->AddComponent(id, GE::Components::PlaneCollider{ normal, 0.0f });
+        GE::Components::PlaneCollider pc{ normal, 0.0f };
+        // Upward/downward-facing planes (floors, ceilings) are bounded by their visual extent.
+        // Vertical planes (walls) remain infinite so they stop objects at any height/position.
+        if (glm::abs(normal.y) > 0.9f) {
+            pc.sizeX = planeW;
+            pc.sizeZ = planeD;
+        }
+        ctx.em->AddComponent(id, pc);
         break;
     }
     case Simulation::Shape::Cylinder: {

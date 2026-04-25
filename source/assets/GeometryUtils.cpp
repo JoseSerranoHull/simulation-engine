@@ -188,8 +188,8 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
         // Normals slightly angled for the tapered look
         const glm::vec3 norm = glm::normalize(glm::vec3(std::cos(static_cast<double>(angle)), 0.2, std::sin(static_cast<double>(angle))));
 
-        data.vertices.push_back({ glm::vec3(xT, height, zT), color, glm::vec2(u, GeometryUtils::RATTAN_REPEAT_V), norm });
-        data.vertices.push_back({ glm::vec3(xB, GeometryUtils::FLOAT_ZERO, zB), color, glm::vec2(u, GeometryUtils::FLOAT_ZERO), norm });
+        data.vertices.push_back({ glm::vec3(xT,  height * 0.5f, zT), color, glm::vec2(u, GeometryUtils::RATTAN_REPEAT_V), norm });
+        data.vertices.push_back({ glm::vec3(xB, -height * 0.5f, zB), color, glm::vec2(u, GeometryUtils::FLOAT_ZERO), norm });
     }
 
     // Step 2: Index the side walls (strips)
@@ -211,11 +211,11 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
     if (generateBottomCap) {
         // Step 3: Generate and Index the Bottom Cap
         const uint32_t botCenterIdx = static_cast<uint32_t>(data.vertices.size());
-        data.vertices.push_back({ glm::vec3(0.0f, 0.0f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, -1.0f, 0.0f) });
+        data.vertices.push_back({ glm::vec3(0.0f, -height * 0.5f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, -1.0f, 0.0f) });
 
         for (uint32_t i = 0U; i <= segments; ++i) {
             const float angle = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
-            data.vertices.push_back({ glm::vec3(std::cos(static_cast<double>(angle)) * static_cast<double>(bottomRadius), 0.0, std::sin(static_cast<double>(angle)) * static_cast<double>(bottomRadius)), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, -1.0f, 0.0f) });
+            data.vertices.push_back({ glm::vec3(std::cos(static_cast<double>(angle)) * static_cast<double>(bottomRadius), static_cast<double>(-height * 0.5f), std::sin(static_cast<double>(angle)) * static_cast<double>(bottomRadius)), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, -1.0f, 0.0f) });
 
             if (i > 0U) {
                 data.indices.push_back(botCenterIdx);
@@ -229,11 +229,11 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
         // Step 4: Generate and Index the Top Cap
         // Reversed winding vs bottom cap so the cross product gives normal +Y (front-facing from above).
         const uint32_t topCenterIdx = static_cast<uint32_t>(data.vertices.size());
-        data.vertices.push_back({ glm::vec3(0.0f, height, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, 1.0f, 0.0f) });
+        data.vertices.push_back({ glm::vec3(0.0f, height * 0.5f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, 1.0f, 0.0f) });
 
         for (uint32_t i = 0U; i <= segments; ++i) {
             const float angle = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
-            data.vertices.push_back({ glm::vec3(std::cos(static_cast<double>(angle)) * static_cast<double>(topRadius), static_cast<double>(height), std::sin(static_cast<double>(angle)) * static_cast<double>(topRadius)), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, 1.0f, 0.0f) });
+            data.vertices.push_back({ glm::vec3(std::cos(static_cast<double>(angle)) * static_cast<double>(topRadius), static_cast<double>(height * 0.5f), std::sin(static_cast<double>(angle)) * static_cast<double>(topRadius)), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, 1.0f, 0.0f) });
 
             if (i > 0U) {
                 data.indices.push_back(topCenterIdx);

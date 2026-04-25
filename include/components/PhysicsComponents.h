@@ -82,6 +82,9 @@ namespace GE::Components {
     struct PlaneCollider {
         glm::vec3 normal{ 0.0f, 1.0f, 0.0f };
         float offset{ 0.0f };
+        // Bounded extent in world units (full width × depth). 0 = infinite plane.
+        float sizeX{ 0.0f };
+        float sizeZ{ 0.0f };
     };
 
     struct CapsuleCollider {

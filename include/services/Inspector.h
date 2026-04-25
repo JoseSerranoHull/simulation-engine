@@ -33,5 +33,8 @@ private:
     void DrawRigidBody(GE::Components::RigidBody* rb) const;
     void DrawSphereCollider(GE::Components::SphereCollider* sc) const;
     void DrawPlaneCollider(GE::Components::PlaneCollider* pc) const;
+    void DrawBoxCollider(GE::Components::BoxCollider* bc) const;
+    void DrawCapsuleCollider(GE::Components::CapsuleCollider* cc) const;
+    void DrawCylinderCollider(GE::Components::CylinderCollider* cc) const;
     void DrawScriptComponent(GE::Components::ScriptComponent* sc) const;
 };

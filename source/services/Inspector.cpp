@@ -16,11 +16,14 @@ void Inspector::Draw(const GE::ECS::EntityID entityID, GE::ECS::EntityManager* c
 
     ImGui::PushItemWidth(200.0f);
 
-    if (auto* t  = em->TryGetTIComponent<Transform>(entityID))       { DrawTransform(t); }
-    if (auto* rb = em->TryGetTIComponent<RigidBody>(entityID))       { DrawRigidBody(rb); }
-    if (auto* sc = em->TryGetTIComponent<SphereCollider>(entityID))  { DrawSphereCollider(sc); }
-    if (auto* pc = em->TryGetTIComponent<PlaneCollider>(entityID))   { DrawPlaneCollider(pc); }
-    if (auto* s  = em->TryGetTIComponent<ScriptComponent>(entityID)) { DrawScriptComponent(s); }
+    if (auto* t  = em->TryGetTIComponent<Transform>(entityID))         { DrawTransform(t); }
+    if (auto* rb = em->TryGetTIComponent<RigidBody>(entityID))         { DrawRigidBody(rb); }
+    if (auto* sc = em->TryGetTIComponent<SphereCollider>(entityID))    { DrawSphereCollider(sc); }
+    if (auto* pc = em->TryGetTIComponent<PlaneCollider>(entityID))     { DrawPlaneCollider(pc); }
+    if (auto* bc = em->TryGetTIComponent<BoxCollider>(entityID))       { DrawBoxCollider(bc); }
+    if (auto* cc = em->TryGetTIComponent<CapsuleCollider>(entityID))   { DrawCapsuleCollider(cc); }
+    if (auto* cy = em->TryGetTIComponent<CylinderCollider>(entityID))  { DrawCylinderCollider(cy); }
+    if (auto* s  = em->TryGetTIComponent<ScriptComponent>(entityID))   { DrawScriptComponent(s); }
 
     ImGui::PopItemWidth();
 }
@@ -70,6 +73,32 @@ void Inspector::DrawPlaneCollider(GE::Components::PlaneCollider* const pc) const
     if (!ImGui::CollapsingHeader("Plane Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
     ImGui::DragFloat3("Normal", &pc->normal.x, 0.01f, -1.0f, 1.0f);
     ImGui::DragFloat("Offset",  &pc->offset,   0.01f);
+    ImGui::Separator();
+    ImGui::TextDisabled("Extent (0 = infinite)");
+    ImGui::DragFloat("Size X", &pc->sizeX, 0.1f, 0.0f, 1000.0f);
+    ImGui::DragFloat("Size Z", &pc->sizeZ, 0.1f, 0.0f, 1000.0f);
+}
+
+void Inspector::DrawBoxCollider(GE::Components::BoxCollider* const bc) const {
+    if (!ImGui::CollapsingHeader("Box Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    ImGui::DragFloat("Size X", &bc->sizeX, 0.01f, 0.001f, 1000.0f);
+    ImGui::DragFloat("Size Y", &bc->sizeY, 0.01f, 0.001f, 1000.0f);
+    ImGui::DragFloat("Size Z", &bc->sizeZ, 0.01f, 0.001f, 1000.0f);
+    ImGui::Checkbox("Is Trigger", &bc->isTrigger);
+}
+
+void Inspector::DrawCapsuleCollider(GE::Components::CapsuleCollider* const cc) const {
+    if (!ImGui::CollapsingHeader("Capsule Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    ImGui::DragFloat("Radius", &cc->radius, 0.01f, 0.001f, 1000.0f);
+    ImGui::DragFloat("Height", &cc->height, 0.01f, 0.001f, 1000.0f);
+    ImGui::Checkbox("Is Trigger", &cc->isTrigger);
+}
+
+void Inspector::DrawCylinderCollider(GE::Components::CylinderCollider* const cc) const {
+    if (!ImGui::CollapsingHeader("Cylinder Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    ImGui::DragFloat("Radius", &cc->radius, 0.01f, 0.001f, 1000.0f);
+    ImGui::DragFloat("Height", &cc->height, 0.01f, 0.001f, 1000.0f);
+    ImGui::Checkbox("Is Trigger", &cc->isTrigger);
 }
 
 void Inspector::DrawScriptComponent(GE::Components::ScriptComponent* const sc) const {

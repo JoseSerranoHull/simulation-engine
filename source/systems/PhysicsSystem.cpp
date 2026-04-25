@@ -257,6 +257,11 @@ namespace GE::Systems {
                 const float dist = plane.DistanceToPoint(sphere.GetCenter());
 
                 if (dist < sphere.GetRadius()) {
+                    if (sCol.isTrigger) {
+                        m_currentTriggers.insert({ std::min(sID, pID), std::max(sID, pID) });
+                        continue;
+                    }
+
                     const float penetration = sphere.GetRadius() - dist;
 
                     // 1. Positional correction — push out of the plane
@@ -552,6 +557,11 @@ namespace GE::Systems {
                 const float dist = glm::dot(pn, deepestPoint - plane.GetPoint());
 
                 if (dist < 0.0f) {
+                    if (bCol.isTrigger) {
+                        m_currentTriggers.insert({ std::min(bID, pID), std::max(bID, pID) });
+                        continue;
+                    }
+
                     const float penetration = -dist;
                     bTrans->m_position += pn * penetration;
 
@@ -621,6 +631,11 @@ namespace GE::Systems {
                 const float minDist    = glm::min(distTop, distBottom);
 
                 if (minDist < cCol.radius) {
+                    if (cCol.isTrigger) {
+                        m_currentTriggers.insert({ std::min(cID, pID), std::max(cID, pID) });
+                        continue;
+                    }
+
                     const float penetration = cCol.radius - minDist;
                     cTrans->m_position += pn * penetration;
 
@@ -687,6 +702,11 @@ namespace GE::Systems {
                 const float minDist    = glm::min(distTop, distBottom);
 
                 if (minDist < cCol.radius) {
+                    if (cCol.isTrigger) {
+                        m_currentTriggers.insert({ std::min(cID, pID), std::max(cID, pID) });
+                        continue;
+                    }
+
                     const float penetration = cCol.radius - minDist;
                     cTrans->m_position += pn * penetration;
 
@@ -767,6 +787,11 @@ namespace GE::Systems {
 
                 if (distSq >= cCol.radius * cCol.radius || distSq < 1e-12f) continue;
 
+                if (cCol.isTrigger || bCol.isTrigger) {
+                    m_currentTriggers.insert({ std::min(cID, bID), std::max(cID, bID) });
+                    continue;
+                }
+
                 const float     dist        = std::sqrt(distSq);
                 const glm::vec3 normal      = diff / dist;   // box → capsule
                 const float     penetration = cCol.radius - dist;
@@ -840,6 +865,11 @@ namespace GE::Systems {
 
                 if (distSq >= sumRadius * sumRadius || distSq < 1e-12f) continue;
 
+                if (sCol.isTrigger || cCol.isTrigger) {
+                    m_currentTriggers.insert({ std::min(sID, cID), std::max(sID, cID) });
+                    continue;
+                }
+
                 const float     dist        = std::sqrt(distSq);
                 const glm::vec3 normal      = diff / dist;   // capsule → sphere
                 const float     penetration = sumRadius - dist;
@@ -912,6 +942,11 @@ namespace GE::Systems {
                 const float oz = hA.z + hB.z - std::abs(delta.z);
 
                 if (ox <= 0.0f || oy <= 0.0f || oz <= 0.0f) continue;
+
+                if (aCol.isTrigger || bCol.isTrigger) {
+                    m_currentTriggers.insert({ std::min(aID, bID), std::max(aID, bID) });
+                    continue;
+                }
 
                 // Minimum overlap axis
                 glm::vec3 normal;
@@ -1005,6 +1040,11 @@ namespace GE::Systems {
                 if (distSq >= cCol.radius * cCol.radius || distSq < 1e-12f) continue;
 
                 const float     dist        = std::sqrt(distSq);
+                if (cCol.isTrigger || bCol.isTrigger) {
+                    m_currentTriggers.insert({ std::min(cID, bID), std::max(cID, bID) });
+                    continue;
+                }
+
                 const glm::vec3 normal      = diff / dist;
                 const float     penetration = cCol.radius - dist;
 
@@ -1074,6 +1114,11 @@ namespace GE::Systems {
                 const float     sumR   = cCol.radius + sCol.radius;
 
                 if (distSq >= sumR * sumR || distSq < 1e-12f) continue;
+
+                if (cCol.isTrigger || sCol.isTrigger) {
+                    m_currentTriggers.insert({ std::min(cID, sID), std::max(cID, sID) });
+                    continue;
+                }
 
                 const float     dist        = std::sqrt(distSq);
                 const glm::vec3 normal      = diff / dist;
@@ -1159,6 +1204,11 @@ namespace GE::Systems {
                 const float     sumR   = aCol.radius + bCol.radius;
 
                 if (distSq >= sumR * sumR || distSq < 1e-12f) continue;
+
+                if (aCol.isTrigger || bCol.isTrigger) {
+                    m_currentTriggers.insert({ std::min(aID, bID), std::max(aID, bID) });
+                    continue;
+                }
 
                 const float     dist        = std::sqrt(distSq);
                 const glm::vec3 normal      = diff / dist;

@@ -222,9 +222,6 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                                             currentScenario->GetConfigPath() == path);
                     if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent)) {
                         experience->requestScenarioChange(path);
-                        // Broadcast scene change to all connected peers
-                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
-                        if (nb != nullptr) { nb->BroadcastSceneChange(path); }
                     }
                 }
             }
@@ -300,8 +297,6 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                                             currentScenario->GetConfigPath() == path);
                     if (ImGui::MenuItem(label.c_str(), nullptr, isCurrent)) {
                         experience->requestScenarioChange(path);
-                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
-                        if (nb != nullptr) { nb->BroadcastSceneChange(path); }
                     }
                 }
                 ImGui::EndMenu();

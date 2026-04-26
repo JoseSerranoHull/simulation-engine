@@ -291,6 +291,10 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
 // ===========================================================================
 
 void FlatBuffersScenario::OnUnload() {
+    // Drop the network connection so each scene starts fresh.
+    // Also prevents stale state if the same scene is restarted.
+    disconnectNetwork();
+
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
 
     // Destroy cloth GPU resources before models are cleared (Mesh doesn't own the buffer)

@@ -606,18 +606,19 @@ void EngineOrchestrator::cleanup() {
         vkDeviceWaitIdle(context->device);
     }
 
-    // 2. Networking shutdown (before ECS / Vulkan teardown)
+    // 2. Unload active scenario first — it may call disconnectNetwork() which
+    //    needs the NetworkBridge/Service to still be alive in the ServiceLocator.
+    if (activeScenario) {
+        activeScenario->OnUnload();
+    }
+    activeScenario.reset();
+
+    // 3. Networking shutdown (after scenario unload, before ECS / Vulkan teardown)
     if (m_networkService != nullptr) {
         m_networkService->Shutdown();
     }
     m_networkBridge.reset();
     m_networkService.reset();
-
-    // 3. Destroy High-Level Logic
-    if (activeScenario) {
-        activeScenario->OnUnload();
-    }
-    activeScenario.reset();
 
     // NEW: Explicitly destroy the Skybox while the Context/Device is still alive!
     skybox.reset();

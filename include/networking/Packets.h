@@ -11,11 +11,14 @@ namespace GE::Networking::Packets {
     // Packet type tags
     // -------------------------------------------------------------------------
     enum class PacketType : uint8_t {
-        Heartbeat      = 0,
-        StateUpdate    = 1,
-        SceneChange    = 2,
-        SpawnObject    = 3,
-        AnimationSync  = 4,
+        Heartbeat         = 0,
+        StateUpdate       = 1,
+        SceneChange       = 2,
+        SpawnObject       = 3,
+        AnimationSync     = 4,
+        DiscoveryHello    = 5,  ///< LAN auto-connect probe (new peer → existing peers)
+        DiscoveryResponse = 6,  ///< Reply from existing peer (existing → new peer temp socket)
+        PeerAnnounce      = 7,  ///< "I just joined as Peer N" broadcast after auto-connect
     };
 
     // -------------------------------------------------------------------------
@@ -81,6 +84,32 @@ namespace GE::Networking::Packets {
     // -------------------------------------------------------------------------
     struct Heartbeat {
         Header header {};
+    };
+
+    // -------------------------------------------------------------------------
+    // DiscoveryHello — broadcast probe sent by a new peer during auto-connect
+    // -------------------------------------------------------------------------
+    struct DiscoveryHello {
+        Header header { PacketType::DiscoveryHello };
+        // No payload — sender identity (IP + temp socket port) comes from recvfrom
+    };
+
+    // -------------------------------------------------------------------------
+    // DiscoveryResponse — unicast reply from an already-connected peer
+    // -------------------------------------------------------------------------
+    struct DiscoveryResponse {
+        Header  header { PacketType::DiscoveryResponse };
+        uint8_t peerID { 0 };   ///< 1–4: which slot this peer currently occupies
+        uint8_t _pad[3]{};
+    };
+
+    // -------------------------------------------------------------------------
+    // PeerAnnounce — broadcast after auto-connect so existing peers can add us
+    // -------------------------------------------------------------------------
+    struct PeerAnnounce {
+        Header  header { PacketType::PeerAnnounce };
+        uint8_t peerID { 0 };   ///< slot this peer just claimed (1–4)
+        uint8_t _pad[3]{};
     };
 
     #pragma pack(pop)

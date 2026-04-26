@@ -14,8 +14,11 @@ struct sockaddr_in;
 
 namespace GE::Networking {
 
-    /// Callback signature: (senderId, rawBytes, byteCount)
-    using ReceiveCallback = std::function<void(uint8_t senderId, const uint8_t* data, std::size_t size)>;
+    /// Callback: (senderId, rawBytes, byteCount, senderAddr, senderPort)
+    /// senderAddr and senderPort are in network byte order (from recvfrom).
+    using ReceiveCallback = std::function<void(uint8_t senderId, const uint8_t* data,
+                                               std::size_t size,
+                                               uint32_t senderAddr, uint16_t senderPort)>;
 
     /**
      * @class NetworkService
@@ -69,6 +72,17 @@ namespace GE::Networking {
          * Returns immediately when no data is waiting.
          */
         void Poll(const ReceiveCallback& cb);
+
+        // --- Discovery helpers ---
+
+        /** @brief One-off unicast to an arbitrary address (used for DiscoveryResponse). */
+        void SendRaw(uint32_t addr, uint16_t port, const void* data, std::size_t size);
+
+        /** @brief Enables SO_BROADCAST on the bound socket. Call once after Init(). */
+        bool EnableBroadcast();
+
+        /** @brief Returns the local IPv4 address as a dotted-decimal string. */
+        std::string GetLocalIPString() const;
 
         // --- State Queries ---
 

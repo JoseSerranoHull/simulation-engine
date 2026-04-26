@@ -186,8 +186,61 @@ void NetworkService::Poll(const ReceiveCallback& cb) {
 
         cb(hdr.senderId,
            reinterpret_cast<const uint8_t*>(buf),
-           static_cast<std::size_t>(received));
+           static_cast<std::size_t>(received),
+           from.sin_addr.s_addr,
+           from.sin_port);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Discovery helpers
+// ---------------------------------------------------------------------------
+
+void NetworkService::SendRaw(uint32_t addr, uint16_t port,
+                              const void* data, std::size_t size) {
+    if (!m_initialised) { return; }
+    sockaddr_in dest{};
+    dest.sin_family      = AF_INET;
+    dest.sin_addr.s_addr = addr;   // already network byte order
+    dest.sin_port        = port;   // already network byte order
+    sendto(static_cast<SOCKET>(m_socket),
+           reinterpret_cast<const char*>(data),
+           static_cast<int>(size), 0,
+           reinterpret_cast<sockaddr*>(&dest),
+           static_cast<int>(sizeof(dest)));
+}
+
+bool NetworkService::EnableBroadcast() {
+    if (!m_initialised) { return false; }
+    const int yes = 1;
+    const bool ok = setsockopt(static_cast<SOCKET>(m_socket),
+                               SOL_SOCKET, SO_BROADCAST,
+                               reinterpret_cast<const char*>(&yes),
+                               static_cast<int>(sizeof(yes))) == 0;
+    if (!ok) {
+        GE_LOG_ERROR("NetworkService: EnableBroadcast failed (" +
+                     std::to_string(WSAGetLastError()) + ")");
+    }
+    return ok;
+}
+
+std::string NetworkService::GetLocalIPString() const {
+    char hostname[256]{};
+    if (gethostname(hostname, sizeof(hostname)) != 0) { return "?.?.?.?"; }
+
+    addrinfo hints{};
+    addrinfo* res = nullptr;
+    hints.ai_family = AF_INET;
+    if (getaddrinfo(hostname, nullptr, &hints, &res) != 0 || res == nullptr) {
+        return "?.?.?.?";
+    }
+
+    char buf[INET_ADDRSTRLEN]{};
+    inet_ntop(AF_INET,
+              &reinterpret_cast<sockaddr_in*>(res->ai_addr)->sin_addr,
+              buf, sizeof(buf));
+    freeaddrinfo(res);
+    return buf;
 }
 
 } // namespace GE::Networking

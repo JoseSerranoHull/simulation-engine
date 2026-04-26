@@ -1,9 +1,24 @@
+// Winsock2 must come before windows.h (needed for BeginAutoConnect raw socket)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+/* parasoft-begin-suppress ALL */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+/* parasoft-end-suppress ALL */
+
 #include "core/NetworkBridge.h"
 #include "core/Logger.h"
 
 /* parasoft-begin-suppress ALL */
 #include <cstring>
 #include <algorithm>
+#include <chrono>
+#include <map>
+#include <random>
 #include <glm/gtc/quaternion.hpp>
 /* parasoft-end-suppress ALL */
 
@@ -73,7 +88,9 @@ void NetworkBridge::BroadcastOwnedStates() {
 
 void NetworkBridge::ApplyReceivedState(uint8_t senderId,
                                        const uint8_t* data,
-                                       std::size_t    size)
+                                       std::size_t    size,
+                                       uint32_t       senderAddr,
+                                       uint16_t       senderPort)
 {
     if (m_entityManager == nullptr) { return; }
     if (size < sizeof(Networking::Packets::Header)) { return; }
@@ -94,8 +111,18 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
     case Networking::Packets::PacketType::AnimationSync:
         handleAnimationSync(data, size);
         break;
+    case Networking::Packets::PacketType::DiscoveryHello:
+        handleDiscoveryHello(senderAddr, senderPort);
+        break;
+    case Networking::Packets::PacketType::PeerAnnounce:
+        if (size >= sizeof(Networking::Packets::PeerAnnounce)) {
+            Networking::Packets::PeerAnnounce pa{};
+            std::memcpy(&pa, data, sizeof(pa));
+            handlePeerAnnounce(pa.peerID, senderAddr);
+        }
+        break;
     default:
-        break;  // Heartbeat and unknown types are silently ignored
+        break;  // Heartbeat, DiscoveryResponse (handled in jthread), and unknowns ignored
     }
 }
 
@@ -378,6 +405,227 @@ void NetworkBridge::handleAnimationSync(const uint8_t* data, std::size_t size)
     if (ac == nullptr) { return; }
     ac->elapsed  = pkt.elapsed;
     ac->reversed = (pkt.reversed != 0U);
+}
+
+// ---------------------------------------------------------------------------
+// handleDiscoveryHello — existing peer responds to a new peer's broadcast probe
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPort)
+{
+    if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
+    const uint8_t myId = m_service->GetLocalPeerId();
+    if (myId < 1U || myId > 4U) { return; }
+
+    Networking::Packets::DiscoveryResponse resp{};
+    resp.header.type     = Networking::Packets::PacketType::DiscoveryResponse;
+    resp.header.senderId = myId;
+    resp.peerID          = myId;
+    m_service->SendRaw(senderAddr, senderPort, &resp, sizeof(resp));
+
+    GE_LOG_INFO("NetworkBridge: sent DiscoveryResponse (peer " + std::to_string(myId) + ")");
+}
+
+// ---------------------------------------------------------------------------
+// handlePeerAnnounce — a peer that just auto-connected announces itself
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
+{
+    if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
+    if (peerID < 1U || peerID > 4U) { return; }
+    if (peerID == m_service->GetLocalPeerId()) { return; }  // don't add ourselves
+
+    char ipBuf[INET_ADDRSTRLEN]{};
+    inet_ntop(AF_INET, &senderAddr, ipBuf, sizeof(ipBuf));
+
+    const uint16_t peerPort = static_cast<uint16_t>(54000U + peerID - 1U);
+    m_service->AddPeer(peerID, ipBuf, peerPort);
+
+    GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID) +
+                " announced itself from " + ipBuf);
+}
+
+// ---------------------------------------------------------------------------
+// BeginAutoConnect — LAN peer discovery jthread
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::BeginAutoConnect()
+{
+    // If a previous discovery is still running, let it finish first
+    if (m_discoveryThread.joinable()) {
+        m_autoConnectState.store(AutoConnectState::Idle);
+        m_discoveryThread.request_stop();
+        m_discoveryThread.join();
+    }
+
+    m_autoConnectState.store(AutoConnectState::Discovering);
+    m_autoConnectStatus = "Discovering...";
+
+    m_discoveryThread = std::jthread([this](std::stop_token stopToken) {
+        static constexpr uint16_t BASE_PORT      = 54000U;
+        static constexpr uint16_t DISCOVERY_PORT = 54998U;
+        static constexpr int      WAIT_MS        = 1500;
+
+        // Shut down any existing game socket BEFORE probing.
+        // This prevents our own socket from answering the broadcast and falsely
+        // occupying our current slot in the discovery responses.
+        if (m_service->IsConnected()) {
+            m_service->Shutdown();
+        }
+
+        // Random jitter 0–300 ms to reduce simultaneous-click collisions
+        {
+            std::mt19937 rng(static_cast<uint32_t>(
+                std::chrono::steady_clock::now().time_since_epoch().count()));
+            std::uniform_int_distribution<int> dist(0, 300);
+            std::this_thread::sleep_for(std::chrono::milliseconds(dist(rng)));
+        }
+        if (stopToken.stop_requested()) { return; }
+
+        // --- Open temporary socket ---
+        WSADATA wsa{};
+        WSAStartup(MAKEWORD(2, 2), &wsa);
+
+        const SOCKET tempSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if (tempSock == INVALID_SOCKET) {
+            m_autoConnectStatus = "Failed: could not create socket";
+            m_autoConnectState.store(AutoConnectState::Failed);
+            WSACleanup();
+            return;
+        }
+
+        // Enable broadcast and bind to discovery reply port
+        const int yes = 1;
+        setsockopt(tempSock, SOL_SOCKET, SO_BROADCAST,
+                   reinterpret_cast<const char*>(&yes), static_cast<int>(sizeof(yes)));
+
+        sockaddr_in local{};
+        local.sin_family      = AF_INET;
+        local.sin_addr.s_addr = INADDR_ANY;
+        local.sin_port        = htons(DISCOVERY_PORT);
+        if (bind(tempSock, reinterpret_cast<sockaddr*>(&local), sizeof(local)) == SOCKET_ERROR) {
+            m_autoConnectStatus = "Failed: port 54998 already in use";
+            m_autoConnectState.store(AutoConnectState::Failed);
+            closesocket(tempSock);
+            WSACleanup();
+            return;
+        }
+
+        u_long nbMode = 1;
+        ioctlsocket(tempSock, FIONBIO, &nbMode);
+
+        // --- Broadcast DiscoveryHello to all four game ports ---
+        Networking::Packets::DiscoveryHello hello{};
+        hello.header.senderId = 0U;  // not yet assigned
+
+        sockaddr_in dest{};
+        dest.sin_family      = AF_INET;
+        dest.sin_addr.s_addr = INADDR_BROADCAST;  // 255.255.255.255
+        for (int p = 0; p < 4; ++p) {
+            dest.sin_port = htons(static_cast<uint16_t>(BASE_PORT + p));
+            sendto(tempSock,
+                   reinterpret_cast<const char*>(&hello),
+                   static_cast<int>(sizeof(hello)), 0,
+                   reinterpret_cast<sockaddr*>(&dest),
+                   static_cast<int>(sizeof(dest)));
+        }
+
+        // --- Collect DiscoveryResponse packets for WAIT_MS milliseconds ---
+        // key = peerID (1–4), value = sender IP (network byte order)
+        std::map<uint8_t, uint32_t> discovered;
+
+        const auto deadline = std::chrono::steady_clock::now() +
+                              std::chrono::milliseconds(WAIT_MS);
+
+        while (std::chrono::steady_clock::now() < deadline && !stopToken.stop_requested()) {
+            fd_set readSet;
+            FD_ZERO(&readSet);
+            FD_SET(tempSock, &readSet);
+            timeval tv{ 0, 50'000 };  // 50 ms poll interval
+            const int ready = select(0, &readSet, nullptr, nullptr, &tv);
+            if (ready <= 0) { continue; }
+
+            char buf[64]{};
+            sockaddr_in from{};
+            int fromLen = static_cast<int>(sizeof(from));
+            const int n = recvfrom(tempSock, buf, static_cast<int>(sizeof(buf)),
+                                   0, reinterpret_cast<sockaddr*>(&from), &fromLen);
+            if (n < static_cast<int>(sizeof(Networking::Packets::DiscoveryResponse))) {
+                continue;
+            }
+
+            Networking::Packets::DiscoveryResponse resp{};
+            std::memcpy(&resp, buf, sizeof(resp));
+            if (resp.header.type != Networking::Packets::PacketType::DiscoveryResponse) {
+                continue;
+            }
+            if (resp.peerID < 1U || resp.peerID > 4U) { continue; }
+
+            discovered[resp.peerID] = from.sin_addr.s_addr;
+        }
+
+        closesocket(tempSock);
+        WSACleanup();
+
+        if (stopToken.stop_requested()) { return; }
+
+        // --- Determine lowest free slot ---
+        uint8_t slot = 0U;
+        for (uint8_t s = 1U; s <= 4U; ++s) {
+            if (discovered.find(s) == discovered.end()) { slot = s; break; }
+        }
+
+        if (slot == 0U) {
+            m_autoConnectStatus = "Failed: no free slot (4/4 peers occupied)";
+            m_autoConnectState.store(AutoConnectState::Failed);
+            return;
+        }
+
+        // --- Initialise game socket ---
+        const uint16_t gamePort = static_cast<uint16_t>(BASE_PORT + slot - 1U);
+        if (!m_service->Init(gamePort)) {
+            m_autoConnectStatus = "Failed: could not bind port " + std::to_string(gamePort);
+            m_autoConnectState.store(AutoConnectState::Failed);
+            return;
+        }
+        m_service->SetLocalPeerId(slot);
+        m_service->EnableBroadcast();
+
+        // --- Register discovered peers ---
+        std::string connectedStr;
+        for (const auto& [peerID, addr] : discovered) {
+            char ipBuf[INET_ADDRSTRLEN]{};
+            inet_ntop(AF_INET, &addr, ipBuf, sizeof(ipBuf));
+            const uint16_t peerPort = static_cast<uint16_t>(BASE_PORT + peerID - 1U);
+            m_service->AddPeer(peerID, ipBuf, peerPort);
+            if (!connectedStr.empty()) { connectedStr += ", "; }
+            connectedStr += "P" + std::to_string(peerID) + "(" + ipBuf + ")";
+        }
+
+        // --- Announce ourselves to all discovered peers so they can add us back ---
+        // This fixes one-way discovery: when we found existing peers but they didn't
+        // know about us (because we weren't running when they connected).
+        if (!discovered.empty()) {
+            Networking::Packets::PeerAnnounce announce{};
+            announce.header.type     = Networking::Packets::PacketType::PeerAnnounce;
+            announce.header.senderId = slot;
+            announce.peerID          = slot;
+            m_service->Broadcast(&announce, sizeof(announce));
+        }
+
+        // --- Finalise ---
+        m_autoConnectStatus = "Peer " + std::to_string(slot) +
+                              " | Port " + std::to_string(gamePort) +
+                              (connectedStr.empty()
+                                  ? " | No peers found yet"
+                                  : " | Connected to: " + connectedStr);
+
+        m_pendingPostConnectSync.store(true);
+        m_autoConnectState.store(AutoConnectState::Done);
+
+        GE_LOG_INFO("NetworkBridge: auto-connect complete — " + m_autoConnectStatus);
+    });
 }
 
 } // namespace GE

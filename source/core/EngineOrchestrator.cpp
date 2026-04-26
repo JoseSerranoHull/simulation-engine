@@ -199,8 +199,10 @@ void EngineOrchestrator::run() {
         while (!st.stop_requested()) {
             if (m_networkBridge != nullptr) {
                 m_networkBridge->GetService()->Poll(
-                    [this](uint8_t senderId, const uint8_t* data, std::size_t size) {
-                        m_networkBridge->ApplyReceivedState(senderId, data, size);
+                    [this](uint8_t senderId, const uint8_t* data, std::size_t size,
+                           uint32_t senderAddr, uint16_t senderPort) {
+                        m_networkBridge->ApplyReceivedState(senderId, data, size,
+                                                            senderAddr, senderPort);
                     });
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -1,12 +1,15 @@
 #pragma once
 
 /* parasoft-begin-suppress ALL */
+#include <atomic>
 #include <cstdint>
 #include <array>
 #include <chrono>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <unordered_map>
 /* parasoft-end-suppress ALL */
 
@@ -52,11 +55,13 @@ namespace GE {
 
         /**
          * @brief Deserialises an incoming datagram and dispatches it to the
-         *        appropriate handler (StateUpdate / SceneChange / SpawnObject).
+         *        appropriate handler (StateUpdate / SceneChange / SpawnObject / Discovery).
          *
          * Call site: networking thread poll callback.
+         * senderAddr / senderPort are in network byte order (from recvfrom).
          */
-        void ApplyReceivedState(uint8_t senderId, const uint8_t* data, std::size_t size);
+        void ApplyReceivedState(uint8_t senderId, const uint8_t* data, std::size_t size,
+                                uint32_t senderAddr = 0, uint16_t senderPort = 0);
 
         /**
          * @brief Packs and broadcasts a SceneChange packet (sent 3× for reliability).
@@ -100,6 +105,41 @@ namespace GE {
          *        Call on scene change to prevent stale IDs from a previous scene.
          */
         void ClearRemoteStates();
+
+        // --- Auto-connect (LAN peer discovery) ---
+
+        enum class AutoConnectState { Idle, Discovering, Done, Failed };
+
+        /**
+         * @brief Starts LAN peer discovery in a background jthread.
+         * Broadcasts DiscoveryHello to fixed game ports, waits 1.5 s for responses,
+         * picks the lowest free slot (1–4), initialises the game socket, and
+         * registers all discovered peers. Safe to call from ImGui (returns immediately).
+         */
+        void BeginAutoConnect();
+
+        AutoConnectState   GetAutoConnectState()  const { return m_autoConnectState.load(); }
+        const std::string& GetAutoConnectStatus() const { return m_autoConnectStatus; }
+
+        void ResetAutoConnect() {
+            if (m_discoveryThread.joinable()) {
+                m_discoveryThread.request_stop();
+                m_discoveryThread.join();
+            }
+            m_autoConnectState.store(AutoConnectState::Idle);
+            m_autoConnectStatus = "Idle";
+            m_pendingPostConnectSync.store(false);
+        }
+
+        /**
+         * @brief Returns true (and clears the flag) once on the first call after
+         * auto-connect completes. Use from the physics/update thread to fire
+         * BroadcastAnimationStates() and other post-connect ECS syncs.
+         */
+        bool ConsumePostConnectSync() {
+            bool expected = true;
+            return m_pendingPostConnectSync.compare_exchange_strong(expected, false);
+        }
 
         // --- Accessors used by EngineOrchestrator / ImGui / Scripts ---
 
@@ -146,11 +186,19 @@ namespace GE {
         std::string m_pendingNetworkScene;
         std::mutex  m_pendingNetworkSceneMutex;
 
+        // Auto-connect state
+        std::atomic<AutoConnectState> m_autoConnectState { AutoConnectState::Idle };
+        std::string                   m_autoConnectStatus { "Idle" };
+        std::jthread                  m_discoveryThread;
+        std::atomic<bool>             m_pendingPostConnectSync { false };
+
         // --- Per-type packet handlers (called by ApplyReceivedState) ---
-        void handleStateUpdate  (uint8_t senderId, const uint8_t* data, std::size_t size);
-        void handleSceneChange  (const uint8_t* data, std::size_t size);
-        void handleSpawnObject  (const uint8_t* data, std::size_t size);
-        void handleAnimationSync(const uint8_t* data, std::size_t size);
+        void handleStateUpdate    (uint8_t senderId, const uint8_t* data, std::size_t size);
+        void handleSceneChange    (const uint8_t* data, std::size_t size);
+        void handleSpawnObject    (const uint8_t* data, std::size_t size);
+        void handleAnimationSync  (const uint8_t* data, std::size_t size);
+        void handleDiscoveryHello (uint32_t senderAddr, uint16_t senderPort);
+        void handlePeerAnnounce   (uint8_t peerID, uint32_t senderAddr);
     };
 
 } // namespace GE

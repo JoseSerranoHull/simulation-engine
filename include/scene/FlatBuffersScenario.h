@@ -79,10 +79,14 @@ namespace GE {
         bool         m_netInitialised { false };
         PeerUIEntry  m_peerEntries[3] {};   ///< Entries for peers 2, 3, 4 relative to local
 
+        enum class ConnectionMethod { None, Auto, Manual };
+        ConnectionMethod m_connectionMethod { ConnectionMethod::None };
+
         // --- Helpers ---
         void buildCamerasFromContext(const GE::Scene::FB::FBSceneContext& ctx);
         void applyActiveCamera() const;
         void scanSceneDirectory();
+        void disconnectNetwork();
     };
 
 } // namespace GE

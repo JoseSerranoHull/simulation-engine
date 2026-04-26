@@ -211,6 +211,21 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
     if (em == nullptr) { return; }
 
+    // Fire post-connect ECS syncs the first frame after auto-connect completes.
+    // Safe here: OnUpdate runs on the physics thread which owns ECS data.
+    {
+        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
+        if (nb != nullptr && nb->ConsumePostConnectSync()) {
+            nb->BroadcastAnimationStates();
+            // Mirror auto-assigned values into the manual UI fields (cosmetic only).
+            if (nb->GetService() != nullptr) {
+                m_localPeerId = static_cast<int>(nb->GetService()->GetLocalPeerId());
+                m_localPort   = 54000 + m_localPeerId - 1;
+            }
+            m_connectionMethod = ConnectionMethod::Auto;
+        }
+    }
+
     // Refresh cloth vertex buffers from current particle positions (HOST_COHERENT — no flush needed).
 
     auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
@@ -441,6 +456,59 @@ void FlatBuffersScenario::OnGUI() {
         GE::Networking::NetworkService* svc = (bridge != nullptr)
             ? bridge->GetService() : nullptr;
 
+        // ── Auto Connect ─────────────────────────────────────────────────────
+        {
+            using ACS = GE::NetworkBridge::AutoConnectState;
+            const bool autoConnected  = (m_connectionMethod == ConnectionMethod::Auto);
+            const bool manualConnected= (m_connectionMethod == ConnectionMethod::Manual);
+            const bool discovering    = (bridge != nullptr) &&
+                bridge->GetAutoConnectState() == ACS::Discovering;
+
+            if (autoConnected) {
+                // Show Disconnect in red
+                ImGui::PushStyleColor(ImGuiCol_Button,        { 0.7f, 0.15f, 0.15f, 1.0f });
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, { 0.9f, 0.2f,  0.2f,  1.0f });
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,  { 0.5f, 0.1f,  0.1f,  1.0f });
+                if (ImGui::Button("Disconnect##Auto")) { disconnectNetwork(); }
+                ImGui::PopStyleColor(3);
+            } else {
+                // Show Auto Connect, disabled while discovering or locked out by manual
+                if (discovering || manualConnected) { ImGui::BeginDisabled(); }
+                if (ImGui::Button("Auto Connect") && bridge != nullptr) {
+                    bridge->BeginAutoConnect();
+                }
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                    ImGui::SetTooltip(manualConnected
+                        ? "Disconnect manual connection first."
+                        : "Broadcasts a probe to peers 1-4 (ports 54000-54003).\n"
+                          "Stagger clicks ~2 s apart to avoid slot conflicts.");
+                }
+                if (discovering || manualConnected) { ImGui::EndDisabled(); }
+            }
+
+            if (bridge != nullptr) {
+                const ACS state = bridge->GetAutoConnectState();
+                ImVec4 col;
+                if      (state == ACS::Done)        { col = { 0.2f, 1.0f, 0.2f, 1.0f }; }
+                else if (state == ACS::Failed)      { col = { 1.0f, 0.3f, 0.3f, 1.0f }; }
+                else if (state == ACS::Discovering) { col = { 1.0f, 1.0f, 0.3f, 1.0f }; }
+                else                                { col = { 0.6f, 0.6f, 0.6f, 1.0f }; }
+                ImGui::SameLine(0.0f, 8.0f);
+                ImGui::TextColored(col, "%s", bridge->GetAutoConnectStatus().c_str());
+
+                if (autoConnected && svc != nullptr) {
+                    ImGui::Indent(8.0f);
+                    ImGui::Text("My IP: %s   Port: %d   Peer ID: %d",
+                        svc->GetLocalIPString().c_str(),
+                        54000 + static_cast<int>(svc->GetLocalPeerId()) - 1,
+                        static_cast<int>(svc->GetLocalPeerId()));
+                    ImGui::Unindent(8.0f);
+                }
+            }
+        }
+        ImGui::Separator();
+        ImGui::TextDisabled("── Manual Configuration ──");
+
         // Shared color palette (matches FBSceneContext::ownerColors exactly)
         static constexpr ImVec4 kPeerColors[4] = {
             { 1.0f, 0.2f, 0.2f, 1.0f },   // Peer 1 — Red
@@ -528,44 +596,60 @@ void FlatBuffersScenario::OnGUI() {
         }
 
         ImGui::Separator();
-        const bool canConnect = (svc != nullptr);
-        if (!canConnect) { ImGui::BeginDisabled(); }
-        if (ImGui::Button("Connect")) {
-            // If the socket is already bound (persists across scene changes),
-            // skip Init() and just update peers / local peer ID.
-            if (svc->IsConnected()) {
-                m_netInitialised = true;
-                svc->SetLocalPeerId(static_cast<uint8_t>(m_localPeerId));
-            }
-            if (!m_netInitialised) {
-                m_netInitialised = svc->Init(static_cast<uint16_t>(m_localPort));
-                if (m_netInitialised) {
-                    svc->SetLocalPeerId(static_cast<uint8_t>(m_localPeerId));
-                    GE_LOG_INFO("FlatBuffersScenario: NetworkService initialised on port "
-                                + std::to_string(m_localPort));
-                }
-            }
+        {
+            const bool manualConnected = (m_connectionMethod == ConnectionMethod::Manual);
+            const bool autoConnected   = (m_connectionMethod == ConnectionMethod::Auto);
 
-            if (m_netInitialised) {
-                for (int i = 0; i < 3; ++i) {
-                    const char* ip = m_peerEntries[i].ip;
-                    if (ip[0] != '\0') {
-                        svc->AddPeer(static_cast<uint8_t>(m_peerEntries[i].peerId), ip,
-                                     static_cast<uint16_t>(m_peerEntries[i].port));
-                        m_peerEntries[i].connected = true;
+            if (manualConnected) {
+                // Show Disconnect in red
+                ImGui::PushStyleColor(ImGuiCol_Button,        { 0.7f, 0.15f, 0.15f, 1.0f });
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, { 0.9f, 0.2f,  0.2f,  1.0f });
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,  { 0.5f, 0.1f,  0.1f,  1.0f });
+                if (ImGui::Button("Disconnect##Manual")) { disconnectNetwork(); }
+                ImGui::PopStyleColor(3);
+                ImGui::SameLine();
+                ImGui::TextColored({0.2f, 1.0f, 0.2f, 1.0f}, "Connected (peer %d)", m_localPeerId);
+            } else {
+                // Show Connect; disabled while auto-connect is negotiating OR connection is active
+                using ACS = GE::NetworkBridge::AutoConnectState;
+                const bool discovering = (bridge != nullptr) &&
+                    bridge->GetAutoConnectState() == ACS::Discovering;
+                const bool canConnect = (svc != nullptr) && !autoConnected && !discovering;
+                if (!canConnect) { ImGui::BeginDisabled(); }
+                if (ImGui::Button("Connect")) {
+                    if (svc->IsConnected()) {
+                        m_netInitialised = true;
+                        svc->SetLocalPeerId(static_cast<uint8_t>(m_localPeerId));
+                    }
+                    if (!m_netInitialised) {
+                        m_netInitialised = svc->Init(static_cast<uint16_t>(m_localPort));
+                        if (m_netInitialised) {
+                            svc->SetLocalPeerId(static_cast<uint8_t>(m_localPeerId));
+                            GE_LOG_INFO("FlatBuffersScenario: NetworkService initialised on port "
+                                        + std::to_string(m_localPort));
+                        }
+                    }
+                    if (m_netInitialised) {
+                        for (int i = 0; i < 3; ++i) {
+                            const char* ip = m_peerEntries[i].ip;
+                            if (ip[0] != '\0') {
+                                svc->AddPeer(static_cast<uint8_t>(m_peerEntries[i].peerId), ip,
+                                             static_cast<uint16_t>(m_peerEntries[i].port));
+                                m_peerEntries[i].connected = true;
+                            }
+                        }
+                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
+                        if (nb != nullptr) { nb->BroadcastAnimationStates(); }
+                        m_connectionMethod = ConnectionMethod::Manual;
                     }
                 }
-                // Sync animated object timers so remote peers snap to the same
-                // point in the animation cycle as the peer who pressed Connect.
-                GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
-                if (nb != nullptr) { nb->BroadcastAnimationStates(); }
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !canConnect) {
+                    ImGui::SetTooltip(autoConnected
+                        ? "Disconnect auto connection first."
+                        : "Auto-connect negotiation in progress...");
+                }
+                if (!canConnect) { ImGui::EndDisabled(); }
             }
-        }
-        if (!canConnect) { ImGui::EndDisabled(); }
-
-        if (svc != nullptr && m_netInitialised) {
-            ImGui::SameLine();
-            ImGui::TextColored({0.2f, 1.0f, 0.2f, 1.0f}, "Connected (peer %d)", m_localPeerId);
         }
 
         ImGui::Separator();
@@ -761,6 +845,27 @@ void FlatBuffersScenario::applyActiveCamera() const {
         ? Camera::ProjectionMode::ORTHOGRAPHIC
         : Camera::ProjectionMode::PERSPECTIVE);
     cam->setZoom(c.isOrtho ? c.orthoSize : c.fov);
+}
+
+void FlatBuffersScenario::disconnectNetwork() {
+    GE::NetworkBridge* bridge = ServiceLocator::GetNetworkBridge();
+    GE::Networking::NetworkService* svc = bridge ? bridge->GetService() : nullptr;
+
+    if (svc != nullptr && svc->IsConnected()) {
+        svc->Shutdown();
+    }
+    if (bridge != nullptr) {
+        bridge->ClearRemoteStates();
+        bridge->ResetAutoConnect();
+    }
+
+    m_netInitialised = false;
+    m_connectionMethod = ConnectionMethod::None;
+    for (auto& entry : m_peerEntries) {
+        entry.connected = false;
+    }
+
+    GE_LOG_INFO("FlatBuffersScenario: disconnected from network.");
 }
 
 void FlatBuffersScenario::scanSceneDirectory() {

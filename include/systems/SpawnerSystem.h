@@ -11,10 +11,10 @@ namespace GE::Systems {
 
     /**
      * @class SpawnerSystem
-     * @brief ECS system that activates pre-created entity pools at runtime.
-     *        Entities are created with all components at scene load time by
-     *        FBSceneAdapter::adaptSpawners(); this system only positions them
-     *        and enables physics when their scheduled time arrives.
+     * @brief ECS system that instantiates prefab entities at runtime.
+     *        Spawners reference PrefabTemplates built at scene load time;
+     *        EntityFactory::InstantiatePrefab() creates real ECS entities with all
+     *        components when each scheduled spawn event fires.
      */
     class SpawnerSystem final : public GE::ECS::ICpuSystem {
     public:
@@ -24,7 +24,7 @@ namespace GE::Systems {
         void       OnUpdate(float dt) override;
         ERROR_CODE Shutdown()         override;
 
-        /** @brief Manually activate one pending entity from the spawner, bypassing the time check. */
+        /** @brief Manually fire one spawn from the spawner, bypassing the time check. */
         void ForceSpawnOne(GE::Components::SpawnerComponent& sc);
 
     private:

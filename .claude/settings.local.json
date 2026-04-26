@@ -125,7 +125,20 @@
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo 2>&1 | Select-Object -Last 50)",
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo 2>&1 | Select-Object -Last 20)",
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo 2>&1 | Select-Object -Last 10)",
-      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo 2>&1 | Select-Object -Last 8)"
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /nologo 2>&1 | Select-Object -Last 8)",
+      "WebFetch(domain:docs.godotengine.org)",
+      "WebFetch(domain:dev.epicgames.com)",
+      "WebFetch(domain:ajmmertens.medium.com)",
+      "WebFetch(domain:www.flecs.dev)",
+      "WebFetch(domain:www.unrealcode.net)",
+      "WebFetch(domain:learn.unity.com)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 80)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 60)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 10)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Where-Object { $_ -match \"error|warning|FAILED|succeeded\" } | Select-Object -Last 40)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Where-Object { $_ -match \"error C|warning C|FAILED|succeeded\" } | Select-Object -Last 30)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Where-Object { $_ -match \"error C|warning C|FAILED|succeeded\" } | Select-Object -Last 10)",
+      "PowerShell($msbuild = \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Enterprise\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"; cd \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\"; & $msbuild simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Where-Object { $_ -match \"error C|warning C|FAILED|succeeded\" } | Select-Object -Last 15)"
     ]
   }
 }

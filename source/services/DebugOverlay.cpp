@@ -6,9 +6,11 @@
 #include "core/ServiceLocator.h"
 #include "components/Tag.h"
 #include "components/Transform.h"
+#include "components/AnimationComponents.h"  // SpawnerComponent::spawnedEntityIds
 
 /* parasoft-begin-suppress ALL */
 #include <filesystem>
+#include <unordered_set>
 /* parasoft-end-suppress ALL */
 
 using namespace GE::Graphics;
@@ -154,10 +156,25 @@ void DebugOverlay::update(InputService* const input, const PerformanceTracker* c
             ImGui::TableSetColumnIndex(0);
             try {
                 GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
+
+                // Build exclusion set: IDs claimed as virtual children by a spawner.
+                // These are real root entities (m_parentEntityID == UINT32_MAX) but
+                // drawn under their spawner node, not at the top level.
+                std::unordered_set<uint32_t> spawnedSet;
+                {
+                    auto& spawnerArr = em->GetCompArr<GE::Components::SpawnerComponent>();
+                    for (uint32_t s = 0; s < spawnerArr.GetCount(); ++s) {
+                        for (const uint32_t sid : spawnerArr.Data()[s].spawnedEntityIds) {
+                            spawnedSet.insert(sid);
+                        }
+                    }
+                }
+
                 auto& transforms = em->GetCompArr<GE::Components::Transform>();
                 for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
                     const GE::ECS::EntityID id = transforms.Index()[i];
-                    if (transforms.Data()[i].m_parentEntityID == UINT32_MAX) {
+                    if (transforms.Data()[i].m_parentEntityID == UINT32_MAX
+                        && spawnedSet.find(id) == spawnedSet.end()) {
                         DrawEntityNode(id, em);
                     }
                 }
@@ -409,15 +426,21 @@ void DebugOverlay::DrawEntityNode(const GE::ECS::EntityID entityID, GE::ECS::Ent
     auto* tag = em->TryGetTIComponent<Tag>(entityID);
     const char* name = (tag != nullptr) ? tag->m_name.c_str() : "Entity";
 
-    // Scan for children
+    // Check for ECS parent-child children (via m_parentEntityID)
     auto& transforms = em->GetCompArr<Transform>();
-    bool hasChildren = false;
+    bool hasEcsChildren = false;
     for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
         if (transforms.Data()[i].m_parentEntityID == entityID) {
-            hasChildren = true;
+            hasEcsChildren = true;
             break;
         }
     }
+
+    // Check for virtual spawner children (tracked by SpawnerComponent::spawnedEntityIds)
+    auto* sc = em->TryGetTIComponent<SpawnerComponent>(entityID);
+    const bool hasSpawnedChildren = (sc != nullptr && !sc->spawnedEntityIds.empty());
+
+    const bool hasChildren = hasEcsChildren || hasSpawnedChildren;
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
     if (!hasChildren) {
@@ -436,9 +459,16 @@ void DebugOverlay::DrawEntityNode(const GE::ECS::EntityID entityID, GE::ECS::Ent
     }
 
     if (open && hasChildren) {
+        // Draw ECS parent-child entities
         for (uint32_t i = 0; i < transforms.GetCount(); ++i) {
             if (transforms.Data()[i].m_parentEntityID == entityID) {
                 DrawEntityNode(transforms.Index()[i], em);
+            }
+        }
+        // Draw virtual spawner children (root entities grouped under the spawner node)
+        if (hasSpawnedChildren) {
+            for (const uint32_t spawnedId : sc->spawnedEntityIds) {
+                DrawEntityNode(spawnedId, em);
             }
         }
         ImGui::TreePop();

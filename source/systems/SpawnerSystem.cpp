@@ -1,4 +1,6 @@
 #include "systems/SpawnerSystem.h"
+#include "scene/EntityFactory.h"
+#include "scene/fb/FBSceneContext.h"
 #include "core/ServiceLocator.h"
 #include "core/NetworkBridge.h"
 #include "networking/NetworkService.h"
@@ -48,7 +50,6 @@ namespace GE::Systems {
             return randomInRange(sc.boxMin, sc.boxMax);
 
         case LT::RANDOM_SPHERE: {
-            // Uniform sampling inside a sphere via rejection-free method
             std::uniform_real_distribution<float> dist(0.0f, 1.0f);
             const float u     = dist(m_rng);
             const float v     = dist(m_rng);
@@ -66,43 +67,32 @@ namespace GE::Systems {
     }
 
     // -------------------------------------------------------------------------
-    // Per-entity activation helper (file-local)
-    // -------------------------------------------------------------------------
-
-    static void activateEntity(GE::ECS::EntityManager* em,
-                               GE::Components::SpawnerComponent& sc,
-                               const glm::vec3& position,
-                               const glm::vec3& linVel,
-                               const glm::vec3& angVelDeg)
-    {
-        const GE::ECS::EntityID id = sc.pendingIds.front();
-        sc.pendingIds.pop_front();
-
-        auto* tr = em->TryGetTIComponent<GE::Components::Transform>(id);
-        auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(id);
-        if (!tr || !rb) return;
-
-        tr->m_position = position;
-        rb->isStatic   = false;
-        rb->useGravity = true;
-        rb->velocity           = linVel;
-        rb->angularVelocity    = glm::radians(angVelDeg);
-    }
-
-    // -------------------------------------------------------------------------
-    // ForceSpawnOne — manual trigger from ImGui
+    // ForceSpawnOne — manual trigger from ImGui Spawners tab
     // -------------------------------------------------------------------------
 
     void SpawnerSystem::ForceSpawnOne(GE::Components::SpawnerComponent& sc) {
-        if (sc.pendingIds.empty()) return;
+        if (sc.spawnedCount >= sc.maxCount) { return; }
+        if (sc.prefabTemplate == nullptr)    { return; }
 
         auto* em = ServiceLocator::GetEntityManager();
-        if (!em) return;
+        if (!em) { return; }
 
         const glm::vec3 pos    = pickLocation(sc);
         const glm::vec3 linVel = randomInRange(sc.linVelMin, sc.linVelMax);
         const glm::vec3 angVel = randomInRange(sc.angVelMin, sc.angVelMax);
-        activateEntity(em, sc, pos, linVel, angVel);
+
+        const uint8_t colorIdx = sc.isSequential
+            ? static_cast<uint8_t>(sc.spawnedCount % 4)
+            : (sc.ownerPeerId > 0U ? sc.ownerPeerId - 1U : 0U);
+
+        const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
+            *sc.prefabTemplate, pos, glm::vec3{0.0f}, linVel, angVel,
+            sc.ownerPeerId, colorIdx, em);
+
+        if (id != UINT32_MAX) {
+            ++sc.spawnedCount;
+            sc.spawnedEntityIds.push_back(id);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -110,38 +100,49 @@ namespace GE::Systems {
     // -------------------------------------------------------------------------
 
     void SpawnerSystem::OnUpdate(float dt) {
-        auto* em  = ServiceLocator::GetEntityManager();
-        if (!em) return;
+        auto* em = ServiceLocator::GetEntityManager();
+        if (!em) { return; }
         auto& arr = em->GetCompArr<GE::Components::SpawnerComponent>();
 
-        // Resolve networking state once per frame (avoids repeated ServiceLocator calls)
-        GE::NetworkBridge* bridge   = ServiceLocator::GetNetworkBridge();
-        auto* netSvc = (bridge != nullptr) ? bridge->GetService() : nullptr;
-        const bool  netActive       = (netSvc != nullptr) && netSvc->IsConnected();
-        const uint8_t localPeerId   = netActive ? netSvc->GetLocalPeerId() : 0U;
+        GE::NetworkBridge* bridge  = ServiceLocator::GetNetworkBridge();
+        auto* netSvc               = (bridge != nullptr) ? bridge->GetService() : nullptr;
+        const bool  netActive      = (netSvc != nullptr) && netSvc->IsConnected();
+        const uint8_t localPeerId  = netActive ? netSvc->GetLocalPeerId() : 0U;
 
         for (uint32_t i = 0; i < arr.GetCount(); ++i) {
             auto& sc = arr.Data()[i];
-            sc.elapsed += dt;
 
-            if (sc.elapsed < sc.startTime || sc.pendingIds.empty()) continue;
+            // Only advance the timer when not paused
+            if (!sc.paused) { sc.elapsed += dt; }
 
-            // Ownership gate: when networking is active, only the owning peer fires this spawner.
+            if (sc.paused)                                   { continue; }
+            if (sc.elapsed < sc.startTime)                   { continue; }
+            if (sc.spawnedCount >= sc.maxCount)              { continue; }
+            if (sc.prefabTemplate == nullptr)                { continue; }
+
+            // Ownership gate: when networked, only the owning peer fires
             if (netActive && sc.ownerPeerId != 0U && sc.ownerPeerId != localPeerId) { continue; }
 
-            // Helper: activate one entity and broadcast its spawn to remote peers.
-            auto doActivate = [&]() {
-                if (sc.pendingIds.empty()) return;
-
-                // Peek ID before activateEntity pops it (needed for broadcast)
-                const GE::ECS::EntityID id = sc.pendingIds.front();
+            auto doSpawn = [&]() {
+                if (sc.spawnedCount >= sc.maxCount) { return; }
 
                 const glm::vec3 pos    = pickLocation(sc);
                 const glm::vec3 linVel = randomInRange(sc.linVelMin, sc.linVelMax);
                 const glm::vec3 angVel = randomInRange(sc.angVelMin, sc.angVelMax);
-                activateEntity(em, sc, pos, linVel, angVel);
 
-                // Broadcast to remote peers so they activate the same entity
+                const uint8_t colorIdx = sc.isSequential
+                    ? static_cast<uint8_t>(sc.spawnedCount % 4)
+                    : (sc.ownerPeerId > 0U ? sc.ownerPeerId - 1U : 0U);
+
+                const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
+                    *sc.prefabTemplate, pos, glm::vec3{0.0f}, linVel, angVel,
+                    sc.ownerPeerId, colorIdx, em);
+
+                if (id == UINT32_MAX) { return; }
+                ++sc.spawnedCount;
+                sc.spawnedEntityIds.push_back(id);
+
+                // Broadcast to remote peers
                 if (netActive && bridge != nullptr) {
                     auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(id);
                     const float mass = (rb != nullptr && rb->inverseMass > 0.0f)
@@ -151,17 +152,17 @@ namespace GE::Systems {
             };
 
             if (sc.isBurst) {
-                if (sc.activated) continue;
+                if (sc.activated) { continue; }
                 sc.activated = true;
-                const uint32_t toActivate = glm::min(
-                    static_cast<uint32_t>(sc.pendingIds.size()), sc.burstCount);
-                for (uint32_t k = 0; k < toActivate; ++k) { doActivate(); }
+                const uint32_t toSpawn = glm::min(
+                    sc.burstCount, sc.maxCount - sc.spawnedCount);
+                for (uint32_t k = 0; k < toSpawn; ++k) { doSpawn(); }
             } else {
                 if (!sc.activated) { sc.activated = true; }
                 sc.timeSinceLastSpawn += dt;
-                while (sc.timeSinceLastSpawn >= sc.interval && !sc.pendingIds.empty()) {
+                while (sc.timeSinceLastSpawn >= sc.interval && sc.spawnedCount < sc.maxCount) {
                     sc.timeSinceLastSpawn -= sc.interval;
-                    doActivate();
+                    doSpawn();
                 }
             }
         }

@@ -2,11 +2,12 @@
 
 /* parasoft-begin-suppress ALL */
 #include <string>
+#include <unordered_map>
 #include <vector>
 /* parasoft-end-suppress ALL */
 
 #include "scene/Scenario.h"
-#include "scene/fb/FBSceneContext.h"      // for FBCameraRecord
+#include "scene/fb/FBSceneContext.h"      // for FBCameraRecord, PrefabTemplate
 #include "physics/MaterialInteractionRegistry.h"
 
 namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class ScriptSystem; class ColliderVisualizerSystem; }
@@ -66,6 +67,9 @@ namespace GE {
 
         // --- Material interaction registry (populated at load, passed to PhysicsSystem) ---
         GE::Physics::MaterialInteractionRegistry m_interactionRegistry;
+
+        // --- Prefab registry (populated at load; SpawnerComponents hold raw pointers into this) ---
+        std::unordered_map<std::string, GE::Scene::FB::PrefabTemplate> m_prefabRegistry;
 
         // --- Networking UI state (ImGui "Network" menu) ---
         struct PeerUIEntry {

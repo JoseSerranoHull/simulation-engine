@@ -2,6 +2,7 @@
 #include <fstream>
 #include <random>
 #include <string>
+#include <unordered_map>
 /* parasoft-end-suppress ALL */
 
 #include "scene/fb/FBSceneAdapter.h"
@@ -33,8 +34,9 @@
 #include "components/ScriptComponent.h"
 #include "scripts/ScriptFactory.h"
 
-// Flat-color pipeline index within m_pipelines (appended after createMaterialPipelines())
-static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX = 8U;
+// Pipeline indices within m_pipelines (see Scenario::createMaterialPipelines())
+static constexpr std::size_t PHONG_PIPELINE_INDEX     = 0U;   // phong.vert + phong.frag
+static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX = 8U;   // flat vertex-color, no descriptor set
 
 namespace GE::Scene::FB {
 
@@ -113,10 +115,11 @@ bool FBSceneAdapter::load(const std::string& path) {
 void FBSceneAdapter::adaptToECS(FBSceneContext& ctx) {
     if (m_scene == nullptr) { return; }
 
-    // Order matters: materials must be available when adaptObjects() looks them up
+    // Order matters: materials before objects/prefabs; prefabs before spawners
     if (m_scene->cameras()      != nullptr) { adaptCameras(ctx);      }
     if (m_scene->materials()    != nullptr) { adaptMaterials(ctx);    }
     if (m_scene->interactions() != nullptr) { adaptInteractions(ctx); }
+    if (m_scene->prefabs()      != nullptr) { adaptPrefabs(ctx);      }
     if (m_scene->objects()      != nullptr) { adaptObjects(ctx);      }
     if (m_scene->objects()      != nullptr) { adaptParentLinks(ctx);  }
     if (m_scene->spawners()     != nullptr &&
@@ -871,9 +874,230 @@ glm::vec3 FBSceneAdapter::resolveColor(const Simulation::Object* obj,
 }
 
 // ===========================================================================
-// SECTION 9: adaptSpawners()
-// Pre-creates entity pools for each spawner (frozen, hidden) so that no GPU
-// uploads occur at runtime. SpawnerSystem activates entities from pendingIds.
+// SECTION 9: adaptPrefabs()
+// Uploads GPU meshes per prefab definition and stores PrefabTemplates in ctx.prefabRegistry.
+// useOwnerColors=true  → 4 owner-colored meshes (red/green/blue/yellow) per prefab.
+// useOwnerColors=false → 1 material-appearance mesh (textured Phong or tinted flat-color).
+// ===========================================================================
+
+void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
+{
+    const auto* prefabsVec = m_scene->prefabs();
+    if (prefabsVec == nullptr) { return; }
+
+    if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
+        GE_LOG_ERROR("FBSceneAdapter::adaptPrefabs: flat-color pipeline not available.");
+        return;
+    }
+    GE::Graphics::GraphicsPipeline* const flatColorPipeline =
+        (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
+
+    const float PI = glm::pi<float>();
+
+    for (flatbuffers::uoffset_t i = 0; i < prefabsVec->size(); ++i) {
+        const Simulation::Prefab* pb = (*prefabsVec)[i];
+        if (pb == nullptr || pb->name() == nullptr) { continue; }
+
+        const std::string prefabName = pb->name()->str();
+
+        PrefabTemplate tmpl;
+        tmpl.name = prefabName;
+
+        // --- Material density lookup ---
+        float density = 1.0f;
+        float restitution = 0.6f;
+        if (pb->material() != nullptr) {
+            const std::string matName = pb->material()->str();
+            for (const auto& pmr : ctx.physicsMaterials) {
+                if (pmr.name == matName) { density = pmr.density; break; }
+            }
+        }
+        tmpl.density     = density;
+        tmpl.restitution = restitution;
+
+        // --- Script type ---
+        if (pb->script_type() != nullptr) {
+            tmpl.scriptType = pb->script_type()->str();
+        }
+
+        // --- Shape parsing + mesh generation ---
+        using namespace GE::Assets;
+        OBJLoader::MeshData meshData;
+        glm::mat3 invI = glm::mat3(0.0f);
+        float mass = 0.0f;
+        const glm::vec3 color = FBSceneContext::defaultColor;
+
+        switch (pb->shape_type()) {
+        case Simulation::Shape::Sphere: {
+            const auto* s = pb->shape_as_Sphere();
+            const float r = s ? s->radius() : 0.5f;
+            tmpl.shapeKind = PrefabShapeKind::Sphere;
+            tmpl.radius    = r;
+            meshData = GeometryUtils::generateSphere(24, r, -r, color);
+            mass = density * (4.0f / 3.0f) * PI * r * r * r;
+            if (mass > 0.0f) invI = glm::mat3(5.0f / (2.0f * mass * r * r));
+            break;
+        }
+        case Simulation::Shape::Capsule: {
+            const auto* c = pb->shape_as_Capsule();
+            const float r  = c ? c->radius() : 0.3f;
+            const float ht = c ? c->height()  : 1.0f;
+            tmpl.shapeKind = PrefabShapeKind::Capsule;
+            tmpl.radius    = r;
+            tmpl.height    = ht;
+            meshData = GeometryUtils::generateCapsule(r, ht, 24, 12);
+            for (auto& v : meshData.vertices) { v.color = color; }
+            const float mc = density * PI * r * r * ht;
+            const float ms = density * (4.0f / 3.0f) * PI * r * r * r;
+            mass = mc + ms;
+            if (mass > 0.0f) {
+                const float Is   = (2.0f / 5.0f) * ms * r * r;
+                const float Icxz = mc * (3.0f * r * r + ht * ht) / 12.0f;
+                const float Icy  = mc * r * r * 0.5f;
+                invI[0][0] = 1.0f / (Icxz + Is);
+                invI[1][1] = 1.0f / (Icy  + Is);
+                invI[2][2] = invI[0][0];
+            }
+            break;
+        }
+        case Simulation::Shape::Cylinder: {
+            const auto* c = pb->shape_as_Cylinder();
+            const float r  = c ? c->radius() : 0.3f;
+            const float ht = c ? c->height()  : 1.0f;
+            tmpl.shapeKind = PrefabShapeKind::Cylinder;
+            tmpl.radius    = r;
+            tmpl.height    = ht;
+            meshData = GeometryUtils::generateCylinder(24, r, r, ht, color, true, true);
+            mass = density * PI * r * r * ht;
+            if (mass > 0.0f) {
+                invI[0][0] = 12.0f / (mass * (3.0f * r * r + ht * ht));
+                invI[1][1] = 2.0f  / (mass * r * r);
+                invI[2][2] = invI[0][0];
+            }
+            break;
+        }
+        case Simulation::Shape::Cuboid: {
+            const auto* c = pb->shape_as_Cuboid();
+            const glm::vec3 sz = (c && c->size()) ? toVec3(*c->size()) : glm::vec3(0.5f);
+            tmpl.shapeKind = PrefabShapeKind::Cuboid;
+            tmpl.size      = sz;
+            meshData = GeometryUtils::generateBox(sz.x, sz.y, sz.z, color);
+            mass = density * sz.x * sz.y * sz.z;
+            if (mass > 0.0f) {
+                invI[0][0] = 12.0f / (mass * (sz.y * sz.y + sz.z * sz.z));
+                invI[1][1] = 12.0f / (mass * (sz.x * sz.x + sz.z * sz.z));
+                invI[2][2] = 12.0f / (mass * (sz.x * sz.x + sz.y * sz.y));
+            }
+            break;
+        }
+        default:
+            GE_LOG_WARN("FBSceneAdapter::adaptPrefabs: unsupported shape in prefab '" + prefabName + "', skipping.");
+            continue;
+        }
+
+        tmpl.mass        = mass;
+        tmpl.invInertia  = invI;
+
+        // Helper: upload a mesh variant and push the Model into ownedModels.
+        auto uploadVariant = [&](OBJLoader::MeshData data,
+                                 std::shared_ptr<GE::Assets::Material> mat) -> GE::Assets::Mesh* {
+            auto meshPtr = ctx.am->processMeshData(
+                data, mat,
+                ctx.uploadCtx->cmd,
+                ctx.uploadCtx->stagingBuffers,
+                ctx.uploadCtx->stagingMemories);
+            if (!meshPtr) { return nullptr; }
+            GE::Assets::Mesh* raw = meshPtr.get();
+            auto mdl = std::make_unique<GE::Assets::Model>();
+            mdl->addMesh(std::move(meshPtr));
+            ctx.ownedModels->push_back(std::move(mdl));
+            return raw;
+        };
+
+        // Shared flat-color material (no descriptor set, no textures — just the pipeline)
+        auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
+        flatMat->SetCastsShadows(false);
+
+        if (ctx.useOwnerColors) {
+            // --- Owner-color mode: upload 4 meshes, one per peer color ---
+            bool anyFailed = false;
+            for (std::size_t ownerIdx = 0; ownerIdx < 4; ++ownerIdx) {
+                OBJLoader::MeshData coloredData = meshData;
+                const glm::vec3 c = FBSceneContext::ownerColors[ownerIdx];
+                for (auto& v : coloredData.vertices) { v.color = c; }
+                GE::Assets::Mesh* m = uploadVariant(coloredData, flatMat);
+                if (m == nullptr) { anyFailed = true; break; }
+                tmpl.ownerMeshes[ownerIdx] = m;
+            }
+            if (anyFailed) {
+                GE_LOG_ERROR("FBSceneAdapter::adaptPrefabs: owner mesh upload failed for '" + prefabName + "'.");
+                continue;
+            }
+        } else {
+            // --- Material-color mode: one mesh reflecting the material's appearance ---
+
+            // Helper: upload the material-tinted flat-color fallback mesh.
+            auto uploadMaterialTint = [&]() -> bool {
+                static const std::unordered_map<std::string, glm::vec3> s_tints = {
+                    { "rubber",   { 0.45f, 0.22f, 0.08f } },
+                    { "steel",    { 0.70f, 0.70f, 0.78f } },
+                    { "concrete", { 0.52f, 0.50f, 0.47f } },
+                    { "plastic",  { 0.25f, 0.55f, 0.80f } },
+                };
+                const std::string matName = pb->material() ? pb->material()->str() : "";
+                const auto it  = s_tints.find(matName);
+                const glm::vec3 tint = (it != s_tints.end()) ? it->second : FBSceneContext::defaultColor;
+                OBJLoader::MeshData tintedData = meshData;
+                for (auto& v : tintedData.vertices) { v.color = tint; }
+                GE::Assets::Mesh* m = uploadVariant(tintedData, flatMat);
+                if (!m) { return false; }
+                tmpl.materialMesh = m;
+                return true;
+            };
+
+            // Textured Phong path (only when texture_path is present and loadable).
+            bool textureSucceeded = false;
+            if (pb->texture_path() != nullptr) {
+                const std::string texPath = pb->texture_path()->str();
+                auto albedo   = ctx.am->loadTexture(texPath);
+                auto whiteTex = ctx.am->loadTexture("textures/white.png");
+                if (albedo && whiteTex) {
+                    auto phongMat = ctx.am->createMaterial(
+                        albedo, whiteTex, whiteTex, whiteTex, whiteTex,
+                        (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
+                    phongMat->SetCastsShadows(false);
+                    OBJLoader::MeshData neutralData = meshData;
+                    for (auto& v : neutralData.vertices) { v.color = glm::vec3(1.0f); }
+                    GE::Assets::Mesh* m = uploadVariant(neutralData, phongMat);
+                    if (m) {
+                        tmpl.materialMesh   = m;
+                        tmpl.materialMatPtr = phongMat;
+                        textureSucceeded    = true;
+                    } else {
+                        GE_LOG_WARN("FBSceneAdapter::adaptPrefabs: textured upload failed for '" + prefabName + "', using tint fallback.");
+                    }
+                } else {
+                    GE_LOG_WARN("FBSceneAdapter::adaptPrefabs: texture files missing for '" + prefabName + "', using tint fallback.");
+                }
+            }
+
+            if (!textureSucceeded) {
+                if (!uploadMaterialTint()) {
+                    GE_LOG_ERROR("FBSceneAdapter::adaptPrefabs: material mesh upload failed for '" + prefabName + "'.");
+                    continue;
+                }
+            }
+        }
+
+        ctx.prefabRegistry[prefabName] = std::move(tmpl);
+        GE_LOG_INFO("FBSceneAdapter::adaptPrefabs: registered prefab '" + prefabName + "'.");
+    }
+}
+
+// ===========================================================================
+// SECTION 10: adaptSpawners()
+// Reads spawner config and stores SpawnerRecords with prefab_ref names.
+// No entity pre-creation — SpawnerSystem calls EntityFactory at runtime.
 // ===========================================================================
 
 void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
@@ -882,69 +1106,46 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
     const auto* spawnersVec   = m_scene->spawners();
     const auto  count         = spawnersVec->size();
 
-    // Seeded once per adaptSpawners call for radius/size randomisation
-    std::mt19937 rng(std::random_device{}());
-    auto randFloat = [&](float lo, float hi) -> float {
-        if (lo >= hi) return lo;
-        return lo + std::uniform_real_distribution<float>(0.0f, 1.0f)(rng) * (hi - lo);
-    };
-
-    const float PI = glm::pi<float>();
-
     for (flatbuffers::uoffset_t i = 0; i < count; ++i) {
-        const Simulation::BaseSpawner* base  = nullptr;
-        float radiusMin = 0.5f, radiusMax = 0.5f;
-        float heightMin = 1.0f, heightMax = 1.0f;
-        glm::vec3 sizeMin{ 1.0f }, sizeMax{ 1.0f };
-        enum class SpawnShape { Sphere, Cylinder, Capsule, Cuboid } spawnShape{};
+        const Simulation::BaseSpawner* base = nullptr;
 
         switch ((*spawnTypesVec)[i]) {
         case Simulation::SpawnerType::SphereSpawner: {
             const auto* s = spawnersVec->GetAs<Simulation::SphereSpawner>(i);
-            if (!s) continue;
-            base = s->base();
-            if (s->radius_range()) { radiusMin = s->radius_range()->min(); radiusMax = s->radius_range()->max(); }
-            spawnShape = SpawnShape::Sphere;
+            if (s) base = s->base();
             break;
         }
         case Simulation::SpawnerType::CylinderSpawner: {
             const auto* c = spawnersVec->GetAs<Simulation::CylinderSpawner>(i);
-            if (!c) continue;
-            base = c->base();
-            if (c->radius_range()) { radiusMin = c->radius_range()->min(); radiusMax = c->radius_range()->max(); }
-            if (c->height_range()) { heightMin = c->height_range()->min(); heightMax = c->height_range()->max(); }
-            spawnShape = SpawnShape::Cylinder;
+            if (c) base = c->base();
             break;
         }
         case Simulation::SpawnerType::CapsuleSpawner: {
             const auto* c = spawnersVec->GetAs<Simulation::CapsuleSpawner>(i);
-            if (!c) continue;
-            base = c->base();
-            if (c->radius_range()) { radiusMin = c->radius_range()->min(); radiusMax = c->radius_range()->max(); }
-            if (c->height_range()) { heightMin = c->height_range()->min(); heightMax = c->height_range()->max(); }
-            spawnShape = SpawnShape::Capsule;
+            if (c) base = c->base();
             break;
         }
         case Simulation::SpawnerType::CuboidSpawner: {
             const auto* c = spawnersVec->GetAs<Simulation::CuboidSpawner>(i);
-            if (!c) continue;
-            base = c->base();
-            if (c->size_range()) {
-                sizeMin = toVec3(c->size_range()->min());
-                sizeMax = toVec3(c->size_range()->max());
-            }
-            spawnShape = SpawnShape::Cuboid;
+            if (c) base = c->base();
             break;
         }
-        default:
-            continue;
+        default: continue;
         }
 
-        if (base == nullptr) continue;
+        if (base == nullptr) { continue; }
 
         SpawnerRecord rec;
         rec.name      = (base->name() != nullptr) ? base->name()->str() : "spawner";
         rec.startTime = base->start_time();
+        rec.prefabRef = (base->prefab_ref() != nullptr) ? base->prefab_ref()->str() : "";
+
+        // Warn early if prefab_ref is missing or not in registry
+        if (rec.prefabRef.empty()) {
+            GE_LOG_WARN("FBSceneAdapter::adaptSpawners: spawner '" + rec.name + "' has no prefab_ref — will be inert.");
+        } else if (ctx.prefabRegistry.find(rec.prefabRef) == ctx.prefabRegistry.end()) {
+            GE_LOG_WARN("FBSceneAdapter::adaptSpawners: spawner '" + rec.name + "' references unknown prefab '" + rec.prefabRef + "'.");
+        }
 
         // --- SpawnType ---
         if (base->spawn_type_type() == Simulation::SpawnType::SingleBurstSpawn) {
@@ -962,9 +1163,7 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
         if (base->location_type() == Simulation::SpawnLocation::FixedLocation) {
             rec.locationType = GE::Components::SpawnLocType::FIXED;
             const auto* fl = base->location_as_FixedLocation();
-            if (fl && fl->transform()) {
-                rec.fixedPos = toVec3(fl->transform()->position());
-            }
+            if (fl && fl->transform()) { rec.fixedPos = toVec3(fl->transform()->position()); }
         } else if (base->location_type() == Simulation::SpawnLocation::RandomBox) {
             rec.locationType = GE::Components::SpawnLocType::RANDOM_BOX;
             const auto* rb = base->location_as_RandomBox();
@@ -991,173 +1190,15 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
             rec.angVelMax = toVec3(base->angular_velocity()->max());
         }
 
-        // --- Density lookup for mass pre-computation ---
-        float density = 1.0f;
-        if (base->material() != nullptr) {
-            const std::string matName = base->material()->str();
-            for (const auto& pmr : ctx.physicsMaterials) {
-                if (pmr.name == matName) { density = pmr.density; break; }
-            }
-        }
-
-        // --- Owner cycling ---
+        // --- Owner ---
         const Simulation::SpawnerOwnerType ownerType = base->owner();
         const bool isSequential = (ownerType == Simulation::SpawnerOwnerType::SEQUENTIAL);
-
-        // Derive the spawner's owning peer ID from the SpawnerOwnerType.
-        // ONE=0 → peer 1, TWO=1 → peer 2, ... SEQUENTIAL → peer 1 (peer 1 fires and broadcasts).
-        rec.ownerPeerId = isSequential
+        rec.ownerPeerId   = isSequential
             ? uint8_t(1)
             : static_cast<uint8_t>(static_cast<int8_t>(ownerType) + 1);
+        rec.isSequential  = isSequential;
 
-        // --- Pre-create entity pool ---
-        if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
-            GE_LOG_ERROR("FBSceneAdapter::adaptSpawners: flat-color pipeline not available, skipping spawner.");
-            continue;
-        }
-        GE::Graphics::GraphicsPipeline* const flatColorPipeline =
-            (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
-
-        for (uint32_t e = 0; e < rec.maxCount; ++e) {
-            // Determine owner and color
-            GE::Components::OwnerType owner;
-            if (isSequential) {
-                owner = static_cast<GE::Components::OwnerType>(e % 4);
-            } else {
-                owner = static_cast<GE::Components::OwnerType>(
-                    static_cast<int8_t>(ownerType));
-            }
-            const auto ownerIdx = static_cast<std::size_t>(static_cast<int>(owner));
-            const glm::vec3 color = (ctx.useOwnerColors && ownerIdx < FBSceneContext::ownerColors.size())
-                ? FBSceneContext::ownerColors[ownerIdx]
-                : FBSceneContext::defaultColor;
-
-            // Sample shape parameters
-            const float r  = randFloat(radiusMin, radiusMax);
-            const float ht = randFloat(heightMin, heightMax);
-            const glm::vec3 sz{
-                randFloat(sizeMin.x, sizeMax.x),
-                randFloat(sizeMin.y, sizeMax.y),
-                randFloat(sizeMin.z, sizeMax.z)
-            };
-
-            const GE::ECS::EntityID id = ctx.em->CreateEntity();
-
-            // Transform — hidden far below world until activated
-            GE::Components::Transform tr;
-            tr.m_position = glm::vec3{ 0.0f, -1.0e6f, 0.0f };
-            tr.m_scale    = glm::vec3{ 1.0f };
-            ctx.em->AddComponent(id, tr);
-
-            // Tag
-            const std::string entName = rec.name + "_pool_" + std::to_string(e);
-            ctx.em->AddComponent(id, GE::Components::Tag{ entName });
-            ctx.scene->addEntity(entName, id);
-
-            // PhysicsMaterialTag
-            if (base->material() != nullptr) {
-                const std::string matName = base->material()->str();
-                for (const auto& pmr : ctx.physicsMaterials) {
-                    if (pmr.name == matName) {
-                        ctx.em->AddComponent(id, GE::Components::PhysicsMaterialTag{ pmr.name, pmr.density });
-                        break;
-                    }
-                }
-            }
-
-            // Mesh + Collider + RigidBody (shape-dependent)
-            using namespace GE::Assets;
-            OBJLoader::MeshData meshData;
-            float mass = 0.0f;
-            glm::mat3 invI = glm::mat3(0.0f);
-
-            switch (spawnShape) {
-            case SpawnShape::Sphere: {
-                meshData = GeometryUtils::generateSphere(32, r, -r, color);
-                ctx.em->AddComponent(id, GE::Components::SphereCollider{ r });
-                mass = density * (4.0f / 3.0f) * PI * r * r * r;
-                if (mass > 0.0f) invI = glm::mat3(5.0f / (2.0f * mass * r * r));
-                break;
-            }
-            case SpawnShape::Cylinder: {
-                meshData = GeometryUtils::generateCylinder(32, r, r, ht, color, true, true);
-                ctx.em->AddComponent(id, GE::Components::CylinderCollider{ r, ht });
-                mass = density * PI * r * r * ht;
-                if (mass > 0.0f) {
-                    invI[0][0] = 12.0f / (mass * (3.0f * r * r + ht * ht));
-                    invI[1][1] = 2.0f  / (mass * r * r);
-                    invI[2][2] = invI[0][0];
-                }
-                break;
-            }
-            case SpawnShape::Capsule: {
-                meshData = GeometryUtils::generateCapsule(r, ht, 32, 16);
-                for (auto& v : meshData.vertices) { v.color = color; }
-                ctx.em->AddComponent(id, GE::Components::CapsuleCollider{ r, ht });
-                const float mc = density * PI * r * r * ht;
-                const float ms = density * (4.0f / 3.0f) * PI * r * r * r;
-                mass = mc + ms;
-                if (mass > 0.0f) {
-                    const float Is   = (2.0f / 5.0f) * ms * r * r;
-                    const float Icxz = mc * (3.0f * r * r + ht * ht) / 12.0f;
-                    const float Icy  = mc * r * r * 0.5f;
-                    invI[0][0] = 1.0f / (Icxz + Is);
-                    invI[1][1] = 1.0f / (Icy  + Is);
-                    invI[2][2] = invI[0][0];
-                }
-                break;
-            }
-            case SpawnShape::Cuboid: {
-                meshData = GeometryUtils::generateBox(sz.x, sz.y, sz.z, color);
-                ctx.em->AddComponent(id, GE::Components::BoxCollider{ sz.x, sz.y, sz.z });
-                mass = density * sz.x * sz.y * sz.z;
-                if (mass > 0.0f) {
-                    invI[0][0] = 12.0f / (mass * (sz.y * sz.y + sz.z * sz.z));
-                    invI[1][1] = 12.0f / (mass * (sz.x * sz.x + sz.z * sz.z));
-                    invI[2][2] = 12.0f / (mass * (sz.x * sz.x + sz.y * sz.y));
-                }
-                break;
-            }
-            }
-
-            // Upload mesh to GPU
-            auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
-            flatMat->SetCastsShadows(false);
-            auto meshPtr = ctx.am->processMeshData(
-                meshData, flatMat,
-                ctx.uploadCtx->cmd,
-                ctx.uploadCtx->stagingBuffers,
-                ctx.uploadCtx->stagingMemories);
-            if (meshPtr) {
-                GE::Assets::Mesh* const rawPtr = meshPtr.get();
-                auto dummyModel = std::make_unique<GE::Assets::Model>();
-                dummyModel->addMesh(std::move(meshPtr));
-                GE::Components::MeshRenderer mr;
-                mr.subMeshes.push_back({ rawPtr, flatMat.get() });
-                ctx.em->AddComponent(id, mr);
-                ctx.ownedModels->push_back(std::move(dummyModel));
-            } else {
-                GE_LOG_ERROR("FBSceneAdapter::adaptSpawners: processMeshData failed for pool entity.");
-            }
-
-            // RigidBody — frozen until SpawnerSystem activates it
-            GE::Components::RigidBody rb;
-            rb.isStatic         = true;
-            rb.useGravity       = false;
-            rb.mass             = mass;
-            rb.inverseMass      = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
-            rb.invInertiaTensor = invI;
-            ctx.em->AddComponent(id, rb);
-
-            // OwnerComponent
-            ctx.em->AddComponent(id, GE::Components::OwnerComponent{ owner });
-
-            rec.entityIds.push_back(id);
-        }
-
-        if (!rec.entityIds.empty()) {
-            ctx.spawners.push_back(std::move(rec));
-        }
+        ctx.spawners.push_back(std::move(rec));
     }
 }
 

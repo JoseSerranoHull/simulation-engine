@@ -156,17 +156,25 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     m_physicsSystem = ps;
     em->RegisterSystem(ps);
 
-    // 11. Build SpawnerComponent entities from adapted spawner records
+    // 11. Move prefab registry into member (keeps PrefabTemplate* pointers valid for scene lifetime)
+    m_prefabRegistry = std::move(adaptCtx.prefabRegistry);
+
+    // Build SpawnerComponent entities from adapted spawner records
     for (auto& rec : adaptCtx.spawners) {
         const GE::ECS::EntityID spawnerId = em->CreateEntity();
         GE::Components::Transform spawnTr;
         spawnTr.m_position = rec.fixedPos;
         em->AddComponent(spawnerId, spawnTr);
 
+        GE::Components::Tag spawnTag;
+        spawnTag.m_name = rec.name;
+        em->AddComponent(spawnerId, spawnTag);
+
         GE::Components::SpawnerComponent sc;
         sc.startTime    = rec.startTime;
         sc.isBurst      = rec.isBurst;
         sc.burstCount   = rec.maxCount;
+        sc.maxCount     = rec.maxCount;
         sc.interval     = rec.interval;
         sc.locationType = rec.locationType;
         sc.fixedPos     = rec.fixedPos;
@@ -179,7 +187,14 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         sc.angVelMin    = rec.angVelMin;
         sc.angVelMax    = rec.angVelMax;
         sc.ownerPeerId  = rec.ownerPeerId;
-        for (const auto id : rec.entityIds) { sc.pendingIds.push_back(id); }
+        sc.isSequential = rec.isSequential;
+
+        // Resolve prefab pointer from registry (stays valid until OnUnload clears m_prefabRegistry)
+        if (!rec.prefabRef.empty()) {
+            const auto it = m_prefabRegistry.find(rec.prefabRef);
+            sc.prefabTemplate = (it != m_prefabRegistry.end()) ? &it->second : nullptr;
+        }
+
         em->AddComponent(spawnerId, sc);
     }
 
@@ -356,9 +371,10 @@ void FlatBuffersScenario::OnUnload() {
     }
 
     m_interactionRegistry.Clear();
+    m_prefabRegistry.clear();   // invalidates all sc.prefabTemplate pointers — safe after systems unregistered
     m_cameras.clear();
     m_availableScenes.clear();
-    m_ownedModels.clear();
+    m_ownedModels.clear();      // destroys shared Mesh objects last (prefabTemplate.sharedMesh already cleared)
     m_pipelines.clear();
     m_shaderModules.clear();
 }
@@ -781,21 +797,122 @@ void FlatBuffersScenario::OnGUI() {
         if (ImGui::BeginMenu("Spawners")) {
             GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
             if (em == nullptr || m_spawnerSystem == nullptr) {
-                ImGui::TextDisabled("No spawners in scene");
+                ImGui::TextDisabled("No spawners in scene.");
             } else {
                 auto& spawnerArr = em->GetCompArr<GE::Components::SpawnerComponent>();
                 if (spawnerArr.GetCount() == 0U) {
-                    ImGui::TextDisabled("No spawners in scene");
+                    ImGui::TextDisabled("No spawners in scene.");
                 } else {
-                    for (uint32_t i = 0; i < spawnerArr.GetCount(); ++i) {
-                        auto& sc = spawnerArr.Data()[i];
-                        ImGui::PushID(static_cast<int>(i));
-                        ImGui::Text("Spawner %u (%zu pending)", i, sc.pendingIds.size());
-                        ImGui::SameLine();
-                        if (!sc.pendingIds.empty() && ImGui::SmallButton("Fire")) {
-                            m_spawnerSystem->ForceSpawnOne(sc);
+                    // Table: # | Name | Prefab | Type | Progress | Status | Actions
+                    constexpr ImGuiTableFlags kTableFlags =
+                        ImGuiTableFlags_Borders    |
+                        ImGuiTableFlags_RowBg      |
+                        ImGuiTableFlags_SizingFixedFit |
+                        ImGuiTableFlags_NoHostExtendX;
+
+                    if (ImGui::BeginTable("spawners_tbl", 7, kTableFlags)) {
+                        ImGui::TableSetupColumn("#",        ImGuiTableColumnFlags_WidthFixed, 22.0f);
+                        ImGui::TableSetupColumn("Name",     ImGuiTableColumnFlags_WidthFixed, 130.0f);
+                        ImGui::TableSetupColumn("Prefab",   ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                        ImGui::TableSetupColumn("Type",     ImGuiTableColumnFlags_WidthFixed, 62.0f);
+                        ImGui::TableSetupColumn("Progress", ImGuiTableColumnFlags_WidthFixed, 110.0f);
+                        ImGui::TableSetupColumn("Status",   ImGuiTableColumnFlags_WidthFixed, 58.0f);
+                        ImGui::TableSetupColumn("Actions",  ImGuiTableColumnFlags_WidthFixed, 148.0f);
+                        ImGui::TableHeadersRow();
+
+                        for (uint32_t i = 0; i < spawnerArr.GetCount(); ++i) {
+                            auto& sc = spawnerArr.Data()[i];
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::TableNextRow();
+
+                            // --- Col 0: index ---
+                            ImGui::TableSetColumnIndex(0);
+                            ImGui::Text("%u", i);
+
+                            // --- Col 1: spawner name (from Tag) ---
+                            ImGui::TableSetColumnIndex(1);
+                            const GE::ECS::EntityID eid = spawnerArr.Index()[i];
+                            const auto* tag = em->TryGetTIComponent<GE::Components::Tag>(eid);
+                            const char* spawnerName = (tag != nullptr && !tag->m_name.empty())
+                                ? tag->m_name.c_str() : "Spawner";
+                            ImGui::TextUnformatted(spawnerName);
+
+                            // --- Col 2: prefab name ---
+                            ImGui::TableSetColumnIndex(2);
+                            const char* prefabName = (sc.prefabTemplate != nullptr)
+                                ? sc.prefabTemplate->name.c_str() : "(none)";
+                            ImGui::TextUnformatted(prefabName);
+
+                            // --- Col 3: type ---
+                            ImGui::TableSetColumnIndex(3);
+                            if (sc.isBurst) {
+                                ImGui::Text("Burst x%u", sc.burstCount);
+                            } else {
+                                ImGui::Text("Rep %.1fs", sc.interval);
+                            }
+
+                            // --- Col 4: progress bar ---
+                            ImGui::TableSetColumnIndex(4);
+                            const float fraction = (sc.maxCount > 0)
+                                ? static_cast<float>(sc.spawnedCount) / static_cast<float>(sc.maxCount)
+                                : 0.0f;
+                            char progressBuf[16];
+                            std::snprintf(progressBuf, sizeof(progressBuf),
+                                "%u / %u", sc.spawnedCount, sc.maxCount);
+                            ImGui::ProgressBar(fraction, ImVec2(-1.0f, 0.0f), progressBuf);
+
+                            // --- Col 5: status (colored) ---
+                            ImGui::TableSetColumnIndex(5);
+                            const bool done = (sc.spawnedCount >= sc.maxCount);
+                            if (done) {
+                                ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 1.0f }, "Done");
+                            } else if (sc.paused) {
+                                ImGui::TextColored({ 1.0f, 0.85f, 0.0f, 1.0f }, "Paused");
+                            } else if (sc.elapsed < sc.startTime) {
+                                ImGui::TextColored({ 0.6f, 0.6f, 1.0f, 1.0f }, "Waiting");
+                            } else {
+                                ImGui::TextColored({ 0.3f, 1.0f, 0.3f, 1.0f }, "Running");
+                            }
+
+                            // --- Col 6: action buttons ---
+                            ImGui::TableSetColumnIndex(6);
+
+                            // Fire
+                            const bool canFire = !done && (sc.prefabTemplate != nullptr);
+                            if (!canFire) ImGui::BeginDisabled();
+                            if (ImGui::SmallButton("Fire"))  { m_spawnerSystem->ForceSpawnOne(sc); }
+                            if (!canFire) ImGui::EndDisabled();
+                            ImGui::SameLine();
+
+                            // Pause / Resume
+                            if (done) ImGui::BeginDisabled();
+                            if (sc.paused) {
+                                if (ImGui::SmallButton("Resume")) { sc.paused = false; }
+                            } else {
+                                if (ImGui::SmallButton("Pause"))  { sc.paused = true; }
+                            }
+                            if (done) ImGui::EndDisabled();
+                            ImGui::SameLine();
+
+                            // Stop (exhausts the spawner — marks as fully done)
+                            if (done || sc.paused) ImGui::BeginDisabled();
+                            if (ImGui::SmallButton("Stop")) { sc.spawnedCount = sc.maxCount; }
+                            if (done || sc.paused) ImGui::EndDisabled();
+                            ImGui::SameLine();
+
+                            // Reset (restart from scratch; old spawned entities become root nodes)
+                            if (ImGui::SmallButton("Reset")) {
+                                sc.elapsed            = 0.0f;
+                                sc.timeSinceLastSpawn = 0.0f;
+                                sc.spawnedCount       = 0;
+                                sc.activated          = false;
+                                sc.paused             = false;
+                                sc.spawnedEntityIds.clear();
+                            }
+
+                            ImGui::PopID();
                         }
-                        ImGui::PopID();
+                        ImGui::EndTable();
                     }
                 }
             }

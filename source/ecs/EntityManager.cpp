@@ -1,6 +1,5 @@
 ﻿#include "ecs/EntityManager.h"
 
-#include "scene/EntityFactory.h"
 #include "memory/MemoryUtilities.h"
 
 namespace GE::ECS
@@ -24,11 +23,8 @@ namespace GE::ECS
         for (EntityID i = 0; i < maxEntities; ++i)
             m_freeEntities.push(maxEntities - 1 - i);
 
-    	ERROR_CODE result = ERROR_CODE::OK;
-		GE_CHECK(result, Scene::EntityFactory::Initialize(this));
-
         m_state = SystemState::Running;
-        return result;
+        return ERROR_CODE::OK;
     }
 
 	// Dispatch updates to all registered systems in stage order
@@ -84,7 +80,6 @@ namespace GE::ECS
 
         m_allComponentIndices.clear();
         m_componentArrays.clear();
-		Scene::EntityFactory::Shutdown();
         m_state = SystemState::Uninitialized;
         return ERROR_CODE::OK;
     }

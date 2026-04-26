@@ -51,6 +51,7 @@ namespace GE::Scene::FB {
         std::string              m_sceneName;
 
         // --- Per-element adapters ---
+        void adaptPrefabs     (FBSceneContext& ctx) const;  // must run before adaptSpawners
         void adaptCameras     (FBSceneContext& ctx) const;
         void adaptMaterials   (FBSceneContext& ctx) const;
         void adaptObjects     (FBSceneContext& ctx) const;

@@ -238,8 +238,9 @@ table BaseSpawner {
   location: SpawnLocation;
   linear_velocity: Vec3Range; // initial linear velocity range (metres/second)
   angular_velocity: Vec3Range; // initial angular velocity range (degrees/second)
-  material: string; // material name for spawned objects
+  material: string; // material name for spawned objects (legacy — prefer prefab_ref)
   owner: SpawnerOwnerType;
+  prefab_ref: string;          // name of a Prefab in Scene.prefabs[] to instantiate
 }
 
 table SphereSpawner {
@@ -272,6 +273,18 @@ union SpawnerType {
 }
 
 // =======================
+// Prefab Definitions
+// =======================
+
+table Prefab {
+  name:         string;
+  shape:        Shape;      // shape union (type discriminant + data)
+  material:     string;     // physics material name (density lookup)
+  script_type:  string;     // optional C++ GameScriptComponent subclass name
+  texture_path: string;     // relative path for material-color mode (e.g. "textures/wood.png")
+}
+
+// =======================
 // Scene
 // =======================
 
@@ -284,6 +297,7 @@ table Scene {
   spawners: [SpawnerType];
   materials: [Material];
   interactions: [MaterialInteraction];
+  prefabs: [Prefab];       // named reusable entity templates for spawners
 }
 
 root_type Scene;

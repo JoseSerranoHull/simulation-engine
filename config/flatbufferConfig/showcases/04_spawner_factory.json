@@ -1,6 +1,6 @@
 {
   "name": "Spawner Factory",
-  "description": "All five spawner configurations: SphereSpawner (SingleBurst, RandomSphere, Peer 1), CuboidSpawner (Repeating, FixedLocation, Peer 2), SphereSpawner (Repeating, RandomBox, SEQUENTIAL), CylinderSpawner (Repeating, RandomSphere, Peer 3), CapsuleSpawner (SingleBurst, FixedLocation, Peer 4). Use the Spawners ImGui menu to manually fire spawners.",
+  "description": "Prefab-based spawning: 5 spawners reference named PrefabDefinitions. Entities are created at runtime — no underground pool. Use the Spawners ImGui menu to fire spawners manually.",
   "gravity_on": true,
   "cameras": [
     {
@@ -24,6 +24,32 @@
     { "material_a": "rubber",  "material_b": "concrete", "restitution": 0.7,  "static_friction": 0.5, "dynamic_friction": 0.4 },
     { "material_a": "steel",   "material_b": "concrete", "restitution": 0.3,  "static_friction": 0.6, "dynamic_friction": 0.5 },
     { "material_a": "plastic", "material_b": "concrete", "restitution": 0.55, "static_friction": 0.3, "dynamic_friction": 0.2 }
+  ],
+  "prefabs": [
+    {
+      "name": "RubberSphere",
+      "shape_type": "Sphere",
+      "shape": { "radius": 0.3 },
+      "material": "rubber"
+    },
+    {
+      "name": "SteelCuboid",
+      "shape_type": "Cuboid",
+      "shape": { "size": { "x": 0.5, "y": 0.5, "z": 0.5 } },
+      "material": "steel"
+    },
+    {
+      "name": "PlasticCylinder",
+      "shape_type": "Cylinder",
+      "shape": { "radius": 0.28, "height": 0.75 },
+      "material": "plastic"
+    },
+    {
+      "name": "RubberCapsule",
+      "shape_type": "Capsule",
+      "shape": { "radius": 0.25, "height": 0.6 },
+      "material": "rubber"
+    }
   ],
   "objects": [
     {
@@ -93,10 +119,10 @@
           "min": { "x": -1.0, "y": 0.0, "z": -1.0 },
           "max": { "x":  1.0, "y": 0.0, "z":  1.0 }
         },
-        "material": "rubber",
-        "owner": "ONE"
+        "owner": "ONE",
+        "prefab_ref": "RubberSphere"
       },
-      "radius_range": { "min": 0.2, "max": 0.4 }
+      "radius_range": { "min": 0.3, "max": 0.3 }
     },
     {
       "base": {
@@ -116,12 +142,12 @@
           "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
           "max": { "x": 0.0, "y": 0.0, "z": 0.0 }
         },
-        "material": "steel",
-        "owner": "TWO"
+        "owner": "TWO",
+        "prefab_ref": "SteelCuboid"
       },
       "size_range": {
-        "min": { "x": 0.3, "y": 0.3, "z": 0.3 },
-        "max": { "x": 0.7, "y": 0.7, "z": 0.7 }
+        "min": { "x": 0.5, "y": 0.5, "z": 0.5 },
+        "max": { "x": 0.5, "y": 0.5, "z": 0.5 }
       }
     },
     {
@@ -139,10 +165,10 @@
           "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
           "max": { "x": 0.0, "y": 0.0, "z": 0.0 }
         },
-        "material": "rubber",
-        "owner": "SEQUENTIAL"
+        "owner": "SEQUENTIAL",
+        "prefab_ref": "RubberSphere"
       },
-      "radius_range": { "min": 0.3, "max": 0.5 }
+      "radius_range": { "min": 0.3, "max": 0.3 }
     },
     {
       "base": {
@@ -156,11 +182,11 @@
           "min": { "x": -0.5, "y": 0.0, "z": -0.5 },
           "max": { "x":  0.5, "y": 0.0, "z":  0.5 }
         },
-        "material": "plastic",
-        "owner": "THREE"
+        "owner": "THREE",
+        "prefab_ref": "PlasticCylinder"
       },
-      "radius_range": { "min": 0.2, "max": 0.35 },
-      "height_range": { "min": 0.5, "max": 1.0 }
+      "radius_range": { "min": 0.28, "max": 0.28 },
+      "height_range": { "min": 0.75, "max": 0.75 }
     },
     {
       "base": {
@@ -180,11 +206,11 @@
           "min": { "x": -1.0, "y": 0.0, "z": -1.0 },
           "max": { "x":  1.0, "y": 0.0, "z":  1.0 }
         },
-        "material": "rubber",
-        "owner": "FOUR"
+        "owner": "FOUR",
+        "prefab_ref": "RubberCapsule"
       },
-      "radius_range": { "min": 0.2, "max": 0.3 },
-      "height_range": { "min": 0.4, "max": 0.8 }
+      "radius_range": { "min": 0.25, "max": 0.25 },
+      "height_range": { "min": 0.6, "max": 0.6 }
     }
   ]
 }

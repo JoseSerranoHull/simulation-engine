@@ -4,17 +4,18 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
 /* parasoft-end-suppress ALL */
 
-#include "components/AnimationComponents.h"  // SpawnLocType, EntityID
+#include "components/AnimationComponents.h"  // SpawnLocType
 
 // Forward declarations to avoid pulling in heavy headers
 namespace GE::ECS    { class EntityManager; }
 namespace GE::Scene  { class Scene; }
 namespace GE::Graphics { struct GpuUploadContext; class GraphicsPipeline; }
-namespace GE::Assets { class Model; }
+namespace GE::Assets { class Model; class Mesh; class Material; }
 class AssetManager;
 
 namespace GE::Scene::FB {
@@ -34,9 +35,49 @@ namespace GE::Scene::FB {
         float dynamicFriction { 0.0f };
     };
 
+    // ---------------------------------------------------------------------------
+    // Prefab system
+    // ---------------------------------------------------------------------------
+
+    /** @brief Shape kind stored in PrefabTemplate for collider selection at spawn time. */
+    enum class PrefabShapeKind : uint8_t { Sphere, Plane, Capsule, Cylinder, Cuboid };
+
+    /**
+     * @brief Pre-computed entity template built at scene load time by adaptPrefabs().
+     *        The shared GPU mesh is uploaded once and reused by all spawned instances.
+     *        Lifetime: owned by FlatBuffersScenario::m_prefabRegistry (valid until OnUnload).
+     */
+    struct PrefabTemplate {
+        std::string         name;
+        PrefabShapeKind     shapeKind { PrefabShapeKind::Sphere };
+
+        // Shape parameters (used to build the collider at spawn time)
+        float     radius { 0.5f };   // sphere radius / capsule+cylinder radius
+        float     height { 1.0f };   // capsule / cylinder height
+        glm::vec3 size   { 1.0f };   // cuboid full extents (x, y, z)
+
+        // Physics (computed from shape + material density at load time)
+        float     density     { 1.0f };
+        float     restitution { 0.6f };
+        float     mass        { 0.0f };
+        glm::mat3 invInertia  { glm::mat3(0.0f) };
+
+        // Owner-colored meshes — indices 0–3 = peer 1–4 (red/green/blue/yellow).
+        // Populated when useOwnerColors=true; all null otherwise.
+        std::array<GE::Assets::Mesh*, 4> ownerMeshes { nullptr, nullptr, nullptr, nullptr };
+
+        // Material-appearance mesh — populated when useOwnerColors=false.
+        // Textured (Phong pipeline) when texture_path specified; tinted flat-color otherwise.
+        GE::Assets::Mesh*                          materialMesh   { nullptr };
+        std::shared_ptr<GE::Assets::Material>      materialMatPtr;  // keeps Phong material alive
+
+        // Optional script type name (empty = no script attached on spawn)
+        std::string scriptType;
+    };
+
     /**
      * @brief Intermediate record for one spawner entry, populated by adaptSpawners().
-     *        Entity IDs are pre-created at load time; SpawnerSystem activates them at runtime.
+     *        References a PrefabTemplate by name; SpawnerSystem instantiates at runtime.
      */
     struct SpawnerRecord {
         std::string name;
@@ -57,11 +98,14 @@ namespace GE::Scene::FB {
         glm::vec3 linVelMin { 0.0f }, linVelMax { 0.0f };
         glm::vec3 angVelMin { 0.0f }, angVelMax { 0.0f };
 
-        // Pre-created entity IDs (in activation order, SEQUENTIAL cycling already applied)
-        std::vector<GE::ECS::EntityID> entityIds;
+        // Prefab reference (name in FBSceneContext::prefabRegistry)
+        std::string prefabRef;
 
         /// Peer ID (1-4) responsible for firing this spawner; derived from SpawnerOwnerType.
         uint8_t ownerPeerId { 1 };
+
+        /// True when SpawnerOwnerType::SEQUENTIAL — SpawnerSystem cycles color across peers.
+        bool isSequential { false };
     };
 
     /**
@@ -98,10 +142,11 @@ namespace GE::Scene::FB {
         bool useOwnerColors { true };
 
         // --- Output collections (populated by adapt*() calls) ---
-        std::vector<PhysicsMaterialRecord>    physicsMaterials;
-        std::vector<FBCameraRecord>           cameras;
-        std::vector<MaterialInteractionRecord> interactions;
-        std::vector<SpawnerRecord>            spawners;
+        std::vector<PhysicsMaterialRecord>              physicsMaterials;
+        std::vector<FBCameraRecord>                     cameras;
+        std::vector<MaterialInteractionRecord>          interactions;
+        std::vector<SpawnerRecord>                      spawners;
+        std::unordered_map<std::string, PrefabTemplate> prefabRegistry;
 
         // Owner color palette: ONE=red, TWO=green, THREE=blue, FOUR=yellow
         static constexpr std::array<glm::vec3, 4> ownerColors = {{

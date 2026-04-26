@@ -1,14 +1,15 @@
 #pragma once
 
 /* parasoft-begin-suppress ALL */
-#include <deque>
 #include <vector>
 #include <string>
 #include <cstdint>
 /* parasoft-end-suppress ALL */
 
 #include <glm/glm.hpp>
-#include "ecs/Entity.h"
+
+// Forward declaration to avoid circular include with FBSceneContext.h
+namespace GE::Scene::FB { struct PrefabTemplate; }
 
 namespace GE::Components {
 
@@ -46,15 +47,15 @@ namespace GE::Components {
     /**
      * @struct SpawnerComponent
      * @brief ECS component holding all runtime state for one logical spawner.
-     *        The entity pool (pendingIds) is pre-created at scene load time by
-     *        FBSceneAdapter::adaptSpawners() so that no GPU uploads happen during gameplay.
+     *        References a PrefabTemplate (built at scene load time); SpawnerSystem
+     *        calls EntityFactory::InstantiatePrefab() to create real entities at runtime.
      */
     struct SpawnerComponent {
         // --- Timing ---
         float startTime          { 0.0f };
         float elapsed            { 0.0f };
         float timeSinceLastSpawn { 0.0f };
-        bool  activated          { false };  // burst: fire-once guard; repeating: marks first tick past startTime
+        bool  activated          { false };
 
         // --- Spawn type ---
         bool     isBurst   { true };
@@ -69,16 +70,26 @@ namespace GE::Components {
         glm::vec3    sphereCenter {  0.0f };
         float        sphereRadius { 1.0f };
 
-        // --- Velocity ranges applied to each entity on activation ---
+        // --- Velocity ranges applied to each entity on spawn ---
         glm::vec3 linVelMin { 0.0f }, linVelMax { 0.0f };
         glm::vec3 angVelMin { 0.0f }, angVelMax { 0.0f };
 
         // --- Ownership (which peer fires this spawner) ---
-        /// Peer ID (1-4) that owns this spawner.  0 = unowned (all peers run it).
         uint8_t ownerPeerId { 0 };
 
-        // --- Pre-created entity pool (populated at load time) ---
-        std::deque<GE::ECS::EntityID> pendingIds;
+        // --- Prefab-based runtime spawning ---
+        // Non-owning pointer into FlatBuffersScenario::m_prefabRegistry (valid until OnUnload)
+        const GE::Scene::FB::PrefabTemplate* prefabTemplate { nullptr };
+        uint32_t                             spawnedCount   { 0 };
+        uint32_t                             maxCount       { 0 };
+        // True when SpawnerOwnerType::SEQUENTIAL — color cycles across 4 peers per spawn.
+        bool                                 isSequential   { false };
+        // When true, the auto-spawn timer freezes; ForceSpawnOne (Fire button) still works.
+        bool                                 paused         { false };
+        // Entity IDs of entities spawned by this spawner (world-space root entities).
+        // Populated at runtime by SpawnerSystem; cleared on Reset.
+        // Used by DebugOverlay to show them as virtual children without m_parentEntityID.
+        std::vector<uint32_t>                spawnedEntityIds;
     };
 
 } // namespace GE::Components

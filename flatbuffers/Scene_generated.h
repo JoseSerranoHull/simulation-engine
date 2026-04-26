@@ -108,6 +108,9 @@ struct CapsuleSpawnerBuilder;
 struct CuboidSpawner;
 struct CuboidSpawnerBuilder;
 
+struct Prefab;
+struct PrefabBuilder;
+
 struct Scene;
 struct SceneBuilder;
 
@@ -2333,7 +2336,8 @@ struct BaseSpawner FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_LINEAR_VELOCITY = 16,
     VT_ANGULAR_VELOCITY = 18,
     VT_MATERIAL = 20,
-    VT_OWNER = 22
+    VT_OWNER = 22,
+    VT_PREFAB_REF = 24  // hand-patched: name of the Prefab in Scene.prefabs[] to spawn
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -2382,6 +2386,9 @@ struct BaseSpawner FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   Simulation::SpawnerOwnerType owner() const {
     return static_cast<Simulation::SpawnerOwnerType>(GetField<int8_t>(VT_OWNER, 0));
   }
+  const ::flatbuffers::String *prefab_ref() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_PREFAB_REF);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -2399,6 +2406,8 @@ struct BaseSpawner FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyOffset(verifier, VT_MATERIAL) &&
            verifier.VerifyString(material()) &&
            VerifyField<int8_t>(verifier, VT_OWNER, 1) &&
+           VerifyOffset(verifier, VT_PREFAB_REF) &&
+           verifier.VerifyString(prefab_ref()) &&
            verifier.EndTable();
   }
 };
@@ -2754,6 +2763,104 @@ inline ::flatbuffers::Offset<CuboidSpawner> CreateCuboidSpawner(
   return builder_.Finish();
 }
 
+// Hand-patched: Prefab table for runtime entity templates.
+// VTable offsets follow flatc ordering rules (name=4, shape_type=6, shape=8, material=10, script_type=12, texture_path=14).
+struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PrefabBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME         = 4,
+    VT_SHAPE_TYPE   = 6,
+    VT_SHAPE        = 8,
+    VT_MATERIAL     = 10,
+    VT_SCRIPT_TYPE  = 12,
+    VT_TEXTURE_PATH = 14   // hand-patched: relative path for material-color mode
+  };
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
+  }
+  Simulation::Shape shape_type() const {
+    return static_cast<Simulation::Shape>(GetField<uint8_t>(VT_SHAPE_TYPE, 0));
+  }
+  const void *shape() const {
+    return GetPointer<const void *>(VT_SHAPE);
+  }
+  template<typename T> const T *shape_as() const;
+  const Simulation::Sphere *shape_as_Sphere() const {
+    return shape_type() == Simulation::Shape::Sphere ? static_cast<const Simulation::Sphere *>(shape()) : nullptr;
+  }
+  const Simulation::Plane *shape_as_Plane() const {
+    return shape_type() == Simulation::Shape::Plane ? static_cast<const Simulation::Plane *>(shape()) : nullptr;
+  }
+  const Simulation::Capsule *shape_as_Capsule() const {
+    return shape_type() == Simulation::Shape::Capsule ? static_cast<const Simulation::Capsule *>(shape()) : nullptr;
+  }
+  const Simulation::Cylinder *shape_as_Cylinder() const {
+    return shape_type() == Simulation::Shape::Cylinder ? static_cast<const Simulation::Cylinder *>(shape()) : nullptr;
+  }
+  const Simulation::Cuboid *shape_as_Cuboid() const {
+    return shape_type() == Simulation::Shape::Cuboid ? static_cast<const Simulation::Cuboid *>(shape()) : nullptr;
+  }
+  const ::flatbuffers::String *material() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_MATERIAL);
+  }
+  const ::flatbuffers::String *script_type() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_SCRIPT_TYPE);
+  }
+  const ::flatbuffers::String *texture_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_TEXTURE_PATH);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<uint8_t>(verifier, VT_SHAPE_TYPE, 1) &&
+           VerifyOffset(verifier, VT_SHAPE) &&
+           VerifyShape(verifier, shape(), shape_type()) &&
+           VerifyOffset(verifier, VT_MATERIAL) &&
+           verifier.VerifyString(material()) &&
+           VerifyOffset(verifier, VT_SCRIPT_TYPE) &&
+           verifier.VerifyString(script_type()) &&
+           VerifyOffset(verifier, VT_TEXTURE_PATH) &&
+           verifier.VerifyString(texture_path()) &&
+           verifier.EndTable();
+  }
+};
+
+template<> inline const Simulation::Sphere   *Prefab::shape_as<Simulation::Sphere>()   const { return shape_as_Sphere(); }
+template<> inline const Simulation::Plane    *Prefab::shape_as<Simulation::Plane>()    const { return shape_as_Plane(); }
+template<> inline const Simulation::Capsule  *Prefab::shape_as<Simulation::Capsule>()  const { return shape_as_Capsule(); }
+template<> inline const Simulation::Cylinder *Prefab::shape_as<Simulation::Cylinder>() const { return shape_as_Cylinder(); }
+template<> inline const Simulation::Cuboid   *Prefab::shape_as<Simulation::Cuboid>()   const { return shape_as_Cuboid(); }
+
+struct PrefabBuilder {
+  typedef Prefab Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
+    fbb_.AddOffset(Prefab::VT_NAME, name);
+  }
+  void add_shape_type(Simulation::Shape shape_type) {
+    fbb_.AddElement<uint8_t>(Prefab::VT_SHAPE_TYPE, static_cast<uint8_t>(shape_type), 0);
+  }
+  void add_shape(::flatbuffers::Offset<void> shape) {
+    fbb_.AddOffset(Prefab::VT_SHAPE, shape);
+  }
+  void add_material(::flatbuffers::Offset<::flatbuffers::String> material) {
+    fbb_.AddOffset(Prefab::VT_MATERIAL, material);
+  }
+  void add_script_type(::flatbuffers::Offset<::flatbuffers::String> script_type) {
+    fbb_.AddOffset(Prefab::VT_SCRIPT_TYPE, script_type);
+  }
+  explicit PrefabBuilder(::flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<Prefab> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    return ::flatbuffers::Offset<Prefab>(end);
+  }
+};
+
 struct Scene FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef SceneBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -2765,7 +2872,8 @@ struct Scene FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_SPAWNERS_TYPE = 14,
     VT_SPAWNERS = 16,
     VT_MATERIALS = 18,
-    VT_INTERACTIONS = 20
+    VT_INTERACTIONS = 20,
+    VT_PREFABS = 22   // hand-patched: named entity templates for runtime spawning
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -2794,6 +2902,9 @@ struct Scene FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::Vector<::flatbuffers::Offset<Simulation::MaterialInteraction>> *interactions() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Simulation::MaterialInteraction>> *>(VT_INTERACTIONS);
   }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<Simulation::Prefab>> *prefabs() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Simulation::Prefab>> *>(VT_PREFABS);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -2819,6 +2930,9 @@ struct Scene FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyOffset(verifier, VT_INTERACTIONS) &&
            verifier.VerifyVector(interactions()) &&
            verifier.VerifyVectorOfTables(interactions()) &&
+           VerifyOffset(verifier, VT_PREFABS) &&
+           verifier.VerifyVector(prefabs()) &&
+           verifier.VerifyVectorOfTables(prefabs()) &&
            verifier.EndTable();
   }
 };

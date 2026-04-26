@@ -159,11 +159,17 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     // 11. Move prefab registry into member (keeps PrefabTemplate* pointers valid for scene lifetime)
     m_prefabRegistry = std::move(adaptCtx.prefabRegistry);
 
+    // 11b. Wire flock spawn config so FlockingSystem::Restart() can scatter agents correctly
+    if (m_flockingSystem != nullptr) {
+        m_flockingSystem->m_spawnOrigin = adaptCtx.flockSpawnOrigin;
+        m_flockingSystem->m_spawnRadius = adaptCtx.flockSpawnRadius;
+    }
+
     // Build SpawnerComponent entities from adapted spawner records
     for (auto& rec : adaptCtx.spawners) {
         const GE::ECS::EntityID spawnerId = em->CreateEntity();
         GE::Components::Transform spawnTr;
-        spawnTr.m_position = rec.fixedPos;
+        spawnTr.m_localPosition = rec.fixedPos;
         em->AddComponent(spawnerId, spawnTr);
 
         GE::Components::Tag spawnTag;
@@ -447,6 +453,7 @@ void FlatBuffersScenario::OnGUI() {
             if (ImGui::Combo("Integration", &methodIdx, intMethodNames, 3)) {
                 m_physicsSystem->m_integrationMethod = static_cast<GE::Systems::IntegrationMethod>(methodIdx);
             }
+            ImGui::SliderInt("Solver Iterations", &m_physicsSystem->m_solverIterations, 1, 8);
         }
 
         ImGui::Separator();
@@ -741,7 +748,11 @@ void FlatBuffersScenario::OnGUI() {
                 ImGui::TextDisabled("No flocking agents in scene");
             } else {
 
-            ImGui::Checkbox("Freeze Agents", &m_flockingSystem->m_frozen);
+            if (ImGui::Button("Restart Flock")) {
+                m_flockingSystem->Restart(ServiceLocator::GetEntityManager());
+            }
+            ImGui::SameLine();
+            ImGui::Checkbox("Freeze", &m_flockingSystem->m_frozen);
             ImGui::Separator();
 
             // Spatial mode selector

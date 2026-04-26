@@ -231,11 +231,11 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
     GE::Components::Transform transform;
     if (obj->transform() != nullptr) {
         const auto* t = obj->transform();
-        transform.m_position = toVec3(t->position());
-        transform.m_rotation = glm::vec3{ t->orientation().yaw(),
-                                          t->orientation().pitch(),
-                                          t->orientation().roll() };
-        transform.m_scale    = toVec3(t->scale());
+        transform.m_localPosition = toVec3(t->position());
+        transform.m_localRotation = glm::vec3{ t->orientation().yaw(),
+                                               t->orientation().pitch(),
+                                               t->orientation().roll() };
+        transform.m_localScale    = toVec3(t->scale());
     }
     ctx.em->AddComponent(id, transform);
 
@@ -552,7 +552,7 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             GE::Components::Transform* transform =
                 ctx.em->GetTIComponent<GE::Components::Transform>(id);
             if (transform != nullptr) {
-                transform->m_position = ac.waypoints[0].position;
+                transform->m_localPosition = ac.waypoints[0].position;
             }
         }
 
@@ -576,7 +576,7 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         // Get the entity's world position from its Transform
         const GE::Components::Transform* tr =
             ctx.em->GetTIComponent<GE::Components::Transform>(id);
-        const glm::vec3 origin = (tr != nullptr) ? tr->m_position : glm::vec3{ 0.0f };
+        const glm::vec3 origin = (tr != nullptr) ? tr->m_localPosition : glm::vec3{ 0.0f };
 
         // Initialise particle flat grid
         cc.particles.resize(static_cast<std::size_t>(cc.rows * cc.cols));
@@ -750,7 +750,11 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         // Get spawn origin from the anchor object's Transform
         const GE::Components::Transform* anchor =
             ctx.em->GetTIComponent<GE::Components::Transform>(id);
-        const glm::vec3 origin = (anchor != nullptr) ? anchor->m_position : glm::vec3{ 0.0f };
+        const glm::vec3 origin = (anchor != nullptr) ? anchor->m_localPosition : glm::vec3{ 0.0f };
+
+        // Store spawn config so FlockingSystem::Restart() can rescatter agents correctly
+        ctx.flockSpawnOrigin = origin;
+        ctx.flockSpawnRadius = spawnRadius;
 
         // Prepare flat-color material
         if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
@@ -783,8 +787,8 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
 
             // Transform
             GE::Components::Transform agentTr;
-            agentTr.m_position = spawnPos;
-            agentTr.m_scale    = glm::vec3{ 1.0f };
+            agentTr.m_localPosition = spawnPos;
+            agentTr.m_localScale    = glm::vec3{ 1.0f };
             ctx.em->AddComponent(agentId, agentTr);
 
             // Tag

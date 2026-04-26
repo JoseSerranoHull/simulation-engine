@@ -38,6 +38,15 @@ public:
     // Freeze toggle: when true, zero all velocities and skip steering
     bool m_frozen { false };
 
+    // Spawn configuration — set by FlatBuffersScenario after scene load.
+    // Used by Restart() to scatter agents back to the original spawn sphere.
+    glm::vec3 m_spawnOrigin { 0.0f };
+    float     m_spawnRadius { 5.0f };
+
+    // Reset all agents to random positions inside the spawn sphere with small
+    // random velocities, then unfreeze. Lets settings take effect from a clean state.
+    void Restart(GE::ECS::EntityManager* em);
+
 private:
     // ---- Agent cache (rebuilt each frame) ----
     struct AgentEntry {

@@ -22,7 +22,7 @@ namespace GE::Scene {
             auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
 
             if (transform) {
-                transform->m_rotation.z += (CIRCLE_ROT_SPEED * deltaTime);
+                transform->m_localRotation.z += (CIRCLE_ROT_SPEED * deltaTime);
                 // Mark as dirty so the TransformSystem knows to update the matrices
                 transform->m_state = GE::Components::Transform::TransformState::Dirty;
             }
@@ -38,7 +38,7 @@ namespace GE::Scene {
                 const double angle = time * static_cast<double>(QUEEN_HOVER_FREQ);
                 const float hoverOffset = static_cast<float>(std::sin(angle)) * QUEEN_HOVER_AMP;
 
-                transform->m_position.y = QUEEN_BASE_HEIGHT + hoverOffset;
+                transform->m_localPosition.y = QUEEN_BASE_HEIGHT + hoverOffset;
                 transform->m_state = GE::Components::Transform::TransformState::Dirty;
             }
         }

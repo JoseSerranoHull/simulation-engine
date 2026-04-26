@@ -52,9 +52,37 @@ namespace GE::Systems {
         rb.torqueAccum += glm::cross(pointRelCoM, force);  // τ = r × F
     }
 
+    // =========================================================================
+    // SyncWorldToLocal — convert m_worldPosition → m_localPosition after corrections
+    // =========================================================================
+
+    void PhysicsSystem::SyncWorldToLocal(GE::Components::Transform& trans,
+                                          GE::ECS::EntityManager* em)
+    {
+        if (trans.m_parentEntityID == UINT32_MAX) {
+            trans.m_localPosition = trans.m_worldPosition;
+        } else {
+            auto* p = em->TryGetTIComponent<GE::Components::Transform>(trans.m_parentEntityID);
+            if (p) {
+                trans.m_localPosition = glm::vec3(
+                    glm::inverse(p->m_worldMatrix) * glm::vec4(trans.m_worldPosition, 1.0f));
+            } else {
+                trans.m_localPosition = trans.m_worldPosition;
+            }
+        }
+        // Patch the translation column of localMatrix so TransformSystem pass 2 computes
+        // the correct worldMatrix. Column 3 of a TRS matrix is always pure translation —
+        // the rotation/scale columns [0..2] are unaffected by this write.
+        // Without this, collision corrections to m_worldPosition are lost when
+        // TransformSystem overwrites m_worldPosition from the stale localMatrix in pass 3.
+        trans.m_localMatrix[3] = glm::vec4(trans.m_localPosition, 1.0f);
+    }
+
     void PhysicsSystem::OnUpdate(float dt) {
         Integrate(dt);
-        ResolveCollisions();
+        for (int iter = 0; iter < m_solverIterations; ++iter) {
+            ResolveCollisions();
+        }
     }
 
     // =========================================================================
@@ -87,27 +115,27 @@ namespace GE::Systems {
 
             const glm::vec3 accel = rb.forceAccum * rb.inverseMass;
 
-            // --- 2. Integration (method-dependent) ---
+            // --- 2. Integration (method-dependent) — operates on world-space position ---
             switch (m_integrationMethod) {
 
             case IntegrationMethod::Euler:
                 // Explicit (Forward) Euler: position uses OLD velocity.
                 // Tends to gain energy; useful as an educational comparison.
-                trans->m_position += rb.velocity * dt;
-                rb.velocity       += accel * dt;
+                trans->m_worldPosition += rb.velocity * dt;
+                rb.velocity            += accel * dt;
                 break;
 
             case IntegrationMethod::SemiImplicit:
                 // Symplectic Euler: velocity updated FIRST, then used for position.
                 // Energy-conserving for conservative forces — preferred default.
-                rb.velocity       += accel * dt;
-                trans->m_position += rb.velocity * dt;
+                rb.velocity            += accel * dt;
+                trans->m_worldPosition += rb.velocity * dt;
                 break;
 
             case IntegrationMethod::RK4:
                 // 4th-order Runge-Kutta. Matches the analytic formula
                 // s = ut + 0.5*a*t² exactly for constant acceleration.
-                IntegrateRK4(trans->m_position, rb.velocity, accel, dt);
+                IntegrateRK4(trans->m_worldPosition, rb.velocity, accel, dt);
                 break;
             }
 
@@ -155,13 +183,14 @@ namespace GE::Systems {
                 }
             }
 
-            // --- 5. Write TRS matrix directly from physics state ---
-            // Bypasses TransformSystem's Euler-angle reconstruction so that
-            // the orientation matrix (not Euler angles) drives the render transform.
-            // Setting state = Clean prevents TransformSystem from overwriting it.
-            const glm::mat4 tMat = glm::translate(glm::mat4(1.0f), trans->m_position);
+            // --- 5. Write-back: world position → local, then build local matrix ---
+            // Bypasses TransformSystem's Euler-angle reconstruction so that the
+            // orientation matrix (not Euler angles) drives the render transform.
+            // Setting state = Clean prevents TransformSystem pass 1 from overwriting it.
+            SyncWorldToLocal(*trans, em);
+            const glm::mat4 tMat = glm::translate(glm::mat4(1.0f), trans->m_localPosition);
             const glm::mat4 rMat = glm::mat4(rb.orientation);
-            const glm::mat4 sMat = glm::scale(glm::mat4(1.0f), trans->m_scale);
+            const glm::mat4 sMat = glm::scale(glm::mat4(1.0f), trans->m_localScale);
             trans->m_localMatrix = tMat * rMat * sMat;
             trans->m_state = GE::Components::Transform::TransformState::Clean;
         }
@@ -249,9 +278,9 @@ namespace GE::Systems {
 
                 // Skip if sphere centre is outside the plane's bounded extent (sizeX/sizeZ == 0 → infinite).
                 const auto* pTrBounds = em->TryGetTIComponent<GE::Components::Transform>(pID);
-                if (!isInsidePlaneBounds(pCol, sTrans->m_position, pTrBounds)) continue;
+                if (!isInsidePlaneBounds(pCol, sTrans->m_worldPosition, pTrBounds)) continue;
 
-                GE::Physics::Sphere sphere(sTrans->m_position, sCol.radius);
+                GE::Physics::Sphere sphere(sTrans->m_worldPosition, sCol.radius);
                 GE::Physics::Plane  plane(pCol.normal * pCol.offset, pCol.normal);
 
                 const float dist = plane.DistanceToPoint(sphere.GetCenter());
@@ -265,7 +294,8 @@ namespace GE::Systems {
                     const float penetration = sphere.GetRadius() - dist;
 
                     // 1. Positional correction — push out of the plane
-                    sTrans->m_position += plane.GetNormal() * penetration;
+                    sTrans->m_worldPosition += plane.GetNormal() * penetration;
+                    SyncWorldToLocal(*sTrans, em);
 
                     // 2. Velocity reflection with restitution (Q5: override if active)
                     if (sRB) {
@@ -286,7 +316,7 @@ namespace GE::Systems {
                         const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
                         const auto* aoc   = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
                         if (aoc && pTrans && m_lastDt > 1e-6f) {
-                            planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                            planeVel = (pTrans->m_worldPosition - aoc->prevPosition) / m_lastDt;
                         }
 
                         const glm::vec3& pn = plane.GetNormal();
@@ -328,7 +358,7 @@ namespace GE::Systems {
                 // Skip pairs where both are static
                 if (aRB && aRB->isStatic && bRB && bRB->isStatic) continue;
 
-                const glm::vec3 diff      = aTrans->m_position - bTrans->m_position;
+                const glm::vec3 diff      = aTrans->m_worldPosition - bTrans->m_worldPosition;
                 const float     dist      = glm::length(diff);
                 const float     radiusSum = aCol.radius + bCol.radius;
 
@@ -350,7 +380,7 @@ namespace GE::Systems {
                     GE::Scripts::EntityPair pair{ std::min(aID, bID), std::max(aID, bID) };
                     GE::Scripts::CollisionInfo info;
                     info.otherEntity  = bID;   // from A's perspective; ScriptSystem mirrors for B
-                    info.contactPoint = aTrans->m_position + (-n) * aCol.radius;
+                    info.contactPoint = aTrans->m_worldPosition + (-n) * aCol.radius;
                     info.normal       = n;
                     info.penetration  = penetration;
                     m_currentContacts.insert(pair);
@@ -370,8 +400,14 @@ namespace GE::Systems {
                 // 1. Positional correction — proportional to inverse mass
                 if (totalInvMass > 0.0f) {
                     const glm::vec3 correction = (penetration / totalInvMass) * n;
-                    if (aRB && !aRB->isStatic && !aIsAnimated) aTrans->m_position += correction * invMassA;
-                    if (bRB && !bRB->isStatic && !bIsAnimated) bTrans->m_position -= correction * invMassB;
+                    if (aRB && !aRB->isStatic && !aIsAnimated) {
+                        aTrans->m_worldPosition += correction * invMassA;
+                        SyncWorldToLocal(*aTrans, em);
+                    }
+                    if (bRB && !bRB->isStatic && !bIsAnimated) {
+                        bTrans->m_worldPosition -= correction * invMassB;
+                        SyncWorldToLocal(*bTrans, em);
+                    }
                 }
 
                 // 2. Impulse response — general formula:  j = -(1+e)*vRel / (1/mA + 1/mB)
@@ -384,10 +420,10 @@ namespace GE::Systems {
                     glm::vec3 velA = aRB ? aRB->velocity : glm::vec3{ 0.0f };
                     glm::vec3 velB = bRB ? bRB->velocity : glm::vec3{ 0.0f };
                     if (aIsAnimated && m_lastDt > 1e-6f) {
-                        velA = (aTrans->m_position - aAOC->prevPosition) / m_lastDt;
+                        velA = (aTrans->m_worldPosition - aAOC->prevPosition) / m_lastDt;
                     }
                     if (bIsAnimated && m_lastDt > 1e-6f) {
-                        velB = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                        velB = (bTrans->m_worldPosition - bAOC->prevPosition) / m_lastDt;
                     }
 
                     const float vRel = glm::dot(velA - velB, n);
@@ -440,18 +476,18 @@ namespace GE::Systems {
 
                 if (!bTrans || sID == bID) continue;
 
-                // Build AABB from box centre (transform position) and half-extents
+                // Build AABB from box centre (world position) and half-extents
                 const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
-                const glm::vec3& boxCenter = bTrans->m_position;
+                const glm::vec3& boxCenter = bTrans->m_worldPosition;
 
                 // Closest point on AABB to sphere centre
                 const glm::vec3 closest{
-                    glm::clamp(sTrans->m_position.x, boxCenter.x - halfExt.x, boxCenter.x + halfExt.x),
-                    glm::clamp(sTrans->m_position.y, boxCenter.y - halfExt.y, boxCenter.y + halfExt.y),
-                    glm::clamp(sTrans->m_position.z, boxCenter.z - halfExt.z, boxCenter.z + halfExt.z)
+                    glm::clamp(sTrans->m_worldPosition.x, boxCenter.x - halfExt.x, boxCenter.x + halfExt.x),
+                    glm::clamp(sTrans->m_worldPosition.y, boxCenter.y - halfExt.y, boxCenter.y + halfExt.y),
+                    glm::clamp(sTrans->m_worldPosition.z, boxCenter.z - halfExt.z, boxCenter.z + halfExt.z)
                 };
 
-                const glm::vec3 diff = sTrans->m_position - closest;
+                const glm::vec3 diff = sTrans->m_worldPosition - closest;
                 const float distSq = glm::dot(diff, diff);
 
                 if (distSq >= sCol.radius * sCol.radius || distSq < 1e-12f) continue;
@@ -480,7 +516,8 @@ namespace GE::Systems {
                 }
 
                 // Positional correction — push sphere out
-                sTrans->m_position += normal * penetration;
+                sTrans->m_worldPosition += normal * penetration;
+                SyncWorldToLocal(*sTrans, em);
 
                 // Impulse response
                 if (sRB) {
@@ -490,7 +527,7 @@ namespace GE::Systems {
                     // Box is treated as infinite mass (static or animated)
                     glm::vec3 boxVel{ 0.0f };
                     if (bAOC && m_lastDt > 1e-6f) {
-                        boxVel = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                        boxVel = (bTrans->m_worldPosition - bAOC->prevPosition) / m_lastDt;
                     }
 
                     float e = sRB->restitution;
@@ -540,7 +577,7 @@ namespace GE::Systems {
                 const auto  pID  = planeArray.Index()[pIdx];
 
                 const auto* pTrBounds = em->TryGetTIComponent<GE::Components::Transform>(pID);
-                if (!isInsidePlaneBounds(pCol, bTrans->m_position, pTrBounds)) continue;
+                if (!isInsidePlaneBounds(pCol, bTrans->m_worldPosition, pTrBounds)) continue;
 
                 GE::Physics::Plane plane(pCol.normal * pCol.offset, pCol.normal);
                 const glm::vec3& pn = plane.GetNormal();
@@ -552,7 +589,7 @@ namespace GE::Systems {
                     (pn.y >= 0.0f) ? -halfExt.y : halfExt.y,
                     (pn.z >= 0.0f) ? -halfExt.z : halfExt.z
                 };
-                const glm::vec3 deepestPoint = bTrans->m_position + support;
+                const glm::vec3 deepestPoint = bTrans->m_worldPosition + support;
                 // Signed distance: negative means deepestPoint has crossed the plane.
                 const float dist = glm::dot(pn, deepestPoint - plane.GetPoint());
 
@@ -563,7 +600,8 @@ namespace GE::Systems {
                     }
 
                     const float penetration = -dist;
-                    bTrans->m_position += pn * penetration;
+                    bTrans->m_worldPosition += pn * penetration;
+                    SyncWorldToLocal(*bTrans, em);
 
                     float e = bRB->restitution;
                     if (m_restitutionOverride >= 0.0f) {
@@ -581,7 +619,7 @@ namespace GE::Systems {
                     const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
                     const auto* aoc    = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
                     if (aoc && pTrans && m_lastDt > 1e-6f) {
-                        planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                        planeVel = (pTrans->m_worldPosition - aoc->prevPosition) / m_lastDt;
                     }
 
                     const glm::vec3 relVel = bRB->velocity - planeVel;
@@ -612,15 +650,15 @@ namespace GE::Systems {
 
             // Capsule axis endpoints (Y-aligned)
             const float halfH = cCol.height * 0.5f;
-            const glm::vec3 top    = cTrans->m_position + glm::vec3(0.0f, +halfH, 0.0f);
-            const glm::vec3 bottom = cTrans->m_position + glm::vec3(0.0f, -halfH, 0.0f);
+            const glm::vec3 top    = cTrans->m_worldPosition + glm::vec3(0.0f, +halfH, 0.0f);
+            const glm::vec3 bottom = cTrans->m_worldPosition + glm::vec3(0.0f, -halfH, 0.0f);
 
             for (uint32_t pIdx = 0; pIdx < planeArray.GetCount(); ++pIdx) {
                 const auto& pCol = planeArray.Data()[pIdx];
                 const auto  pID  = planeArray.Index()[pIdx];
 
                 const auto* pTrBounds = em->TryGetTIComponent<GE::Components::Transform>(pID);
-                if (!isInsidePlaneBounds(pCol, cTrans->m_position, pTrBounds)) continue;
+                if (!isInsidePlaneBounds(pCol, cTrans->m_worldPosition, pTrBounds)) continue;
 
                 GE::Physics::Plane plane(pCol.normal * pCol.offset, pCol.normal);
                 const glm::vec3& pn = plane.GetNormal();
@@ -637,7 +675,8 @@ namespace GE::Systems {
                     }
 
                     const float penetration = cCol.radius - minDist;
-                    cTrans->m_position += pn * penetration;
+                    cTrans->m_worldPosition += pn * penetration;
+                    SyncWorldToLocal(*cTrans, em);
 
                     float e = cRB->restitution;
                     if (m_restitutionOverride >= 0.0f) {
@@ -655,7 +694,7 @@ namespace GE::Systems {
                     const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
                     const auto* aoc    = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
                     if (aoc && pTrans && m_lastDt > 1e-6f) {
-                        planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                        planeVel = (pTrans->m_worldPosition - aoc->prevPosition) / m_lastDt;
                     }
 
                     const glm::vec3 relVel = cRB->velocity - planeVel;
@@ -684,15 +723,15 @@ namespace GE::Systems {
             if (!cTrans || !cRB || cRB->isStatic) continue;
 
             const float halfH = cCol.height * 0.5f;
-            const glm::vec3 top    = cTrans->m_position + glm::vec3(0.0f, +halfH, 0.0f);
-            const glm::vec3 bottom = cTrans->m_position + glm::vec3(0.0f, -halfH, 0.0f);
+            const glm::vec3 top    = cTrans->m_worldPosition + glm::vec3(0.0f, +halfH, 0.0f);
+            const glm::vec3 bottom = cTrans->m_worldPosition + glm::vec3(0.0f, -halfH, 0.0f);
 
             for (uint32_t pIdx = 0; pIdx < planeArray.GetCount(); ++pIdx) {
                 const auto& pCol = planeArray.Data()[pIdx];
                 const auto  pID  = planeArray.Index()[pIdx];
 
                 const auto* pTrBounds = em->TryGetTIComponent<GE::Components::Transform>(pID);
-                if (!isInsidePlaneBounds(pCol, cTrans->m_position, pTrBounds)) continue;
+                if (!isInsidePlaneBounds(pCol, cTrans->m_worldPosition, pTrBounds)) continue;
 
                 GE::Physics::Plane plane(pCol.normal * pCol.offset, pCol.normal);
                 const glm::vec3& pn = plane.GetNormal();
@@ -708,7 +747,8 @@ namespace GE::Systems {
                     }
 
                     const float penetration = cCol.radius - minDist;
-                    cTrans->m_position += pn * penetration;
+                    cTrans->m_worldPosition += pn * penetration;
+                    SyncWorldToLocal(*cTrans, em);
 
                     float e = cRB->restitution;
                     if (m_restitutionOverride >= 0.0f) {
@@ -726,7 +766,7 @@ namespace GE::Systems {
                     const auto* pTrans = em->TryGetTIComponent<GE::Components::Transform>(pID);
                     const auto* aoc    = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(pID);
                     if (aoc && pTrans && m_lastDt > 1e-6f) {
-                        planeVel = (pTrans->m_position - aoc->prevPosition) / m_lastDt;
+                        planeVel = (pTrans->m_worldPosition - aoc->prevPosition) / m_lastDt;
                     }
 
                     const glm::vec3 relVel = cRB->velocity - planeVel;
@@ -757,7 +797,7 @@ namespace GE::Systems {
             if (!cTrans || !cRB || cRB->isStatic) continue;
 
             const float halfH    = cCol.height * 0.5f;
-            const glm::vec3 capBot = cTrans->m_position - glm::vec3(0.0f, halfH, 0.0f);
+            const glm::vec3 capBot = cTrans->m_worldPosition - glm::vec3(0.0f, halfH, 0.0f);
             const glm::vec3 axis   = glm::vec3(0.0f, cCol.height, 0.0f); // capTop - capBot
             const float axisLenSq  = cCol.height * cCol.height;
 
@@ -769,7 +809,7 @@ namespace GE::Systems {
                 if (!bTrans || cID == bID) continue;
 
                 const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
-                const glm::vec3& boxCenter = bTrans->m_position;
+                const glm::vec3& boxCenter = bTrans->m_worldPosition;
 
                 // Closest point on capsule segment to box centre
                 const float t = glm::clamp(glm::dot(boxCenter - capBot, axis) / axisLenSq, 0.0f, 1.0f);
@@ -796,7 +836,8 @@ namespace GE::Systems {
                 const glm::vec3 normal      = diff / dist;   // box → capsule
                 const float     penetration = cCol.radius - dist;
 
-                cTrans->m_position += normal * penetration;
+                cTrans->m_worldPosition += normal * penetration;
+                SyncWorldToLocal(*cTrans, em);
 
                 float e = cRB->restitution;
                 if (m_restitutionOverride >= 0.0f) {
@@ -813,7 +854,7 @@ namespace GE::Systems {
                 const auto* bAOC = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(bID);
                 glm::vec3 boxVel{ 0.0f };
                 if (bAOC && m_lastDt > 1e-6f) {
-                    boxVel = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                    boxVel = (bTrans->m_worldPosition - bAOC->prevPosition) / m_lastDt;
                 }
 
                 const glm::vec3 relVel = cRB->velocity - boxVel;
@@ -851,15 +892,15 @@ namespace GE::Systems {
                 if (!cTrans || sID == cID) continue;
 
                 const float halfH      = cCol.height * 0.5f;
-                const glm::vec3 capBot = cTrans->m_position - glm::vec3(0.0f, halfH, 0.0f);
+                const glm::vec3 capBot = cTrans->m_worldPosition - glm::vec3(0.0f, halfH, 0.0f);
                 const glm::vec3 axis   = glm::vec3(0.0f, cCol.height, 0.0f);
                 const float axisLenSq  = cCol.height * cCol.height;
 
                 // Closest point on capsule axis to sphere centre
-                const float t = glm::clamp(glm::dot(sTrans->m_position - capBot, axis) / axisLenSq, 0.0f, 1.0f);
+                const float t = glm::clamp(glm::dot(sTrans->m_worldPosition - capBot, axis) / axisLenSq, 0.0f, 1.0f);
                 const glm::vec3 closestOnAxis = capBot + t * axis;
 
-                const glm::vec3 diff      = sTrans->m_position - closestOnAxis;
+                const glm::vec3 diff      = sTrans->m_worldPosition - closestOnAxis;
                 const float     distSq    = glm::dot(diff, diff);
                 const float     sumRadius = sCol.radius + cCol.radius;
 
@@ -880,8 +921,14 @@ namespace GE::Systems {
 
                 if (totalInvMass > 0.0f) {
                     const glm::vec3 correction = (penetration / totalInvMass) * normal;
-                    if (sRB && !sRB->isStatic) sTrans->m_position += correction * invMassS;
-                    if (cRB && !cRB->isStatic) cTrans->m_position -= correction * invMassC;
+                    if (sRB && !sRB->isStatic) {
+                        sTrans->m_worldPosition += correction * invMassS;
+                        SyncWorldToLocal(*sTrans, em);
+                    }
+                    if (cRB && !cRB->isStatic) {
+                        cTrans->m_worldPosition -= correction * invMassC;
+                        SyncWorldToLocal(*cTrans, em);
+                    }
                 }
 
                 if (totalInvMass > 0.0f) {
@@ -935,7 +982,7 @@ namespace GE::Systems {
                 if (aStatic && bStatic) continue;
 
                 const glm::vec3 hB{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
-                const glm::vec3 delta = bTrans->m_position - aTrans->m_position;
+                const glm::vec3 delta = bTrans->m_worldPosition - aTrans->m_worldPosition;
 
                 const float ox = hA.x + hB.x - std::abs(delta.x);
                 const float oy = hA.y + hB.y - std::abs(delta.y);
@@ -969,8 +1016,14 @@ namespace GE::Systems {
 
                 // Positional correction
                 const glm::vec3 correction = (penetration / totalInvMass) * normal;
-                if (!aStatic) aTrans->m_position -= correction * invMassA;
-                if (!bStatic) bTrans->m_position += correction * invMassB;
+                if (!aStatic) {
+                    aTrans->m_worldPosition -= correction * invMassA;
+                    SyncWorldToLocal(*aTrans, em);
+                }
+                if (!bStatic) {
+                    bTrans->m_worldPosition += correction * invMassB;
+                    SyncWorldToLocal(*bTrans, em);
+                }
 
                 // Impulse response
                 float e = 0.3f;
@@ -1011,7 +1064,7 @@ namespace GE::Systems {
             if (!cTrans || !cRB || cRB->isStatic) continue;
 
             const float halfH     = cCol.height * 0.5f;
-            const glm::vec3 cylBot = cTrans->m_position - glm::vec3(0.0f, halfH, 0.0f);
+            const glm::vec3 cylBot = cTrans->m_worldPosition - glm::vec3(0.0f, halfH, 0.0f);
             const glm::vec3 axis   = glm::vec3(0.0f, cCol.height, 0.0f);
             const float axisLenSq  = cCol.height * cCol.height;
 
@@ -1023,7 +1076,7 @@ namespace GE::Systems {
                 if (!bTrans || cID == bID) continue;
 
                 const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
-                const glm::vec3& boxCenter = bTrans->m_position;
+                const glm::vec3& boxCenter = bTrans->m_worldPosition;
 
                 const float t = glm::clamp(glm::dot(boxCenter - cylBot, axis) / axisLenSq, 0.0f, 1.0f);
                 const glm::vec3 closestOnAxis = cylBot + t * axis;
@@ -1048,7 +1101,8 @@ namespace GE::Systems {
                 const glm::vec3 normal      = diff / dist;
                 const float     penetration = cCol.radius - dist;
 
-                cTrans->m_position += normal * penetration;
+                cTrans->m_worldPosition += normal * penetration;
+                SyncWorldToLocal(*cTrans, em);
 
                 float e = cRB->restitution;
                 if (m_restitutionOverride >= 0.0f) {
@@ -1065,7 +1119,7 @@ namespace GE::Systems {
                 const auto* bAOC = em->TryGetTIComponent<GE::Components::AnimatedObjectComponent>(bID);
                 glm::vec3 boxVel{ 0.0f };
                 if (bAOC && m_lastDt > 1e-6f) {
-                    boxVel = (bTrans->m_position - bAOC->prevPosition) / m_lastDt;
+                    boxVel = (bTrans->m_worldPosition - bAOC->prevPosition) / m_lastDt;
                 }
 
                 const glm::vec3 relVel = cRB->velocity - boxVel;
@@ -1094,7 +1148,7 @@ namespace GE::Systems {
             if (!cTrans || !cRB || cRB->isStatic) continue;
 
             const float halfH     = cCol.height * 0.5f;
-            const glm::vec3 cylBot = cTrans->m_position - glm::vec3(0.0f, halfH, 0.0f);
+            const glm::vec3 cylBot = cTrans->m_worldPosition - glm::vec3(0.0f, halfH, 0.0f);
             const glm::vec3 axis   = glm::vec3(0.0f, cCol.height, 0.0f);
             const float axisLenSq  = cCol.height * cCol.height;
 
@@ -1106,10 +1160,10 @@ namespace GE::Systems {
 
                 if (!sTrans || cID == sID) continue;
 
-                const float t = glm::clamp(glm::dot(sTrans->m_position - cylBot, axis) / axisLenSq, 0.0f, 1.0f);
+                const float t = glm::clamp(glm::dot(sTrans->m_worldPosition - cylBot, axis) / axisLenSq, 0.0f, 1.0f);
                 const glm::vec3 closestOnAxis = cylBot + t * axis;
 
-                const glm::vec3 diff   = sTrans->m_position - closestOnAxis;
+                const glm::vec3 diff   = sTrans->m_worldPosition - closestOnAxis;
                 const float     distSq = glm::dot(diff, diff);
                 const float     sumR   = cCol.radius + sCol.radius;
 
@@ -1131,8 +1185,12 @@ namespace GE::Systems {
                 if (totalInvMass <= 0.0f) continue;
 
                 const glm::vec3 correction = (penetration / totalInvMass) * normal;
-                cTrans->m_position -= correction * invMassC;
-                if (!sStatic) sTrans->m_position += correction * invMassS;
+                cTrans->m_worldPosition -= correction * invMassC;
+                SyncWorldToLocal(*cTrans, em);
+                if (!sStatic) {
+                    sTrans->m_worldPosition += correction * invMassS;
+                    SyncWorldToLocal(*sTrans, em);
+                }
 
                 float e = cRB->restitution;
                 if (!sStatic) e = glm::min(e, sRB->restitution);
@@ -1169,7 +1227,7 @@ namespace GE::Systems {
 
             if (!aTrans || !aRB || aRB->isStatic) continue;
 
-            const glm::vec3 aBot  = aTrans->m_position - glm::vec3(0.0f, aCol.height * 0.5f, 0.0f);
+            const glm::vec3 aBot  = aTrans->m_worldPosition - glm::vec3(0.0f, aCol.height * 0.5f, 0.0f);
             const glm::vec3 aAxis = glm::vec3(0.0f, aCol.height, 0.0f);
             const float aLenSq    = aCol.height * aCol.height;
 
@@ -1182,13 +1240,13 @@ namespace GE::Systems {
                 if (!bTrans) continue;
                 const bool bStatic = (!bRB || bRB->isStatic);
 
-                const glm::vec3 bBot  = bTrans->m_position - glm::vec3(0.0f, bCol.height * 0.5f, 0.0f);
+                const glm::vec3 bBot  = bTrans->m_worldPosition - glm::vec3(0.0f, bCol.height * 0.5f, 0.0f);
                 const glm::vec3 bAxis = glm::vec3(0.0f, bCol.height, 0.0f);
                 const float bLenSq    = bCol.height * bCol.height;
 
                 // Closest point on A's axis to B's centre, and vice versa
-                const float tA = glm::clamp(glm::dot(bTrans->m_position - aBot, aAxis) / aLenSq, 0.0f, 1.0f);
-                const float tB = glm::clamp(glm::dot(aTrans->m_position - bBot, bAxis) / bLenSq, 0.0f, 1.0f);
+                const float tA = glm::clamp(glm::dot(bTrans->m_worldPosition - aBot, aAxis) / aLenSq, 0.0f, 1.0f);
+                const float tB = glm::clamp(glm::dot(aTrans->m_worldPosition - bBot, bAxis) / bLenSq, 0.0f, 1.0f);
                 const glm::vec3 pA = aBot + tA * aAxis;
                 const glm::vec3 pB = bBot + tB * bAxis;
                 const glm::vec3 midpoint = (pA + pB) * 0.5f;
@@ -1220,8 +1278,12 @@ namespace GE::Systems {
                 if (totalInvMass <= 0.0f) continue;
 
                 const glm::vec3 correction = (penetration / totalInvMass) * normal;
-                aTrans->m_position += correction * invMassA;
-                if (!bStatic) bTrans->m_position -= correction * invMassB;
+                aTrans->m_worldPosition += correction * invMassA;
+                SyncWorldToLocal(*aTrans, em);
+                if (!bStatic) {
+                    bTrans->m_worldPosition -= correction * invMassB;
+                    SyncWorldToLocal(*bTrans, em);
+                }
 
                 float e = aRB->restitution;
                 if (!bStatic) e = glm::min(e, bRB->restitution);

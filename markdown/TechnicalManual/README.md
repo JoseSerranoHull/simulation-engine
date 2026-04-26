@@ -32,7 +32,7 @@ graph TD
     CF["06 Cloth &amp; Flocking<br/>Verlet cloth, spring nets,<br/>Reynolds boids, octree"]
     NET["07 UDP Networking<br/>P2P packets, dead reckoning,<br/>NetworkBridge isolation"]
     SCR["08 Scripting &amp; Services<br/>GameScriptComponent,<br/>ServiceLocator pattern"]
-    ANI["09 Animation &amp; Spawning<br/>Waypoint animation,<br/>entity pooling, burst spawning"]
+    ANI["09 Animation &amp; Spawning<br/>Waypoint animation,<br/>prefab instantiation, owner colors"]
 
     README --> ECS
     ECS --> THR
@@ -77,7 +77,7 @@ graph TD
 
 ### For gameplay programming:
 1. **[08 — Scripting & Services](08_Scripting_and_Services.md)** — Writing custom per-entity behaviours
-2. **[09 — Animation & Spawning](09_Animation_Spawning.md)** — Waypoints, easing, spawner pools
+2. **[09 — Animation & Spawning](09_Animation_Spawning.md)** — Waypoints, easing, prefab instantiation, owner colors, virtual hierarchy
 
 ---
 
@@ -122,6 +122,12 @@ simulation-engine/
 | **NetworkBridge** | The only class allowed to see both ECS and networking headers |
 | **Dead Reckoning** | Predicting a remote entity's position between received packets |
 | **ServiceLocator** | Static registry giving any system access to global services |
+| **PrefabTemplate** | Blueprint describing shape, physics params, and meshes for a spawnable entity |
+| **EntityFactory** | Creates fully-initialised ECS entities at runtime from a PrefabTemplate |
+| **m_localPosition** | Position relative to the parent entity (stored, authored by loaders/animation) |
+| **m_worldPosition** | World-space position (computed by TransformSystem each frame; read by physics/renderer) |
+| **SyncWorldToLocal** | Converts a physics world-space correction back into local-space for the next TransformSystem pass |
+| **Solver Iterations** | Number of times ResolveCollisions runs per physics tick; higher = more stable stacking |
 
 ---
 

@@ -321,7 +321,7 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
 
             ImGui::EndMenu();
         }
-
+	
         // --- CAMERA CONTROLS ---
         // Fulfills Requirement: Orthographic/Perspective Toggle
         if (ImGui::BeginMenu("Camera")) {

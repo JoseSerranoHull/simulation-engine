@@ -148,6 +148,11 @@ namespace GE::Scene::FB {
         std::vector<SpawnerRecord>                      spawners;
         std::unordered_map<std::string, PrefabTemplate> prefabRegistry;
 
+        // Flock spawn configuration — populated by adaptBehaviour() when FlockAgent is present.
+        // FlatBuffersScenario reads these after Adapt() to initialise FlockingSystem::Restart().
+        glm::vec3 flockSpawnOrigin { 0.0f };
+        float     flockSpawnRadius  { 5.0f };
+
         // Owner color palette: ONE=red, TWO=green, THREE=blue, FOUR=yellow
         static constexpr std::array<glm::vec3, 4> ownerColors = {{
             { 1.0f, 0.2f, 0.2f },   // ONE   — red

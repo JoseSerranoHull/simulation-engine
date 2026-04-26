@@ -408,14 +408,14 @@ void ColliderVisualizerSystem::RecordPass(
                 } else {
                     auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityA);
                     if (!t) continue;
-                    posA = t->m_position;
+                    posA = t->m_worldPosition;
                 }
                 if (s.entityB == GE::Systems::SpringSystem::WORLD_ANCHOR) {
                     posB = s.worldAnchorB;
                 } else {
                     auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityB);
                     if (!t) continue;
-                    posB = t->m_position;
+                    posB = t->m_worldPosition;
                 }
 
                 verts[vertCount]     = GE::Assets::Vertex{ posA, SPRING_COLOR, {}, {} };

@@ -13,17 +13,22 @@ namespace GE::Components {
             Dirty    // Needs recalculation
         };
 
-        // --- Local Transform (Data-Driven from .ini) ---
-        glm::vec3 m_position{ 0.0f };
-        glm::vec3 m_rotation{ 0.0f };
-        glm::vec3 m_scale{ 1.0f };
+        // --- Local Transform (stored; authored by scene loaders, Animation, Inspector) ---
+        glm::vec3 m_localPosition { 0.0f };
+        glm::vec3 m_localRotation { 0.0f };  // Euler degrees YXZ
+        glm::vec3 m_localScale    { 1.0f };
+
+        // --- World Transform (computed by TransformSystem each frame — read-only for all other systems) ---
+        glm::vec3 m_worldPosition { 0.0f };
+        glm::vec3 m_worldRotation { 0.0f };  // Euler degrees, extracted from worldMatrix (display only)
+        glm::vec3 m_worldScale    { 1.0f };
 
         // --- Matrices ---
-        glm::mat4 m_localMatrix{ 1.0f };
-        glm::mat4 m_worldMatrix{ 1.0f };
+        glm::mat4 m_localMatrix { 1.0f };
+        glm::mat4 m_worldMatrix { 1.0f };
 
-        // --- Hierarchy (Agnostic GameObject Logic) ---
-        uint32_t m_parentEntityID = UINT32_MAX; // Parent index; UINT32_MAX = root entity
+        // --- Hierarchy ---
+        uint32_t m_parentEntityID = UINT32_MAX; // UINT32_MAX = root entity
 
         TransformState m_state = TransformState::Dirty;
     };

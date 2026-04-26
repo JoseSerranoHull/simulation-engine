@@ -1,6 +1,7 @@
 #pragma once
 #include "ecs/IECSystem.h"
 #include "ecs/EntityManager.h"
+#include "components/Transform.h"
 #include "components/PhysicsComponents.h"
 #include "physics/MaterialInteractionRegistry.h"
 #include "scripts/CollisionInfo.h"
@@ -52,6 +53,11 @@ namespace GE::Systems {
         /** Global gravity toggle — when false, no gravity force is applied to any RigidBody. */
         bool  m_gravityEnabled{ true };
 
+        /** Number of collision solver passes per physics tick.
+         *  Higher values improve stacking stability at the cost of CPU time.
+         *  3 is a good balance; 1 is the old single-pass behaviour. */
+        int   m_solverIterations{ 3 };
+
         /** Q5: When >= 0.0f, overrides every body's restitution during collision resolution. -1 = disabled. */
         float m_restitutionOverride{ -1.0f };
 
@@ -96,5 +102,9 @@ namespace GE::Systems {
 
         /** @brief Fulfills Q4: Detects and resolves sphere-plane and sphere-sphere intersections. */
         void ResolveCollisions();
+
+        /** @brief Converts world-space position back to local-space after physics integration/correction. */
+        static void SyncWorldToLocal(GE::Components::Transform& trans,
+                                      GE::ECS::EntityManager* em);
     };
 }

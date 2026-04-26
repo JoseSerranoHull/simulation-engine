@@ -138,7 +138,7 @@ void ClothSystem::OnUpdate(float dt) {
             GE::Components::Transform* tr = em->TryGetTIComponent<GE::Components::Transform>(seid);
             if (tr == nullptr) { continue; }
 
-            const glm::vec3 sphereCenter = tr->m_position;
+            const glm::vec3 sphereCenter = tr->m_worldPosition;
             const float     sphereRadius = sc.radius;
 
             for (auto& p : cc.particles) {

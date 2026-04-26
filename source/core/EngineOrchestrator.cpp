@@ -511,16 +511,16 @@ void EngineOrchestrator::updateUniformBuffer(const uint32_t currentImage) {
         auto* const trans = em->GetTIComponent<GE::Components::Transform>(lightEntityID);
 
         if (trans) {
-            ubo.lightPos = trans->m_position;
+            ubo.lightPos = trans->m_worldPosition;
             ubo.lightColor = lightComp.color * lightComp.intensity * inputManager->getColorMod();
 
             // Compute light-space matrix for shadow mapping
             const glm::vec3 shadowTarget{ 0.0f, 0.0f, 0.0f };
-            const glm::vec3 lightDir = glm::normalize(shadowTarget - trans->m_position);
+            const glm::vec3 lightDir = glm::normalize(shadowTarget - trans->m_worldPosition);
             const glm::vec3 up = (glm::abs(lightDir.x) < 0.001f && glm::abs(lightDir.z) < 0.001f)
                 ? glm::vec3(0.0f, 0.0f, 1.0f)
                 : glm::vec3(0.0f, 1.0f, 0.0f);
-            const glm::mat4 lightView = glm::lookAt(trans->m_position, shadowTarget, up);
+            const glm::mat4 lightView = glm::lookAt(trans->m_worldPosition, shadowTarget, up);
             glm::mat4 lightProj = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 20.0f);
             lightProj[1][1] *= -1.0f; // Vulkan NDC Y-flip
             ubo.lightSpaceMatrix = lightProj * lightView;

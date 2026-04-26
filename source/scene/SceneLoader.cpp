@@ -181,9 +181,9 @@ namespace GE::Scene {
         GE::Components::Transform trans;
 
         // Standard properties
-        if (props.count("Position")) trans.m_position = parseVec3(props.at("Position"));
-        if (props.count("Rotation")) trans.m_rotation = parseVec3(props.at("Rotation"));
-        if (props.count("Scale"))    trans.m_scale = parseVec3(props.at("Scale"));
+        if (props.count("Position")) trans.m_localPosition = parseVec3(props.at("Position"));
+        if (props.count("Rotation")) trans.m_localRotation = parseVec3(props.at("Rotation"));
+        if (props.count("Scale"))    trans.m_localScale    = parseVec3(props.at("Scale"));
 
         // NEW: Agnostic Hierarchy Linking
         if (props.count("Parent")) {
@@ -598,8 +598,8 @@ namespace GE::Scene {
         scene->addEntity(name, id);
 
         GE::Components::Transform tr;
-        tr.m_position = pos;
-        tr.m_scale    = glm::vec3(1.0f);
+        tr.m_localPosition = pos;
+        tr.m_localScale    = glm::vec3(1.0f);
         tr.m_state    = GE::Components::Transform::TransformState::Dirty;
         em->AddComponent(id, tr);
 

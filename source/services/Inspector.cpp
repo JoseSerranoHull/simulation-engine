@@ -31,15 +31,21 @@ void Inspector::Draw(const GE::ECS::EntityID entityID, GE::ECS::EntityManager* c
 void Inspector::DrawTransform(GE::Components::Transform* const t) const {
     if (!ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) return;
 
-    if (ImGui::DragFloat3("Position", &t->m_position.x, 0.05f)) {
+    ImGui::TextDisabled("Local");
+    if (ImGui::DragFloat3("Position##L", &t->m_localPosition.x, 0.05f))
         t->m_state = GE::Components::Transform::TransformState::Dirty;
-    }
-    if (ImGui::DragFloat3("Rotation", &t->m_rotation.x, 0.5f)) {
+    if (ImGui::DragFloat3("Rotation##L", &t->m_localRotation.x, 0.5f))
         t->m_state = GE::Components::Transform::TransformState::Dirty;
-    }
-    if (ImGui::DragFloat3("Scale", &t->m_scale.x, 0.01f, 0.001f, 1000.0f)) {
+    if (ImGui::DragFloat3("Scale##L", &t->m_localScale.x, 0.01f, 0.001f, 1000.0f))
         t->m_state = GE::Components::Transform::TransformState::Dirty;
-    }
+
+    ImGui::Separator();
+    ImGui::TextDisabled("World (read-only)");
+    ImGui::BeginDisabled();
+    ImGui::DragFloat3("Position##W", &t->m_worldPosition.x, 0.05f);
+    ImGui::DragFloat3("Rotation##W", &t->m_worldRotation.x, 0.5f);
+    ImGui::DragFloat3("Scale##W",    &t->m_worldScale.x,    0.01f);
+    ImGui::EndDisabled();
 }
 
 void Inspector::DrawRigidBody(GE::Components::RigidBody* const rb) const {

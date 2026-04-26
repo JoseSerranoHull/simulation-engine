@@ -24,7 +24,7 @@ void SpringSystem::OnUpdate(float dt) {
         } else {
             auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityA);
             if (!t) continue;
-            posA = t->m_position;
+            posA = t->m_worldPosition;
             rbA  = em->TryGetTIComponent<GE::Components::RigidBody>(s.entityA);
             if (rbA) velA = rbA->velocity;
         }
@@ -34,7 +34,7 @@ void SpringSystem::OnUpdate(float dt) {
         } else {
             auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityB);
             if (!t) continue;
-            posB = t->m_position;
+            posB = t->m_worldPosition;
             rbB  = em->TryGetTIComponent<GE::Components::RigidBody>(s.entityB);
             if (rbB) velB = rbB->velocity;
         }

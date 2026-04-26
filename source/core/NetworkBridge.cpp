@@ -66,7 +66,7 @@ void NetworkBridge::BroadcastOwnedStates() {
         pkt.header.sequence = m_outSequence++;
 
         pkt.entityId        = entityId;
-        pkt.position        = tr->m_position;
+        pkt.position        = tr->m_worldPosition;
         // Derive orientation from world matrix (rotation part), pack as x y z w
         {
             const glm::quat q = glm::quat_cast(glm::mat3(tr->m_worldMatrix));
@@ -171,7 +171,7 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
                           pkt.orientation[1],   // y
                           pkt.orientation[2]);  // z
         const glm::mat3 rotMat = glm::mat3_cast(q);
-        const glm::vec3 scale  = tr->m_scale;
+        const glm::vec3 scale  = tr->m_localScale;
         tr->m_worldMatrix = glm::mat4(
             glm::vec4(rotMat[0] * scale.x, 0.0f),
             glm::vec4(rotMat[1] * scale.y, 0.0f),
@@ -220,7 +220,7 @@ void NetworkBridge::UpdateRemoteEntities(float dt)
             // Active blend: lerp from current rendered position toward predicted
             const float alpha = dt / rs.blendTimer;
             const float t     = glm::clamp(alpha, 0.0f, 1.0f);
-            rs.renderPosition = glm::mix(tr->m_position, predictedPos, t);
+            rs.renderPosition = glm::mix(tr->m_worldPosition, predictedPos, t);
             rs.blendTimer    -= dt;
             if (rs.blendTimer < 0.0f) { rs.blendTimer = 0.0f; }
         } else {
@@ -229,7 +229,8 @@ void NetworkBridge::UpdateRemoteEntities(float dt)
         }
 
         // Apply to entity (overwrites whatever PhysicsSystem did this tick)
-        tr->m_position        = rs.renderPosition;
+        tr->m_localPosition   = rs.renderPosition;
+        tr->m_worldPosition   = rs.renderPosition;
         rb->velocity          = rs.authVelocity;
         tr->m_worldMatrix[3]  = glm::vec4(rs.renderPosition, 1.0f);
     }
@@ -287,8 +288,9 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
     }
 
     // Activate the entity: move it into the world and enable physics
-    tr->m_position = pkt.position;
-    tr->m_scale    = pkt.scale;
+    tr->m_localPosition = pkt.position;
+    tr->m_worldPosition = pkt.position;
+    tr->m_localScale    = pkt.scale;
     tr->m_worldMatrix = glm::mat4(
         glm::vec4(pkt.scale.x, 0.0f,      0.0f,      0.0f),
         glm::vec4(0.0f,      pkt.scale.y, 0.0f,      0.0f),

@@ -50,7 +50,7 @@ namespace GE::Physics {
                 auto* trans = em->GetTIComponent<GE::Components::Transform>(id);
 
                 if (trans) {
-                    glm::vec2 worldPos = glm::vec2(trans->m_position.x, trans->m_position.y) + col.offset;
+                    glm::vec2 worldPos = glm::vec2(trans->m_worldPosition.x, trans->m_worldPosition.y) + col.offset;
                     float dist = glm::distance(center, worldPos);
                     if (dist <= (radius + col.radius)) {
                         resultsBuffer[count++] = id;

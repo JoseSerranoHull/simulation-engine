@@ -75,11 +75,10 @@ The simplest method. Compute velocity from the **old** state, then update positi
 ```cpp
 // source/systems/PhysicsSystem.cpp — Euler branch
 glm::vec3 acceleration = forceAccum * rb.inverseMass;
-if (rb.useGravity) acceleration.y -= 9.81f;
 
-rb.velocity          += acceleration * dt;         // Update velocity
-tr->m_position       += rb.velocity * dt;          // Update position using OLD velocity
-// Note: This "old velocity" means we're extrapolating FROM the start of the tick
+rb.velocity              += acceleration * dt;
+tr->m_worldPosition      += rb.velocity * dt;   // writes world-space position
+// SyncWorldToLocal() then converts worldPosition → localPosition + rebuilds localMatrix
 ```
 
 **Problem:** Euler adds energy to conservative systems. A bouncing ball bounces higher each tick. It is numerically unstable for large `dt` values.
@@ -91,10 +90,9 @@ Update velocity **first**, then use the new velocity for position:
 ```cpp
 // source/systems/PhysicsSystem.cpp — Semi-Implicit branch
 glm::vec3 acceleration = forceAccum * rb.inverseMass;
-if (rb.useGravity) acceleration.y -= 9.81f;
 
-rb.velocity    += acceleration * dt;    // Update velocity first
-tr->m_position += rb.velocity * dt;    // Then use NEW velocity for position
+rb.velocity              += acceleration * dt;    // velocity updated first
+tr->m_worldPosition      += rb.velocity * dt;    // then use NEW velocity
 ```
 
 This tiny change makes the integrator **symplectic** — it conserves energy for conservative forces (gravity, spring forces). A bouncing ball bounces to exactly the same height each time. This is the correct choice for game physics simulations.
@@ -105,17 +103,13 @@ RK4 takes four sub-step samples and combines them with a weighted average. It is
 
 ```cpp
 // source/systems/PhysicsSystem.cpp — RK4 branch
-// For constant acceleration a, all four k derivatives are equal:
-const glm::vec3 accel = forceAccum * rb.inverseMass + (rb.useGravity ? glm::vec3{0,-9.81f,0} : glm::vec3{0});
+const glm::vec3 k1p = rb.velocity;
+const glm::vec3 k2p = rb.velocity + accel * (dt * 0.5f);
+const glm::vec3 k3p = rb.velocity + accel * (dt * 0.5f);
+const glm::vec3 k4p = rb.velocity + accel * dt;
 
-const glm::vec3 k1p = rb.velocity;                   // Slope at t
-const glm::vec3 k2p = rb.velocity + accel * (dt * 0.5f); // Slope at t + dt/2 (midpoint)
-const glm::vec3 k3p = rb.velocity + accel * (dt * 0.5f); // Slope at t + dt/2 (midpoint again)
-const glm::vec3 k4p = rb.velocity + accel * dt;           // Slope at t + dt
-
-// Weighted average: 1/6 * (k1 + 2k2 + 2k3 + k4)
-tr->m_position += (dt / 6.0f) * (k1p + 2.0f*k2p + 2.0f*k3p + k4p);
-rb.velocity    += accel * dt;   // Velocity update simplifies to standard for constant a
+tr->m_worldPosition += (dt / 6.0f) * (k1p + 2.0f*k2p + 2.0f*k3p + k4p);
+rb.velocity         += accel * dt;
 ```
 
 For constant gravity, RK4 gives the same result as the analytic solution. It becomes beneficial only for forces that vary with position or velocity (springs, drag). The cost is 4× more force evaluations per tick.
@@ -145,18 +139,17 @@ distance(centerA, centerB) < radiusA + radiusB
 // source/systems/PhysicsSystem.cpp — broadphase + narrowphase
 for (uint32_t i = 0; i < sphereCount; ++i) {
     for (uint32_t j = i + 1; j < sphereCount; ++j) {
-        glm::vec3 posA = transformA.m_position;
-        glm::vec3 posB = transformB.m_position;
+        // Use m_worldPosition — the world-space coordinate computed by TransformSystem
+        glm::vec3 posA = transformA->m_worldPosition;
+        glm::vec3 posB = transformB->m_worldPosition;
         float     sumR = sphereA.radius + sphereB.radius;
 
-        glm::vec3 delta    = posA - posB;
-        float     distSq   = glm::dot(delta, delta);
+        glm::vec3 delta  = posA - posB;
+        float     distSq = glm::dot(delta, delta);
 
         if (distSq < sumR * sumR && distSq > 0.0f) {
-            // Collision detected
             float dist = glm::sqrt(distSq);
-            glm::vec3 n = delta / dist;   // Unit normal pointing A←B
-
+            glm::vec3 n = delta / dist;   // Unit normal A←B
             resolveCollision(idA, idB, n, dist, sumR, ...);
         }
     }
@@ -210,16 +203,22 @@ if (vRel < 0.0f) {
 
 ### Positional Correction (Preventing Sinking)
 
-After applying impulse, the spheres may still physically overlap (they were overlapping when we detected the collision). Without correction, objects sink into each other over many frames:
+After applying impulse, the spheres may still physically overlap. Without correction, objects sink into each other over many frames. The correction writes to `m_worldPosition`, then calls `SyncWorldToLocal` to keep `m_localPosition` and `m_localMatrix[3]` consistent — essential so TransformSystem computes the correct `m_worldMatrix` for the next frame:
 
 ```cpp
-// Positional correction: push spheres apart proportionally to their masses
-const float overlap = (radiusA + radiusB) - dist;
-const float correction = overlap / totalInvMass * 0.8f;  // 0.8 = "slop" factor
-
-tr_A->m_position += correction * rbA->inverseMass * n;
-tr_B->m_position -= correction * rbB->inverseMass * n;
+// Positional correction
+const glm::vec3 correction = (penetration / totalInvMass) * n;
+if (!aIsStatic) {
+    aTrans->m_worldPosition += correction * invMassA;
+    SyncWorldToLocal(*aTrans, em);   // patches m_localPosition and m_localMatrix[3]
+}
+if (!bIsStatic) {
+    bTrans->m_worldPosition -= correction * invMassB;
+    SyncWorldToLocal(*bTrans, em);
+}
 ```
+
+**Why `SyncWorldToLocal` must also patch `m_localMatrix[3]`:** TransformSystem sets `m_worldMatrix = m_localMatrix` (for root entities) in pass 2, then extracts `m_worldPosition` from `m_worldMatrix[3]` in pass 3. If `m_localMatrix[3]` were stale (pointing to the pre-correction position), pass 3 would overwrite the corrected `m_worldPosition` — causing the "quicksand sinking" bug where objects slowly drift through floors.
 
 ---
 
@@ -229,19 +228,21 @@ A plane is defined by a normal `n` and a signed distance `d` from the origin: `d
 
 ```cpp
 // Signed distance from sphere centre to plane
-float signedDist = glm::dot(transform.m_position, planeNormal) - planeOffset;
+GE::Physics::Sphere sphere(sTrans->m_worldPosition, sCol.radius);
+float dist = plane.DistanceToPoint(sphere.GetCenter());
 
-if (signedDist < sphere.radius) {  // Sphere is below (or touching) the plane
-    // Reflect velocity component along plane normal
-    float velAlongNormal = glm::dot(rb.velocity, planeNormal);
+if (dist < sphere.GetRadius()) {
+    float penetration = sphere.GetRadius() - dist;
 
-    if (velAlongNormal < 0.0f) {   // Moving toward plane
-        rb.velocity -= (1.0f + rb.restitution) * velAlongNormal * planeNormal;
+    // Push sphere out of plane (world-space correction)
+    sTrans->m_worldPosition += plane.GetNormal() * penetration;
+    SyncWorldToLocal(*sTrans, em);  // keep localPosition and localMatrix[3] in sync
+
+    // Reflect velocity
+    float vRelN = glm::dot(rb.velocity, plane.GetNormal());
+    if (vRelN < 0.0f) {
+        rb.velocity -= (1.0f + e) * vRelN * plane.GetNormal();
     }
-
-    // Push sphere out of plane
-    float penetration = sphere.radius - signedDist;
-    transform.m_position += planeNormal * penetration;
 }
 ```
 
@@ -361,23 +362,104 @@ Each physics tick (inside `UpdateCpuStages`):
 
 ```mermaid
 flowchart TD
-    A["SpringSystem::OnUpdate(dt)\nApply Hooke + damping spring forces\nto connected entity pairs"]
-    B["TransformSystem::OnUpdate(dt)\nRebuild world matrices from\npos/rot/scale"]
-    C["AnimationSystem::OnUpdate(dt)\nMove animated objects along waypoints\nstore prevPosition for kinematic velocity"]
-    D["PhysicsSystem::OnUpdate(dt)"]
-    D1["Accumulate gravity + external forces"]
-    D2["Integrate linear velocity + position\n(Euler / Semi-Implicit / RK4)"]
-    D3["Integrate angular velocity + orientation"]
-    D4["Clear forceAccum + torqueAccum"]
-    D5["Sphere-sphere collision detection\n(O(n²) brute force)"]
-    D6["Sphere-plane collision detection"]
-    D7["Impulse response + positional correction"]
-    E["FlockingSystem::OnUpdate(dt)\nReynolds boids steering forces"]
+    A["TransformSystem (stage 1)\nPass 1: rebuild localMatrix for Dirty entities\nPass 2: worldMatrix = parent * localMatrix\nPass 3: extract worldPosition/Scale/Rotation"]
+    B["AnimationSystem (stage 2)\nMove animated objects along waypoints\nWrite m_localPosition/localRotation → Dirty\nStore prevPosition for kinematic velocity"]
+    C["PhysicsSystem (stage 3)\nIntegrate: update m_worldPosition\nSyncWorldToLocal: world → localPosition + localMatrix[3]\nResolveCollisions × m_solverIterations"]
+    D["FlockingSystem (stage 6)\nReynolds boids steering → forceAccum"]
+    E["SpawnerSystem (stage 6)\nEntityFactory::InstantiatePrefab\nPre-computes worldMatrix at creation"]
 
-    A --> B --> C --> D
-    D --> D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7
-    D7 --> E
+    A --> B --> C --> C
+    C --> D
+    C --> E
 ```
+
+### Multi-Pass Collision Solver
+
+`PhysicsSystem::OnUpdate` runs `ResolveCollisions` N times per tick (default N = 3):
+
+```cpp
+void PhysicsSystem::OnUpdate(float dt) {
+    Integrate(dt);
+    for (int i = 0; i < m_solverIterations; ++i) {
+        ResolveCollisions();
+    }
+}
+```
+
+Each pass propagates corrections between adjacent contact pairs. With a single pass, correcting pair A-B doesn't update pair B-C, causing stacked objects to drift. Three passes gives stable 3–4 object stacks at normal physics Hz. `m_solverIterations` is exposed in the ImGui Simulation menu (slider 1–8).
+
+---
+
+## 5.10 Dual Local/World Transform Property System
+
+The engine implements Unity-style dual transform coordinates — every `Transform` carries both a **local** (stored) and a **world** (computed) position:
+
+```cpp
+// include/components/Transform.h
+struct Transform {
+    // Local — authored by scene loaders, AnimationSystem, Inspector
+    glm::vec3 m_localPosition { 0.0f };
+    glm::vec3 m_localRotation { 0.0f };  // Euler degrees YXZ
+    glm::vec3 m_localScale    { 1.0f };
+
+    // World — computed by TransformSystem each frame (read-only outside TransformSystem)
+    glm::vec3 m_worldPosition { 0.0f };
+    glm::vec3 m_worldRotation { 0.0f };  // Euler extracted from worldMatrix (display only)
+    glm::vec3 m_worldScale    { 1.0f };
+
+    glm::mat4 m_localMatrix { 1.0f };
+    glm::mat4 m_worldMatrix { 1.0f };
+    uint32_t  m_parentEntityID = UINT32_MAX;
+    TransformState m_state = TransformState::Dirty;
+};
+```
+
+### Why Two Positions?
+
+Before this refactor, there was only `m_position`. This worked correctly for root entities (where local = world), but broke when entities had parents: `PhysicsSystem` treated `m_position` as world coordinates, while `TransformSystem` treated it as local — entities with parents would float at the wrong height.
+
+Now:
+- **Physics reads and writes `m_worldPosition`** — always world-space, correct regardless of parent
+- **TransformSystem computes `m_worldPosition`** from `m_worldMatrix[3]` in pass 3
+- **SyncWorldToLocal converts** `m_worldPosition → m_localPosition` (via inverse parent matrix) after each physics correction
+
+### TransformSystem Three Passes
+
+```
+Pass 1 (Dirty entities only):
+    m_localMatrix = translate(m_localPosition) * rotY * rotX * rotZ * scale(m_localScale)
+
+Pass 2 (all entities):
+    if root: m_worldMatrix = m_localMatrix
+    else:    m_worldMatrix = parent.m_worldMatrix * m_localMatrix
+
+Pass 3 (all entities):
+    m_worldPosition = vec3(m_worldMatrix[3])
+    m_worldScale    = { |col0|, |col1|, |col2| }
+    m_worldRotation = YXZ Euler extracted from normalised rotation submatrix
+```
+
+### SyncWorldToLocal
+
+PhysicsSystem calls this after every position write (integration or collision correction):
+
+```cpp
+void PhysicsSystem::SyncWorldToLocal(Transform& trans, EntityManager* em) {
+    if (trans.m_parentEntityID == UINT32_MAX) {
+        trans.m_localPosition = trans.m_worldPosition;
+    } else {
+        auto* p = em->TryGetTIComponent<Transform>(trans.m_parentEntityID);
+        if (p) {
+            trans.m_localPosition = vec3(inverse(p->m_worldMatrix) * vec4(trans.m_worldPosition, 1));
+        }
+    }
+    // Patch translation column of localMatrix so TransformSystem pass 2
+    // produces the correct worldMatrix without needing a full rebuild.
+    trans.m_localMatrix[3] = glm::vec4(trans.m_localPosition, 1.0f);
+}
+```
+
+The `m_localMatrix[3]` patch is critical. If only `m_localPosition` were updated, TransformSystem pass 2 would compute `worldMatrix` from the stale (pre-correction) `m_localMatrix`, and pass 3 would then overwrite `m_worldPosition` with the wrong value — causing the object to sink through floors over time.
 
 ---
 

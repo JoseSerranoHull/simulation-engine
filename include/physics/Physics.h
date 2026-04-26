@@ -77,7 +77,7 @@ namespace GE::Physics {
                 auto* trans = em->GetTIComponent<GE::Components::Transform>(entityID);
 
                 if (trans) {
-                    Sphere s(trans->m_position, col.radius);
+                    Sphere s(trans->m_worldPosition, col.radius);
                     RaycastHit hit;
                     if (Raycast(ray, s, hit, maxDistance)) {
                         hitCount++;
@@ -103,7 +103,7 @@ namespace GE::Physics {
                 auto* trans = em->GetTIComponent<GE::Components::Transform>(entityID);
 
                 if (trans) {
-                    float distanceSq = glm::distance2(center, trans->m_position);
+                    float distanceSq = glm::distance2(center, trans->m_worldPosition);
                     float combinedRadius = radius + col.radius;
 
                     if (distanceSq <= (combinedRadius * combinedRadius)) {

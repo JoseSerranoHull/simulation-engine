@@ -46,9 +46,9 @@ namespace GE {
                 if (trans && input->getAutoOrbit()) {
                     float radius = 4.0f;
                     float speed = 0.3f;
-                    trans->m_position.x = std::sin(totalTime * speed) * radius;
-                    trans->m_position.y = radius;
-                    trans->m_position.z = std::cos(totalTime * speed) * radius;
+                    trans->m_localPosition.x = std::sin(totalTime * speed) * radius;
+                    trans->m_localPosition.y = radius;
+                    trans->m_localPosition.z = std::cos(totalTime * speed) * radius;
                     trans->m_state = Components::Transform::TransformState::Dirty;
                 }
 
@@ -74,7 +74,7 @@ namespace GE {
                 auto id = scene->getEntityID(key);
                 auto* trans = em->GetTIComponent<Components::Transform>(id);
                 if (trans) {
-                    trans->m_scale = glm::vec3(baseScale) * cactusMult;
+                    trans->m_localScale = glm::vec3(baseScale) * cactusMult;
                     trans->m_state = Components::Transform::TransformState::Dirty;
                 }
             }
@@ -88,8 +88,8 @@ namespace GE {
             auto* trans = em->GetTIComponent<Components::Transform>(id);
             if (trans) {
                 // Apply the vec3 scale multiplier
-                trans->m_scale = glm::vec3(0.1f) * waterScaleVec;
-                trans->m_position.y = -0.1f + waterOffset;
+                trans->m_localScale = glm::vec3(0.1f) * waterScaleVec;
+                trans->m_localPosition.y = -0.1f + waterOffset;
                 trans->m_state = Components::Transform::TransformState::Dirty;
             }
         }

@@ -12,6 +12,7 @@
 /* parasoft-begin-suppress ALL */
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 /* parasoft-end-suppress ALL */
 
 namespace GE::Scene {
@@ -36,9 +37,27 @@ GE::ECS::EntityID EntityFactory::InstantiatePrefab(
     // Spawned physics entities must be root nodes so PhysicsSystem treats m_position as
     // world-space coordinates. Hierarchy grouping is handled via SpawnerComponent::spawnedEntityIds.
     GE::Components::Transform tr;
-    tr.m_position = position;
-    tr.m_rotation = rotationDeg;
-    tr.m_scale    = glm::vec3(1.0f);
+    tr.m_localPosition = position;
+    tr.m_localRotation = rotationDeg;
+    tr.m_localScale    = glm::vec3(1.0f);
+
+    // Pre-compute matrices immediately so the entity is at the correct world position
+    // even before TransformSystem runs. TransformSystem uses ESystemStage::Transform (=1),
+    // which runs before GameLogic (=6) where SpawnerSystem creates entities. Without this
+    // pre-computation, the entity would have identity worldMatrix for one full tick,
+    // causing a one-frame flash at the world origin (0,0,0).
+    {
+        glm::mat4 m = glm::translate(glm::mat4(1.0f), position);
+        m = glm::rotate(m, glm::radians(rotationDeg.y), { 0.0f, 1.0f, 0.0f });
+        m = glm::rotate(m, glm::radians(rotationDeg.x), { 1.0f, 0.0f, 0.0f });
+        m = glm::rotate(m, glm::radians(rotationDeg.z), { 0.0f, 0.0f, 1.0f });
+        tr.m_localMatrix  = m;
+        tr.m_worldMatrix  = m;       // root entity: world == local
+        tr.m_worldPosition = position;
+        tr.m_worldScale    = glm::vec3(1.0f);
+        tr.m_state = GE::Components::Transform::TransformState::Clean;
+    }
+
     em->AddComponent(id, tr);
 
     // 2. Tag (unique name per instance)

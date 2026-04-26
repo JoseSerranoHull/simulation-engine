@@ -81,7 +81,7 @@ public:
         // Runs once on the same first active frame, immediately after Awake.
         // Record the spawn position for display in the inspector.
         if (auto* t = GetTransform()) {
-            startPosition = t->m_position;
+            startPosition = t->m_localPosition;
         }
         GE_LOG_INFO("[DemoPlayerScript] Start — spawn at ("
             + std::to_string(startPosition.x) + ", "
@@ -98,16 +98,16 @@ public:
 
         // Horizontal movement (arrow keys / WASD)
         if (in->IsKeyDown(GLFW_KEY_RIGHT) || in->IsKeyDown(GLFW_KEY_D))
-            t->m_position.x += dir * moveSpeed * dt;
+            t->m_localPosition.x += dir * moveSpeed * dt;
 
         if (in->IsKeyDown(GLFW_KEY_LEFT) || in->IsKeyDown(GLFW_KEY_A))
-            t->m_position.x -= dir * moveSpeed * dt;
+            t->m_localPosition.x -= dir * moveSpeed * dt;
 
         if (in->IsKeyDown(GLFW_KEY_UP) || in->IsKeyDown(GLFW_KEY_W))
-            t->m_position.z -= moveSpeed * dt;
+            t->m_localPosition.z -= moveSpeed * dt;
 
         if (in->IsKeyDown(GLFW_KEY_DOWN) || in->IsKeyDown(GLFW_KEY_S))
-            t->m_position.z += moveSpeed * dt;
+            t->m_localPosition.z += moveSpeed * dt;
 
         // Jump — apply upward velocity via RigidBody if present
         if (in->IsKeyDown(GLFW_KEY_SPACE)) {
@@ -139,8 +139,8 @@ public:
         auto* t = GetTransform();
         if (!t) return;
 
-        t->m_position.x = glm::clamp(t->m_position.x, -boundarySize, boundarySize);
-        t->m_position.z = glm::clamp(t->m_position.z, -boundarySize, boundarySize);
+        t->m_localPosition.x = glm::clamp(t->m_localPosition.x, -boundarySize, boundarySize);
+        t->m_localPosition.z = glm::clamp(t->m_localPosition.z, -boundarySize, boundarySize);
     }
 
     void OnCollisionEnter(const GE::Scripts::CollisionInfo& info) override {

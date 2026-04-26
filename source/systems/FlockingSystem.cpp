@@ -1,6 +1,7 @@
 /* parasoft-begin-suppress ALL */
 #include <chrono>
 #include <cmath>
+#include <random>
 /* parasoft-end-suppress ALL */
 
 #include "systems/FlockingSystem.h"
@@ -78,7 +79,7 @@ void FlockingSystem::OnUpdate(float dt) {
 
         AgentEntry entry;
         entry.idx   = i;
-        entry.pos   = tr->m_position;
+        entry.pos   = tr->m_worldPosition;
         entry.vel   = rb->velocity;
         entry.mass  = rb->mass;
         entry.group = fk.groupId;
@@ -254,7 +255,7 @@ glm::vec3 FlockingSystem::computeSteering(const AgentEntry& self,
 
             const float obstacleR   = sphereArr.Data()[si].radius;
             const float avoidRadius = obstacleR + fk.separationRadius * 1.5f;
-            const glm::vec3 away    = self.pos - str->m_position;
+            const glm::vec3 away    = self.pos - str->m_worldPosition;
             const float dist        = glm::length(away);
             if (dist < avoidRadius && dist > MIN_DIST) {
                 avoidance += glm::normalize(away) * fk.maxForce;
@@ -418,6 +419,47 @@ void FlockingSystem::queryOctree(const OctreeNode& node, const glm::vec3& pos, f
             queryOctree(*node.children[c], pos, radius, out);
         }
     }
+}
+
+void FlockingSystem::Restart(GE::ECS::EntityManager* em) {
+    if (em == nullptr) { return; }
+
+    auto& fkArr = em->GetCompArr<GE::Components::FlockingComponent>();
+    std::mt19937 rng{ std::random_device{}() };
+    std::uniform_real_distribution<float> distUnit(-1.0f, 1.0f);
+
+    for (uint32_t i = 0; i < fkArr.GetCount(); ++i) {
+        const GE::ECS::EntityID eid = fkArr.Index()[i];
+
+        // Rejection-sample a random point inside the unit sphere, then scale
+        glm::vec3 offset{ 0.0f };
+        for (int attempt = 0; attempt < 100; ++attempt) {
+            offset = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) };
+            if (glm::dot(offset, offset) <= 1.0f) { break; }
+        }
+        const glm::vec3 newPos = m_spawnOrigin + offset * m_spawnRadius;
+
+        auto* tr = em->TryGetTIComponent<GE::Components::Transform>(eid);
+        if (tr != nullptr) {
+            tr->m_localPosition  = newPos;
+            tr->m_worldPosition  = newPos;
+            // Patch matrix columns directly so TransformSystem produces the correct
+            // worldMatrix without a full Dirty rebuild (same technique as SyncWorldToLocal)
+            tr->m_localMatrix[3] = glm::vec4(newPos, 1.0f);
+            tr->m_worldMatrix[3] = glm::vec4(newPos, 1.0f);
+            tr->m_state = GE::Components::Transform::TransformState::Clean;
+        }
+
+        auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
+        if (rb != nullptr) {
+            rb->velocity        = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) } * 2.0f;
+            rb->angularVelocity = glm::vec3(0.0f);
+            rb->forceAccum      = glm::vec3(0.0f);
+            rb->torqueAccum     = glm::vec3(0.0f);
+        }
+    }
+
+    m_frozen = false;
 }
 
 } // namespace GE::Systems

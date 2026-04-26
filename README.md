@@ -85,6 +85,66 @@ The project folder is organized into the following folders:
 
 ---
 
+# Technical Manual
+
+A full chapter-by-chapter technical manual for the engine is located in [`markdown/TechnicalManual/`](markdown/TechnicalManual/README.md). It covers ECS architecture, threading, Vulkan rendering, physics, cloth & flocking, networking, scripting, and the spawner system.
+
+---
+
+# Engine Systems
+
+## Spawner System
+
+The spawner system creates physics entities at runtime from **PrefabTemplate** blueprints — the same pattern used in Unity (`Instantiate`) and Unreal (Spawn Actor). It replaced an earlier entity-pool approach where entities were pre-created at scene load and "teleported" into position.
+
+### How It Works
+
+1. **Scene Load** — `FBSceneAdapter::adaptPrefabs()` reads each `[Prefab]` block from the `.bin` scene file and builds a `PrefabTemplate` struct containing: shape kind, physics parameters (mass, restitution, inertia tensor), and pre-uploaded GPU meshes for up to four owner-color variants plus one material/textured fallback.
+
+2. **Runtime Spawn** — `SpawnerSystem::OnUpdate()` advances a timer each physics tick. When the timer fires (after `startTime`, every `interval` for repeating spawners, or once for burst), it calls `EntityFactory::InstantiatePrefab`:
+
+   - Creates a new `EntityID`
+   - Adds `Transform` (position + pre-computed world matrices so no flash appears at the origin)
+   - Adds `RigidBody` (gravity enabled, initial linear + angular velocity from random ranges)
+   - Adds the correct collider (`SphereCollider`, `BoxCollider`, `CapsuleCollider`, `CylinderCollider`)
+   - Adds `MeshRenderer` pointing to the selected owner-color or material mesh
+   - Adds `ScriptComponent` if the prefab declares a script type
+
+3. **Hierarchy Display** — Spawned entities are root ECS entities (no parent) to keep physics correct. The DebugOverlay hierarchy panel uses `SpawnerComponent::spawnedEntityIds` to display them visually nested under their spawner node.
+
+4. **Networking** — When `ownerPeerId > 0`, only the owning peer fires the spawner. After local instantiation, it sends a `SpawnObject` UDP packet so remote peers call `EntityFactory::InstantiatePrefab` with the same parameters and entity ID.
+
+### Spawn Modes
+
+| Mode | Behaviour |
+|------|-----------|
+| **Single Burst** | Spawns `burstCount` entities once, after `startTime` seconds |
+| **Repeating** | Spawns one entity every `interval` seconds, up to `maxCount` total |
+
+### Spawn Locations
+
+| Location | Behaviour |
+|----------|-----------|
+| **Fixed** | Always at the same world position |
+| **Random Box** | Uniform random inside an AABB defined by `boxMin`/`boxMax` |
+| **Random Sphere** | Uniform random inside a sphere (uses cube-root sampling for unbiased volume distribution) |
+
+### ImGui Controls (Spawners menu)
+
+Each spawner in the scene appears as a row in the **Spawners** top menu:
+- **Progress bar** — `spawnedCount / maxCount`
+- **Pause / Resume** — freeze the timer without resetting count
+- **Reset** — restart the timer and count from zero; old spawned entities remain in the world as independent physics objects
+- **Fire** — immediately spawn one entity regardless of timer state
+
+### Color Assignment
+
+When `use_owner_colors = true` in the scene JSON, each spawner selects a mesh color based on:
+- **Sequential mode** (`is_sequential = true`): cycles colors 0→1→2→3 per spawn, useful for visual variety in single-player scenes
+- **Owner mode**: all entities from peer N use peer N's color (red/blue/green/yellow)
+
+---
+
 # Builded Release Executable
 
 The repository includes a `exe` named "Vulkan-clean" that can be executed directly without the need to build the project again. This executable is located in the **root folder**.

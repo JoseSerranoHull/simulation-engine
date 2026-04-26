@@ -50,7 +50,7 @@ namespace GE::Systems {
             if (!tr || ac.waypoints.empty()) continue;
 
             // 1. Save position from before this frame (used by PhysicsSystem for kinematic velocity)
-            ac.prevPosition = tr->m_position;
+            ac.prevPosition = tr->m_localPosition;
 
             // 2. Advance elapsed time (reversed flag controls direction)
             if (!ac.reversed) { ac.elapsed += dt; }
@@ -128,9 +128,9 @@ namespace GE::Systems {
             }
 
             // 5. Write to Transform
-            tr->m_position = pos;
-            tr->m_rotation = rot;
-            tr->m_state    = GE::Components::Transform::TransformState::Dirty;
+            tr->m_localPosition = pos;
+            tr->m_localRotation = rot;
+            tr->m_state         = GE::Components::Transform::TransformState::Dirty;
         }
     }
 

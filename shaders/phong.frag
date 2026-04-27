@@ -15,6 +15,7 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec3 fragGouraudColor;
 layout(location = 4) in vec4 fragPosLightSpace;
+layout(location = 5) in vec3 fragTangent;
 
 // --- Data Structures ---
 struct SparkLight {
@@ -39,6 +40,7 @@ layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 // --- Set 1: Material Textures ---
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 1) uniform sampler2D normalSampler;
 layout(set = 1, binding = 2) uniform sampler2D aoSampler;
 layout(set = 1, binding = 3) uniform sampler2D metallicSampler;
 layout(set = 1, binding = 4) uniform sampler2D roughnessSampler;
@@ -112,10 +114,18 @@ void main() {
         outColor = vec4(ambientResult + (albedo * fragGouraudColor * shadow) + sparkContribution, 1.0);
     } else {
         // 4. PHONG / PBR-LITE MODE
-        float metallic = texture(metallicSampler, fragTexCoord).r;
+        float metallic  = texture(metallicSampler,  fragTexCoord).r;
         float roughness = texture(roughnessSampler, fragTexCoord).r;
-        
-        vec3 N = normalize(fragNormal);
+
+        // TBN normal mapping: decode tangent-space normal and rotate into world space.
+        // Gram-Schmidt re-orthogonalises T against the interpolated N to fix precision drift.
+        vec3 N_geom = normalize(fragNormal);
+        vec3 T      = normalize(fragTangent - dot(fragTangent, N_geom) * N_geom);
+        vec3 B      = cross(N_geom, T);
+        mat3 TBN    = mat3(T, B, N_geom);
+        vec3 normalSample = texture(normalSampler, fragTexCoord).rgb * 2.0 - 1.0;
+        vec3 N = normalize(TBN * normalSample);
+
         vec3 L = normalize(ubo.lightPos - fragPos);
         vec3 V = normalize(ubo.viewPos - fragPos);
         vec3 H = normalize(L + V);

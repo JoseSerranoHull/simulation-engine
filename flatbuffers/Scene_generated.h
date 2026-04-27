@@ -1701,10 +1701,11 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_COLLISION_TYPE = 18,
     VT_SCRIPT_TYPE    = 20,
     VT_PARENT         = 22,
-    VT_TEXTURE_PATH   = 24,  // hand-patched: albedo; triggers Phong pipeline
-    VT_AO_PATH        = 26,  // hand-patched: ambient occlusion map
-    VT_ROUGHNESS_PATH = 28,  // hand-patched: PBR roughness
-    VT_METALLIC_PATH  = 30   // hand-patched: PBR metallic
+    VT_TEXTURE_PATH    = 24,  // hand-patched: albedo; triggers Phong pipeline
+    VT_AO_PATH         = 26,  // hand-patched: ambient occlusion map
+    VT_ROUGHNESS_PATH  = 28,  // hand-patched: PBR roughness
+    VT_METALLIC_PATH   = 30,  // hand-patched: PBR metallic
+    VT_NORMAL_MAP_PATH = 32   // hand-patched: tangent-space normal map
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -1780,6 +1781,9 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *metallic_path() const {
     return GetPointer<const ::flatbuffers::String *>(VT_METALLIC_PATH);
   }
+  const ::flatbuffers::String *normal_map_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NORMAL_MAP_PATH);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -1807,6 +1811,8 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyString(roughness_path()) &&
            VerifyOffset(verifier, VT_METALLIC_PATH) &&
            verifier.VerifyString(metallic_path()) &&
+           VerifyOffset(verifier, VT_NORMAL_MAP_PATH) &&
+           verifier.VerifyString(normal_map_path()) &&
            verifier.EndTable();
   }
 };
@@ -2798,9 +2804,10 @@ struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_MATERIAL     = 10,
     VT_SCRIPT_TYPE    = 12,
     VT_TEXTURE_PATH   = 14,  // hand-patched: albedo path for material-color mode
-    VT_AO_PATH        = 16,  // hand-patched: ambient occlusion map
-    VT_ROUGHNESS_PATH = 18,  // hand-patched: PBR roughness
-    VT_METALLIC_PATH  = 20   // hand-patched: PBR metallic
+    VT_AO_PATH         = 16,  // hand-patched: ambient occlusion map
+    VT_ROUGHNESS_PATH  = 18,  // hand-patched: PBR roughness
+    VT_METALLIC_PATH   = 20,  // hand-patched: PBR metallic
+    VT_NORMAL_MAP_PATH = 22   // hand-patched: tangent-space normal map
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -2845,6 +2852,9 @@ struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *metallic_path() const {
     return GetPointer<const ::flatbuffers::String *>(VT_METALLIC_PATH);
   }
+  const ::flatbuffers::String *normal_map_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NORMAL_MAP_PATH);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -2865,6 +2875,8 @@ struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyString(roughness_path()) &&
            VerifyOffset(verifier, VT_METALLIC_PATH) &&
            verifier.VerifyString(metallic_path()) &&
+           VerifyOffset(verifier, VT_NORMAL_MAP_PATH) &&
+           verifier.VerifyString(normal_map_path()) &&
            verifier.EndTable();
   }
 };

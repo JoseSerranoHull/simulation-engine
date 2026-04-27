@@ -27,15 +27,18 @@ OBJLoader::MeshData GeometryUtils::generateSphere(const uint32_t segments, const
         }
 
         for (uint32_t x = 0U; x <= segments; ++x) {
-            const float theta = (GeometryUtils::TWO_PI * static_cast<float>(x)) / fSegments;
-            const float xPos = static_cast<float>(std::sin(static_cast<double>(phi)) * std::cos(static_cast<double>(theta))) * radius;
-            const float zPos = static_cast<float>(std::sin(static_cast<double>(phi)) * std::sin(static_cast<double>(theta))) * radius;
+            const float theta    = (GeometryUtils::TWO_PI * static_cast<float>(x)) / fSegments;
+            const float cosTheta = static_cast<float>(std::cos(static_cast<double>(theta)));
+            const float sinTheta = static_cast<float>(std::sin(static_cast<double>(theta)));
+            const float xPos = static_cast<float>(std::sin(static_cast<double>(phi))) * cosTheta * radius;
+            const float zPos = static_cast<float>(std::sin(static_cast<double>(phi))) * sinTheta * radius;
 
             data.vertices.push_back({
                 glm::vec3(xPos, yPos, zPos),
                 color,
                 glm::vec2(static_cast<float>(x) / fSegments, static_cast<float>(y) / fSegments),
-                glm::normalize(glm::vec3(xPos, yPos, zPos))
+                glm::normalize(glm::vec3(xPos, yPos, zPos)),
+                glm::vec3(-sinTheta, 0.0f, cosTheta)   // tangent along longitude
                 });
         }
     }
@@ -177,19 +180,22 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
 
     // Step 1: Generate Wall Vertices with UV tiling for the rattan texture
     for (uint32_t i = 0U; i <= segments; ++i) {
-        const float angle = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
+        const float angle    = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
+        const float cosAngle = static_cast<float>(std::cos(static_cast<double>(angle)));
+        const float sinAngle = static_cast<float>(std::sin(static_cast<double>(angle)));
         const float u = (static_cast<float>(i) / fSegments) * GeometryUtils::RATTAN_REPEAT_H;
 
-        const float xT = static_cast<float>(std::cos(static_cast<double>(angle))) * topRadius;
-        const float zT = static_cast<float>(std::sin(static_cast<double>(angle))) * topRadius;
-        const float xB = static_cast<float>(std::cos(static_cast<double>(angle))) * bottomRadius;
-        const float zB = static_cast<float>(std::sin(static_cast<double>(angle))) * bottomRadius;
+        const float xT = cosAngle * topRadius;
+        const float zT = sinAngle * topRadius;
+        const float xB = cosAngle * bottomRadius;
+        const float zB = sinAngle * bottomRadius;
 
         // Normals slightly angled for the tapered look
-        const glm::vec3 norm = glm::normalize(glm::vec3(std::cos(static_cast<double>(angle)), 0.2, std::sin(static_cast<double>(angle))));
+        const glm::vec3 norm    = glm::normalize(glm::vec3(cosAngle, 0.2f, sinAngle));
+        const glm::vec3 tangent = glm::vec3(-sinAngle, 0.0f, cosAngle);
 
-        data.vertices.push_back({ glm::vec3(xT,  height * 0.5f, zT), color, glm::vec2(u, GeometryUtils::RATTAN_REPEAT_V), norm });
-        data.vertices.push_back({ glm::vec3(xB, -height * 0.5f, zB), color, glm::vec2(u, GeometryUtils::FLOAT_ZERO), norm });
+        data.vertices.push_back({ glm::vec3(xT,  height * 0.5f, zT), color, glm::vec2(u, GeometryUtils::RATTAN_REPEAT_V), norm, tangent });
+        data.vertices.push_back({ glm::vec3(xB, -height * 0.5f, zB), color, glm::vec2(u, GeometryUtils::FLOAT_ZERO),      norm, tangent });
     }
 
     // Step 2: Index the side walls (strips)
@@ -211,11 +217,13 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
     if (generateBottomCap) {
         // Step 3: Generate and Index the Bottom Cap
         const uint32_t botCenterIdx = static_cast<uint32_t>(data.vertices.size());
-        data.vertices.push_back({ glm::vec3(0.0f, -height * 0.5f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, -1.0f, 0.0f) });
+        data.vertices.push_back({ glm::vec3(0.0f, -height * 0.5f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f) });
 
         for (uint32_t i = 0U; i <= segments; ++i) {
-            const float angle = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
-            data.vertices.push_back({ glm::vec3(std::cos(static_cast<double>(angle)) * static_cast<double>(bottomRadius), static_cast<double>(-height * 0.5f), std::sin(static_cast<double>(angle)) * static_cast<double>(bottomRadius)), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, -1.0f, 0.0f) });
+            const float angle    = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
+            const float cosA     = static_cast<float>(std::cos(static_cast<double>(angle)));
+            const float sinA     = static_cast<float>(std::sin(static_cast<double>(angle)));
+            data.vertices.push_back({ glm::vec3(cosA * bottomRadius, -height * 0.5f, sinA * bottomRadius), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(-sinA, 0.0f, cosA) });
 
             if (i > 0U) {
                 data.indices.push_back(botCenterIdx);
@@ -229,11 +237,13 @@ OBJLoader::MeshData GeometryUtils::generateCylinder(const uint32_t segments, con
         // Step 4: Generate and Index the Top Cap
         // Reversed winding vs bottom cap so the cross product gives normal +Y (front-facing from above).
         const uint32_t topCenterIdx = static_cast<uint32_t>(data.vertices.size());
-        data.vertices.push_back({ glm::vec3(0.0f, height * 0.5f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, 1.0f, 0.0f) });
+        data.vertices.push_back({ glm::vec3(0.0f, height * 0.5f, 0.0f), color, glm::vec2(GeometryUtils::FLOAT_HALF, GeometryUtils::FLOAT_HALF), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f) });
 
         for (uint32_t i = 0U; i <= segments; ++i) {
             const float angle = (static_cast<float>(i) / fSegments) * GeometryUtils::TWO_PI;
-            data.vertices.push_back({ glm::vec3(std::cos(static_cast<double>(angle)) * static_cast<double>(topRadius), static_cast<double>(height * 0.5f), std::sin(static_cast<double>(angle)) * static_cast<double>(topRadius)), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, 1.0f, 0.0f) });
+            const float cosA  = static_cast<float>(std::cos(static_cast<double>(angle)));
+            const float sinA  = static_cast<float>(std::sin(static_cast<double>(angle)));
+            data.vertices.push_back({ glm::vec3(cosA * topRadius, height * 0.5f, sinA * topRadius), color, glm::vec2(GeometryUtils::FLOAT_ZERO, GeometryUtils::FLOAT_ZERO), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(-sinA, 0.0f, cosA) });
 
             if (i > 0U) {
                 data.indices.push_back(topCenterIdx);
@@ -312,6 +322,9 @@ OBJLoader::MeshData GeometryUtils::generateCapsule(float radius, float height, i
             v.texcoord.x = (float)slice / (float)segments;
             v.texcoord.y = (float)stack / (float)(2 * stacks);
 
+            // 5. Tangent: longitude direction, perpendicular to N in the XZ plane
+            v.tangent = glm::vec3(-sinTheta, 0.0f, cosTheta);
+
             mesh.vertices.push_back(v);
         }
     }
@@ -353,21 +366,22 @@ OBJLoader::MeshData GeometryUtils::generateBox(float sizeX, float sizeY, float s
     struct FaceDef {
         glm::vec3 v[4];
         glm::vec3 normal;
+        glm::vec3 tangent;  // UV U-axis direction for TBN
     };
 
     const FaceDef faces[6] = {
-        // +X face
-        { { {+hw,-hh,+hd}, {+hw,-hh,-hd}, {+hw,+hh,-hd}, {+hw,+hh,+hd} }, {+1.0f, 0.0f, 0.0f} },
-        // -X face
-        { { {-hw,-hh,-hd}, {-hw,-hh,+hd}, {-hw,+hh,+hd}, {-hw,+hh,-hd} }, {-1.0f, 0.0f, 0.0f} },
-        // +Y face (winding corrected: CCW from above → geometric normal +Y)
-        { { {-hw,+hh,+hd}, {+hw,+hh,+hd}, {+hw,+hh,-hd}, {-hw,+hh,-hd} }, {0.0f, +1.0f, 0.0f} },
-        // -Y face (winding corrected: CCW from below → geometric normal -Y)
-        { { {-hw,-hh,-hd}, {+hw,-hh,-hd}, {+hw,-hh,+hd}, {-hw,-hh,+hd} }, {0.0f, -1.0f, 0.0f} },
-        // +Z face
-        { { {-hw,-hh,+hd}, {+hw,-hh,+hd}, {+hw,+hh,+hd}, {-hw,+hh,+hd} }, {0.0f, 0.0f, +1.0f} },
-        // -Z face
-        { { {+hw,-hh,-hd}, {-hw,-hh,-hd}, {-hw,+hh,-hd}, {+hw,+hh,-hd} }, {0.0f, 0.0f, -1.0f} },
+        // +X face: T=(0,0,-1)  — UV U increases toward -Z
+        { { {+hw,-hh,+hd}, {+hw,-hh,-hd}, {+hw,+hh,-hd}, {+hw,+hh,+hd} }, {+1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f,-1.0f} },
+        // -X face: T=(0,0,+1)
+        { { {-hw,-hh,-hd}, {-hw,-hh,+hd}, {-hw,+hh,+hd}, {-hw,+hh,-hd} }, {-1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f,+1.0f} },
+        // +Y face (winding corrected): T=(+1,0,0)  — UV U increases toward +X
+        { { {-hw,+hh,+hd}, {+hw,+hh,+hd}, {+hw,+hh,-hd}, {-hw,+hh,-hd} }, { 0.0f,+1.0f, 0.0f}, {+1.0f, 0.0f, 0.0f} },
+        // -Y face (winding corrected): T=(+1,0,0)
+        { { {-hw,-hh,-hd}, {+hw,-hh,-hd}, {+hw,-hh,+hd}, {-hw,-hh,+hd} }, { 0.0f,-1.0f, 0.0f}, {+1.0f, 0.0f, 0.0f} },
+        // +Z face: T=(+1,0,0)
+        { { {-hw,-hh,+hd}, {+hw,-hh,+hd}, {+hw,+hh,+hd}, {-hw,+hh,+hd} }, { 0.0f, 0.0f,+1.0f}, {+1.0f, 0.0f, 0.0f} },
+        // -Z face: T=(-1,0,0)
+        { { {+hw,-hh,-hd}, {-hw,-hh,-hd}, {-hw,+hh,-hd}, {+hw,+hh,-hd} }, { 0.0f, 0.0f,-1.0f}, {-1.0f, 0.0f, 0.0f} },
     };
 
     const glm::vec2 uvs[4] = { {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f} };
@@ -375,7 +389,7 @@ OBJLoader::MeshData GeometryUtils::generateBox(float sizeX, float sizeY, float s
     for (const auto& face : faces) {
         const uint32_t base = static_cast<uint32_t>(data.vertices.size());
         for (uint32_t i = 0U; i < 4U; ++i) {
-            data.vertices.push_back({ face.v[i], color, uvs[i], face.normal });
+            data.vertices.push_back({ face.v[i], color, uvs[i], face.normal, face.tangent });
         }
         data.indices.push_back(base + 0U);
         data.indices.push_back(base + 1U);

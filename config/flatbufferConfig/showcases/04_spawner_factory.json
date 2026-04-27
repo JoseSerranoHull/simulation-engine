@@ -31,20 +31,22 @@
       "shape_type": "Sphere",
       "shape": { "radius": 0.3 },
       "material": "rubber",
-      "texture_path":   "textures/rubber/RubberGenericClean001_ALBEDO_2K.jpg",
-      "ao_path":        "textures/rubber/RubberGenericClean001_AMBIENT_OCCLUSION_2K.jpg",
-      "roughness_path": "textures/white.png",
-      "metallic_path":  "textures/black.png"
+      "texture_path":    "textures/rubber/RubberGenericClean001_ALBEDO_2K.jpg",
+      "ao_path":         "textures/rubber/RubberGenericClean001_AMBIENT_OCCLUSION_2K.jpg",
+      "roughness_path":  "textures/white.png",
+      "metallic_path":   "textures/black.png",
+      "normal_map_path": "textures/rubber/RubberGenericClean001_NORMAL_2K.jpg"
     },
     {
       "name": "SteelCuboid",
       "shape_type": "Cuboid",
       "shape": { "size": { "x": 0.5, "y": 0.5, "z": 0.5 } },
       "material": "steel",
-      "texture_path":   "textures/steel/MetalGalvanizedSteelWorn001_ALBEDO_2K_METALNESS.jpg",
-      "ao_path":        "textures/white.png",
-      "roughness_path": "textures/steel/MetalGalvanizedSteelWorn001_ROUGHNESS_2K_METALNESS.jpg",
-      "metallic_path":  "textures/steel/MetalGalvanizedSteelWorn001_METALLIC_2K_METALNESS.jpg"
+      "texture_path":    "textures/steel/MetalGalvanizedSteelWorn001_ALBEDO_2K_METALNESS.jpg",
+      "ao_path":         "textures/white.png",
+      "roughness_path":  "textures/steel/MetalGalvanizedSteelWorn001_ROUGHNESS_2K_METALNESS.jpg",
+      "metallic_path":   "textures/steel/MetalGalvanizedSteelWorn001_METALLIC_2K_METALNESS.jpg",
+      "normal_map_path": "textures/steel/MetalGalvanizedSteelWorn001_NORMAL_8BIT_2K_METALNESS.jpg"
     },
     {
       "name": "PlasticCylinder",
@@ -57,10 +59,11 @@
       "shape_type": "Capsule",
       "shape": { "radius": 0.25, "height": 0.6 },
       "material": "rubber",
-      "texture_path":   "textures/rubber/RubberGenericClean001_ALBEDO_2K.jpg",
-      "ao_path":        "textures/rubber/RubberGenericClean001_AMBIENT_OCCLUSION_2K.jpg",
-      "roughness_path": "textures/white.png",
-      "metallic_path":  "textures/black.png"
+      "texture_path":    "textures/rubber/RubberGenericClean001_ALBEDO_2K.jpg",
+      "ao_path":         "textures/rubber/RubberGenericClean001_AMBIENT_OCCLUSION_2K.jpg",
+      "roughness_path":  "textures/white.png",
+      "metallic_path":   "textures/black.png",
+      "normal_map_path": "textures/rubber/RubberGenericClean001_NORMAL_2K.jpg"
     }
   ],
   "objects": [

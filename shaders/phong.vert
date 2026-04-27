@@ -14,6 +14,7 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNormal;
+layout(location = 4) in vec3 inTangent;
 
 // --- Outputs ---
 layout(location = 0) out vec3 fragPos;
@@ -21,6 +22,7 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragGouraudColor;
 layout(location = 4) out vec4 fragPosLightSpace;
+layout(location = 5) out vec3 fragTangent;
 
 // --- Data Structures ---
 struct SparkLight {
@@ -56,7 +58,9 @@ void main() {
     // Prepare world-space attributes for the fragment stage.
     fragPos = vec3(worldPos);
     fragTexCoord = inTexCoord;
-    fragNormal = mat3(transpose(inverse(push.model))) * inNormal;
+    mat3 normalMatrix = mat3(transpose(inverse(push.model)));
+    fragNormal  = normalMatrix * inNormal;
+    fragTangent = normalize(normalMatrix * inTangent);
     
     // 3. SHADOW COORDINATE CALCULATION
     // Transform position into light-perspective for shadow sampling.

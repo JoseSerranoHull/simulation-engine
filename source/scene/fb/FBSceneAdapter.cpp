@@ -271,19 +271,22 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
             obj->texture_path() != nullptr && !obj->texture_path()->str().empty() &&
             ctx.pipelines != nullptr && ctx.pipelines->size() > PHONG_PIPELINE_INDEX)
         {
-            auto whiteTex = ctx.am->loadTexture("textures/white.png");
-            auto blackTex = ctx.am->loadTexture("textures/black.png");
-            auto albedo   = ctx.am->loadTexture(obj->texture_path()->str());
-            if (albedo && whiteTex && blackTex) {
-                auto aoTex = (obj->ao_path() && !obj->ao_path()->str().empty())
-                             ? ctx.am->loadTexture(obj->ao_path()->str()) : whiteTex;
+            auto whiteTex     = ctx.am->loadTexture("textures/white.png");
+            auto blackTex     = ctx.am->loadTexture("textures/black.png");
+            auto flatNormalTex = ctx.am->loadTexture("textures/flat_normal.png");
+            auto albedo       = ctx.am->loadTexture(obj->texture_path()->str());
+            if (albedo && whiteTex && blackTex && flatNormalTex) {
+                auto normalTex = (obj->normal_map_path() && !obj->normal_map_path()->str().empty())
+                                 ? ctx.am->loadTexture(obj->normal_map_path()->str()) : flatNormalTex;
+                auto aoTex    = (obj->ao_path()        && !obj->ao_path()->str().empty())
+                                ? ctx.am->loadTexture(obj->ao_path()->str())        : whiteTex;
                 auto roughTex = (obj->roughness_path() && !obj->roughness_path()->str().empty())
                                 ? ctx.am->loadTexture(obj->roughness_path()->str()) : whiteTex;
-                auto metalTex = (obj->metallic_path() && !obj->metallic_path()->str().empty())
-                                ? ctx.am->loadTexture(obj->metallic_path()->str()) : blackTex;
+                auto metalTex = (obj->metallic_path()  && !obj->metallic_path()->str().empty())
+                                ? ctx.am->loadTexture(obj->metallic_path()->str())  : blackTex;
 
                 auto phongMat = ctx.am->createMaterial(
-                    albedo, whiteTex, aoTex, metalTex, roughTex,
+                    albedo, normalTex, aoTex, metalTex, roughTex,
                     (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
 
                 if (phongMat) {
@@ -1167,10 +1170,13 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             bool textureSucceeded = false;
             if (pb->texture_path() != nullptr) {
                 const std::string texPath = pb->texture_path()->str();
-                auto albedo   = ctx.am->loadTexture(texPath);
-                auto whiteTex = ctx.am->loadTexture("textures/white.png");
-                auto blackTex = ctx.am->loadTexture("textures/black.png");
-                if (albedo && whiteTex && blackTex) {
+                auto albedo        = ctx.am->loadTexture(texPath);
+                auto whiteTex      = ctx.am->loadTexture("textures/white.png");
+                auto blackTex      = ctx.am->loadTexture("textures/black.png");
+                auto flatNormalTex = ctx.am->loadTexture("textures/flat_normal.png");
+                if (albedo && whiteTex && blackTex && flatNormalTex) {
+                    auto normalTex = (pb->normal_map_path() && !pb->normal_map_path()->str().empty())
+                                     ? ctx.am->loadTexture(pb->normal_map_path()->str()) : flatNormalTex;
                     auto aoTex    = (pb->ao_path()        && !pb->ao_path()->str().empty())
                                     ? ctx.am->loadTexture(pb->ao_path()->str())        : whiteTex;
                     auto roughTex = (pb->roughness_path() && !pb->roughness_path()->str().empty())
@@ -1178,7 +1184,7 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
                     auto metalTex = (pb->metallic_path()  && !pb->metallic_path()->str().empty())
                                     ? ctx.am->loadTexture(pb->metallic_path()->str())  : blackTex;
                     auto phongMat = ctx.am->createMaterial(
-                        albedo, whiteTex, aoTex, metalTex, roughTex,
+                        albedo, normalTex, aoTex, metalTex, roughTex,
                         (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
                     phongMat->SetCastsShadows(false);
                     OBJLoader::MeshData neutralData = meshData;

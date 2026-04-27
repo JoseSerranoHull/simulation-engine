@@ -16,18 +16,20 @@ namespace GE::Assets {
 struct Vertex {
     // --- SANITIZATION: Named Constants ---
     static constexpr uint32_t BINDING_ZERO = 0U;
-    static constexpr uint32_t ATTRIBUTE_COUNT = 4U;
+    static constexpr uint32_t ATTRIBUTE_COUNT = 5U;
     static constexpr uint32_t LOC_POSITION = 0U;
-    static constexpr uint32_t LOC_COLOR = 1U;
+    static constexpr uint32_t LOC_COLOR    = 1U;
     static constexpr uint32_t LOC_TEXCOORD = 2U;
-    static constexpr uint32_t LOC_NORMAL = 3U;
-    static constexpr uint32_t HASH_SHIFT = 1U;
+    static constexpr uint32_t LOC_NORMAL   = 3U;
+    static constexpr uint32_t LOC_TANGENT  = 4U;
+    static constexpr uint32_t HASH_SHIFT   = 1U;
 
     // Explicit initialization of all members
     glm::vec3 position{ 0.0f, 0.0f, 0.0f };
     glm::vec3 color{ 1.0f, 1.0f, 1.0f };
     glm::vec2 texcoord{ 0.0f, 0.0f };
     glm::vec3 normal{ 0.0f, 0.0f, 1.0f };
+    glm::vec3 tangent{ 1.0f, 0.0f, 0.0f };  // tangent for TBN normal mapping
 
     // Tells Vulkan how to read the vertex buffer.
     static VkVertexInputBindingDescription getBindingDescription() {
@@ -68,12 +70,18 @@ struct Vertex {
         attributeDescriptions[LOC_NORMAL].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[LOC_NORMAL].offset = static_cast<uint32_t>(offsetof(Vertex, normal));
 
+        // Tangent: Location 4
+        attributeDescriptions[LOC_TANGENT].binding  = BINDING_ZERO;
+        attributeDescriptions[LOC_TANGENT].location = LOC_TANGENT;
+        attributeDescriptions[LOC_TANGENT].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[LOC_TANGENT].offset   = static_cast<uint32_t>(offsetof(Vertex, tangent));
+
         return attributeDescriptions;
     }
 
     bool operator==(const Vertex& other) const {
         return (position == other.position) && (color == other.color) &&
-            (texcoord == other.texcoord) && (normal == other.normal);
+            (texcoord == other.texcoord) && (normal == other.normal) && (tangent == other.tangent);
     }
 };
 

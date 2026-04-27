@@ -360,10 +360,10 @@ OBJLoader::MeshData GeometryUtils::generateBox(float sizeX, float sizeY, float s
         { { {+hw,-hh,+hd}, {+hw,-hh,-hd}, {+hw,+hh,-hd}, {+hw,+hh,+hd} }, {+1.0f, 0.0f, 0.0f} },
         // -X face
         { { {-hw,-hh,-hd}, {-hw,-hh,+hd}, {-hw,+hh,+hd}, {-hw,+hh,-hd} }, {-1.0f, 0.0f, 0.0f} },
-        // +Y face
-        { { {-hw,+hh,-hd}, {+hw,+hh,-hd}, {+hw,+hh,+hd}, {-hw,+hh,+hd} }, {0.0f, +1.0f, 0.0f} },
-        // -Y face
-        { { {-hw,-hh,+hd}, {+hw,-hh,+hd}, {+hw,-hh,-hd}, {-hw,-hh,-hd} }, {0.0f, -1.0f, 0.0f} },
+        // +Y face (winding corrected: CCW from above → geometric normal +Y)
+        { { {-hw,+hh,+hd}, {+hw,+hh,+hd}, {+hw,+hh,-hd}, {-hw,+hh,-hd} }, {0.0f, +1.0f, 0.0f} },
+        // -Y face (winding corrected: CCW from below → geometric normal -Y)
+        { { {-hw,-hh,-hd}, {+hw,-hh,-hd}, {+hw,-hh,+hd}, {-hw,-hh,+hd} }, {0.0f, -1.0f, 0.0f} },
         // +Z face
         { { {-hw,-hh,+hd}, {+hw,-hh,+hd}, {+hw,+hh,+hd}, {-hw,+hh,+hd} }, {0.0f, 0.0f, +1.0f} },
         // -Z face

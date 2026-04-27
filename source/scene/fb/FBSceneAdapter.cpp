@@ -265,7 +265,111 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
     const bool isFlockAgent = (obj->behaviour_type() == Simulation::Behaviour::FlockAgent);
     const bool isContainer  = (obj->collision_type() == Simulation::CollisionType::CONTAINER);
     if (hasShape && !isCloth && !isFlockAgent) {
-        adaptShape(obj, id, color, isContainer, ctx);
+        bool usedTexturePath = false;
+
+        if (!ctx.useOwnerColors &&
+            obj->texture_path() != nullptr && !obj->texture_path()->str().empty() &&
+            ctx.pipelines != nullptr && ctx.pipelines->size() > PHONG_PIPELINE_INDEX)
+        {
+            auto whiteTex = ctx.am->loadTexture("textures/white.png");
+            auto blackTex = ctx.am->loadTexture("textures/black.png");
+            auto albedo   = ctx.am->loadTexture(obj->texture_path()->str());
+            if (albedo && whiteTex && blackTex) {
+                auto aoTex = (obj->ao_path() && !obj->ao_path()->str().empty())
+                             ? ctx.am->loadTexture(obj->ao_path()->str()) : whiteTex;
+                auto roughTex = (obj->roughness_path() && !obj->roughness_path()->str().empty())
+                                ? ctx.am->loadTexture(obj->roughness_path()->str()) : whiteTex;
+                auto metalTex = (obj->metallic_path() && !obj->metallic_path()->str().empty())
+                                ? ctx.am->loadTexture(obj->metallic_path()->str()) : blackTex;
+
+                auto phongMat = ctx.am->createMaterial(
+                    albedo, whiteTex, aoTex, metalTex, roughTex,
+                    (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
+
+                if (phongMat) {
+                    phongMat->SetCastsShadows(true);
+                    using namespace GE::Assets;
+                    OBJLoader::MeshData meshData;
+                    bool shapeBuilt = false;
+
+                    switch (obj->shape_type()) {
+                    case Simulation::Shape::Sphere: {
+                        const auto* s = obj->shape_as_Sphere();
+                        const float r = s ? s->radius() : 0.5f;
+                        meshData = GeometryUtils::generateSphere(32, r, -r, glm::vec3(1.0f));
+                        ctx.em->AddComponent(id, GE::Components::SphereCollider{ r });
+                        shapeBuilt = true;
+                        break;
+                    }
+                    case Simulation::Shape::Plane: {
+                        const auto* p = obj->shape_as_Plane();
+                        const float planeW = p ? p->width()  : 20.0f;
+                        const float planeD = p ? p->depth()  : 20.0f;
+                        meshData = GeometryUtils::generatePlane(planeW, planeD);
+                        for (auto& v : meshData.vertices) { v.color = glm::vec3(1.0f); }
+                        glm::vec3 normal{ 0.0f, 1.0f, 0.0f };
+                        if (p && p->normal()) { normal = toVec3(*p->normal()); }
+                        GE::Components::PlaneCollider pc{ normal, 0.0f };
+                        if (glm::abs(normal.y) > 0.9f) { pc.sizeX = planeW; pc.sizeZ = planeD; }
+                        ctx.em->AddComponent(id, pc);
+                        shapeBuilt = true;
+                        break;
+                    }
+                    case Simulation::Shape::Cylinder: {
+                        const auto* c = obj->shape_as_Cylinder();
+                        const float r  = c ? c->radius() : 0.5f;
+                        const float ht = c ? c->height()  : 1.0f;
+                        meshData = GeometryUtils::generateCylinder(32, r, r, ht, glm::vec3(1.0f), true, true);
+                        ctx.em->AddComponent(id, GE::Components::CylinderCollider{ r, ht });
+                        shapeBuilt = true;
+                        break;
+                    }
+                    case Simulation::Shape::Capsule: {
+                        const auto* c = obj->shape_as_Capsule();
+                        const float r  = c ? c->radius() : 0.5f;
+                        const float ht = c ? c->height()  : 1.0f;
+                        meshData = GeometryUtils::generateCapsule(r, ht, 32, 16);
+                        for (auto& v : meshData.vertices) { v.color = glm::vec3(1.0f); }
+                        ctx.em->AddComponent(id, GE::Components::CapsuleCollider{ r, ht });
+                        shapeBuilt = true;
+                        break;
+                    }
+                    case Simulation::Shape::Cuboid: {
+                        const auto* c = obj->shape_as_Cuboid();
+                        const glm::vec3 sz = (c && c->size()) ? toVec3(*c->size()) : glm::vec3(1.0f);
+                        meshData = GeometryUtils::generateBox(sz.x, sz.y, sz.z, glm::vec3(1.0f));
+                        ctx.em->AddComponent(id, GE::Components::BoxCollider{ sz.x, sz.y, sz.z });
+                        shapeBuilt = true;
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+
+                    if (shapeBuilt && !meshData.vertices.empty()) {
+                        auto meshPtr = ctx.am->processMeshData(
+                            meshData, phongMat,
+                            ctx.uploadCtx->cmd,
+                            ctx.uploadCtx->stagingBuffers,
+                            ctx.uploadCtx->stagingMemories);
+                        if (meshPtr) {
+                            GE::Assets::Mesh* const rawPtr = meshPtr.get();
+                            auto dummyModel = std::make_unique<GE::Assets::Model>();
+                            dummyModel->addMesh(std::move(meshPtr));
+                            GE::Components::MeshRenderer mr;
+                            mr.subMeshes.push_back({ rawPtr, phongMat.get() });
+                            ctx.em->AddComponent(id, mr);
+                            ctx.ownedModels->push_back(std::move(dummyModel));
+                            usedTexturePath = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!usedTexturePath) {
+            adaptShape(obj, id, color, isContainer, ctx);
+        }
     }
 
     // --- Behaviour → RigidBody / AnimatedObjectComponent / ClothComponent ---
@@ -1065,9 +1169,16 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
                 const std::string texPath = pb->texture_path()->str();
                 auto albedo   = ctx.am->loadTexture(texPath);
                 auto whiteTex = ctx.am->loadTexture("textures/white.png");
-                if (albedo && whiteTex) {
+                auto blackTex = ctx.am->loadTexture("textures/black.png");
+                if (albedo && whiteTex && blackTex) {
+                    auto aoTex    = (pb->ao_path()        && !pb->ao_path()->str().empty())
+                                    ? ctx.am->loadTexture(pb->ao_path()->str())        : whiteTex;
+                    auto roughTex = (pb->roughness_path() && !pb->roughness_path()->str().empty())
+                                    ? ctx.am->loadTexture(pb->roughness_path()->str()) : whiteTex;
+                    auto metalTex = (pb->metallic_path()  && !pb->metallic_path()->str().empty())
+                                    ? ctx.am->loadTexture(pb->metallic_path()->str())  : blackTex;
                     auto phongMat = ctx.am->createMaterial(
-                        albedo, whiteTex, whiteTex, whiteTex, whiteTex,
+                        albedo, whiteTex, aoTex, metalTex, roughTex,
                         (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
                     phongMat->SetCastsShadows(false);
                     OBJLoader::MeshData neutralData = meshData;

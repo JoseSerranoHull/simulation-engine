@@ -82,7 +82,11 @@
       "shape_type": "Sphere", "shape": { "radius": 0.5 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":1,"y":0,"z":0}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "ONE" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "texture_path":   "textures/rubber/RubberGenericClean001_ALBEDO_2K.jpg",
+      "ao_path":        "textures/rubber/RubberGenericClean001_AMBIENT_OCCLUSION_2K.jpg",
+      "roughness_path": "textures/white.png",
+      "metallic_path":  "textures/black.png"
     },
     {
       "name": "SteelSphere",
@@ -91,7 +95,11 @@
       "shape_type": "Sphere", "shape": { "radius": 0.4 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":0,"y":0,"z":-0.5}, "angular_velocity": {"x":0,"y":0,"z":0} }, "owner": "TWO" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "texture_path":   "textures/steel/MetalGalvanizedSteelWorn001_ALBEDO_2K_METALNESS.jpg",
+      "ao_path":        "textures/white.png",
+      "roughness_path": "textures/steel/MetalGalvanizedSteelWorn001_ROUGHNESS_2K_METALNESS.jpg",
+      "metallic_path":  "textures/steel/MetalGalvanizedSteelWorn001_METALLIC_2K_METALNESS.jpg"
     },
     {
       "name": "WoodCuboid",
@@ -100,7 +108,11 @@
       "shape_type": "Cuboid", "shape": { "size": {"x":0.8,"y":0.8,"z":0.8} },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":0.5,"y":0,"z":0}, "angular_velocity": {"x":0,"y":5,"z":0} }, "owner": "THREE" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "texture_path":   "textures/wood/GroundWoodChips001_ALBEDO_2K.jpg",
+      "ao_path":        "textures/wood/GroundWoodChips001_AMBIENT_OCCLUSION_2K.jpg",
+      "roughness_path": "textures/white.png",
+      "metallic_path":  "textures/black.png"
     },
     {
       "name": "RubberCapsule",
@@ -109,7 +121,11 @@
       "shape_type": "Capsule", "shape": { "radius": 0.35, "height": 0.6 },
       "behaviour_type": "SimulatedObject",
       "behaviour": { "initial_state": { "linear_velocity": {"x":-0.5,"y":0,"z":0}, "angular_velocity": {"x":5,"y":0,"z":0} }, "owner": "FOUR" },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "texture_path":   "textures/rubber/RubberGenericClean001_ALBEDO_2K.jpg",
+      "ao_path":        "textures/rubber/RubberGenericClean001_AMBIENT_OCCLUSION_2K.jpg",
+      "roughness_path": "textures/white.png",
+      "metallic_path":  "textures/black.png"
     }
   ]
 }

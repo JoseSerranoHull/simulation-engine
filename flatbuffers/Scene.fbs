@@ -172,6 +172,10 @@ table Object {
   collision_type: CollisionType = SOLID;
   script_type: string;   // optional C++ script class name attached to this entity (e.g. "PlayerController")
   parent: string;        // optional name of parent Object; null = root entity
+  texture_path:   string;  // albedo path; triggers Phong pipeline when non-null
+  ao_path:        string;  // ambient occlusion map
+  roughness_path: string;  // PBR roughness (0=smooth, 1=rough)
+  metallic_path:  string;  // PBR metallic (0=dielectric, 1=metal)
 }
 
 // =======================
@@ -277,11 +281,14 @@ union SpawnerType {
 // =======================
 
 table Prefab {
-  name:         string;
-  shape:        Shape;      // shape union (type discriminant + data)
-  material:     string;     // physics material name (density lookup)
-  script_type:  string;     // optional C++ GameScriptComponent subclass name
-  texture_path: string;     // relative path for material-color mode (e.g. "textures/wood.png")
+  name:          string;
+  shape:         Shape;      // shape union (type discriminant + data)
+  material:      string;     // physics material name (density lookup)
+  script_type:   string;     // optional C++ GameScriptComponent subclass name
+  texture_path:  string;     // albedo path for material-color mode
+  ao_path:       string;     // ambient occlusion map
+  roughness_path: string;    // PBR roughness (0=smooth, 1=rough)
+  metallic_path:  string;    // PBR metallic (0=dielectric, 1=metal)
 }
 
 // =======================

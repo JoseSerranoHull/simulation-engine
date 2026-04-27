@@ -1699,8 +1699,12 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_BEHAVIOUR_TYPE = 14,
     VT_BEHAVIOUR = 16,
     VT_COLLISION_TYPE = 18,
-    VT_SCRIPT_TYPE = 20,
-    VT_PARENT = 22
+    VT_SCRIPT_TYPE    = 20,
+    VT_PARENT         = 22,
+    VT_TEXTURE_PATH   = 24,  // hand-patched: albedo; triggers Phong pipeline
+    VT_AO_PATH        = 26,  // hand-patched: ambient occlusion map
+    VT_ROUGHNESS_PATH = 28,  // hand-patched: PBR roughness
+    VT_METALLIC_PATH  = 30   // hand-patched: PBR metallic
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -1764,6 +1768,18 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *parent() const {
     return GetPointer<const ::flatbuffers::String *>(VT_PARENT);
   }
+  const ::flatbuffers::String *texture_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_TEXTURE_PATH);
+  }
+  const ::flatbuffers::String *ao_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_AO_PATH);
+  }
+  const ::flatbuffers::String *roughness_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_ROUGHNESS_PATH);
+  }
+  const ::flatbuffers::String *metallic_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_METALLIC_PATH);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -1783,6 +1799,14 @@ struct Object FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyString(script_type()) &&
            VerifyOffset(verifier, VT_PARENT) &&
            verifier.VerifyString(parent()) &&
+           VerifyOffset(verifier, VT_TEXTURE_PATH) &&
+           verifier.VerifyString(texture_path()) &&
+           VerifyOffset(verifier, VT_AO_PATH) &&
+           verifier.VerifyString(ao_path()) &&
+           VerifyOffset(verifier, VT_ROUGHNESS_PATH) &&
+           verifier.VerifyString(roughness_path()) &&
+           VerifyOffset(verifier, VT_METALLIC_PATH) &&
+           verifier.VerifyString(metallic_path()) &&
            verifier.EndTable();
   }
 };
@@ -2772,8 +2796,11 @@ struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_SHAPE_TYPE   = 6,
     VT_SHAPE        = 8,
     VT_MATERIAL     = 10,
-    VT_SCRIPT_TYPE  = 12,
-    VT_TEXTURE_PATH = 14   // hand-patched: relative path for material-color mode
+    VT_SCRIPT_TYPE    = 12,
+    VT_TEXTURE_PATH   = 14,  // hand-patched: albedo path for material-color mode
+    VT_AO_PATH        = 16,  // hand-patched: ambient occlusion map
+    VT_ROUGHNESS_PATH = 18,  // hand-patched: PBR roughness
+    VT_METALLIC_PATH  = 20   // hand-patched: PBR metallic
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -2809,6 +2836,15 @@ struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *texture_path() const {
     return GetPointer<const ::flatbuffers::String *>(VT_TEXTURE_PATH);
   }
+  const ::flatbuffers::String *ao_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_AO_PATH);
+  }
+  const ::flatbuffers::String *roughness_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_ROUGHNESS_PATH);
+  }
+  const ::flatbuffers::String *metallic_path() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_METALLIC_PATH);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -2823,6 +2859,12 @@ struct Prefab FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyString(script_type()) &&
            VerifyOffset(verifier, VT_TEXTURE_PATH) &&
            verifier.VerifyString(texture_path()) &&
+           VerifyOffset(verifier, VT_AO_PATH) &&
+           verifier.VerifyString(ao_path()) &&
+           VerifyOffset(verifier, VT_ROUGHNESS_PATH) &&
+           verifier.VerifyString(roughness_path()) &&
+           VerifyOffset(verifier, VT_METALLIC_PATH) &&
+           verifier.VerifyString(metallic_path()) &&
            verifier.EndTable();
   }
 };

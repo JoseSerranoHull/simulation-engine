@@ -39,6 +39,7 @@ layout(set = 0, binding = 1) uniform sampler2DShadow shadowMap;
 
 // --- Set 1: Material Textures ---
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
+layout(set = 1, binding = 2) uniform sampler2D aoSampler;
 layout(set = 1, binding = 3) uniform sampler2D metallicSampler;
 layout(set = 1, binding = 4) uniform sampler2D roughnessSampler;
 
@@ -102,7 +103,8 @@ void main() {
     float shadow = calculateShadow(fragPosLightSpace);
 
     // 2. DYNAMIC AMBIENT CALCULATION
-    vec3 ambientResult = albedo * (ubo.lightColor * 0.05); 
+    float ao = texture(aoSampler, fragTexCoord).r;
+    vec3 ambientResult = albedo * ao * (ubo.lightColor * 0.05);
 
     if (ubo.useGouraud == 1) {
         // 3. GOURAUD FALLBACK MODE

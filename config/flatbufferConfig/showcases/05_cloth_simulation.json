@@ -60,7 +60,12 @@
         "particle_mass": 0.05,
         "pin_top_edge": true
       },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "texture_path":    "textures/fabric/Poliigon_BoucleFabricBubbly_7827_Albedo.jpg",
+      "normal_map_path": "textures/fabric/Poliigon_BoucleFabricBubbly_7827_Normal.png",
+      "ao_path":         "textures/fabric/Poliigon_BoucleFabricBubbly_7827_AmbientOcclusion.jpg",
+      "roughness_path":  "textures/fabric/Poliigon_BoucleFabricBubbly_7827_Roughness.jpg",
+      "metallic_path":   "textures/black.png"
     },
     {
       "name": "Floor",

@@ -256,8 +256,31 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
         if (cc.mappedVertices == nullptr || cc.vertexCount == 0U) { continue; }
 
         auto* verts = static_cast<GE::Assets::Vertex*>(cc.mappedVertices);
+        const int R = cc.rows;
+        const int C = cc.cols;
+
         for (uint32_t vi = 0U; vi < cc.vertexCount; ++vi) {
-            verts[vi].position = cc.particles[vi].position;
+            const int r = static_cast<int>(vi) / C;
+            const int c = static_cast<int>(vi) % C;
+            const glm::vec3 center = cc.particles[vi].position;
+
+            verts[vi].position = center;
+
+            // Per-vertex normal: central-difference cross product of deformed neighbor positions.
+            // At boundary vertices the missing neighbor is replaced by the current vertex (half step).
+            const glm::vec3 right = (c < C-1) ? cc.particles[vi+1].position : center;
+            const glm::vec3 left  = (c > 0)   ? cc.particles[vi-1].position : center;
+            const glm::vec3 above = (r > 0)   ? cc.particles[vi-C].position : center;
+            const glm::vec3 below = (r < R-1) ? cc.particles[vi+C].position : center;
+            const glm::vec3 dX = right - left;
+            const glm::vec3 dY = above - below;
+            const glm::vec3 n  = glm::cross(dX, dY);
+            verts[vi].normal = (glm::dot(n, n) > 1e-8f) ? glm::normalize(n) : glm::vec3(0.0f, 0.0f, 1.0f);
+
+            // Per-vertex tangent: U direction (toward increasing column) for TBN normal mapping.
+            const glm::vec3 tang = (c < C-1) ? (cc.particles[vi+1].position - center)
+                                              : (center - cc.particles[vi-1].position);
+            verts[vi].tangent = (glm::dot(tang, tang) > 1e-8f) ? glm::normalize(tang) : glm::vec3(1.0f, 0.0f, 0.0f);
 
             // Heat-based color: cold = cloth color, heating → orange, burned → near-black
             const float heat = cc.particles[vi].heat;

@@ -775,27 +775,61 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
                     indices.data(), indexBytes);
 
         // Create a Mesh wrapping the cloth buffer — non-owning reference, cloth owns cleanup.
-        if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
-            GE_LOG_ERROR("FBSceneAdapter: ClothObject: Flat-color pipeline not available.");
-            break;
+        // Use textured Phong when texture_path is set and in material-color mode; flat-color otherwise.
+        std::shared_ptr<GE::Assets::Material> clothMat;
+
+        const bool clothHasTexture = (!ctx.useOwnerColors &&
+                                      obj->texture_path() != nullptr &&
+                                      !obj->texture_path()->str().empty() &&
+                                      ctx.pipelines != nullptr &&
+                                      ctx.pipelines->size() > PHONG_PIPELINE_INDEX);
+        if (clothHasTexture) {
+            auto whiteTex       = ctx.am->loadTexture("textures/white.png");
+            auto blackTex       = ctx.am->loadTexture("textures/black.png");
+            auto flatNormalTex  = ctx.am->loadTexture("textures/flat_normal.png");
+            auto albedo         = ctx.am->loadTexture(obj->texture_path()->str());
+            if (albedo && whiteTex && blackTex && flatNormalTex) {
+                auto normalTex = (obj->normal_map_path() && !obj->normal_map_path()->str().empty())
+                                  ? ctx.am->loadTexture(obj->normal_map_path()->str()) : flatNormalTex;
+                auto aoTex     = (obj->ao_path()        && !obj->ao_path()->str().empty())
+                                  ? ctx.am->loadTexture(obj->ao_path()->str())        : whiteTex;
+                auto roughTex  = (obj->roughness_path() && !obj->roughness_path()->str().empty())
+                                  ? ctx.am->loadTexture(obj->roughness_path()->str()) : whiteTex;
+                auto metalTex  = (obj->metallic_path()  && !obj->metallic_path()->str().empty())
+                                  ? ctx.am->loadTexture(obj->metallic_path()->str())  : blackTex;
+                auto phongMat  = ctx.am->createMaterial(
+                    albedo, normalTex, aoTex, metalTex, roughTex,
+                    (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
+                if (phongMat) {
+                    phongMat->SetCastsShadows(false);
+                    clothMat = std::move(phongMat);
+                }
+            }
         }
-        GE::Graphics::GraphicsPipeline* const flatColorPipeline =
-            (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
-        auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
-        flatMat->SetCastsShadows(false);
+
+        if (!clothMat) {
+            // Flat-color fallback (owner-color mode, or texture loading failed)
+            if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
+                GE_LOG_ERROR("FBSceneAdapter: ClothObject: pipeline not available.");
+                break;
+            }
+            clothMat = std::make_shared<GE::Assets::Material>(
+                VK_NULL_HANDLE, (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get());
+            clothMat->SetCastsShadows(false);
+        }
 
         auto meshPtr = std::make_unique<GE::Assets::Mesh>(
             cc.vertexBuffer,
             cc.indexCount,
             cc.indexOffset,
-            flatMat);
+            clothMat);
 
         GE::Assets::Mesh* const rawMesh = meshPtr.get();
         auto dummyModel = std::make_unique<GE::Assets::Model>();
         dummyModel->addMesh(std::move(meshPtr));
 
         GE::Components::MeshRenderer mr;
-        mr.subMeshes.push_back({ rawMesh, flatMat.get() });
+        mr.subMeshes.push_back({ rawMesh, clothMat.get() });
         ctx.em->AddComponent(id, mr);
         ctx.ownedModels->push_back(std::move(dummyModel));
 

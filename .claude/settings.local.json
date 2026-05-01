@@ -160,7 +160,13 @@
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 20)",
       "PowerShell(& \"C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe\" --binary -o \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\showcases\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\flatbuffers\\\\Scene.fbs\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\showcases\\\\05_cloth_simulation.json\" ; Write-Host \"flatc exit: $LASTEXITCODE\")",
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 15)",
-      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 10)"
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /t:Build /m /nologo 2>&1 | Select-Object -Last 10)",
+      "Bash(glslc shaders/checkerboard.vert -o shaders/checkerboard_vert.spv)",
+      "Bash(glslc phong.vert -o phong_vert.spv)",
+      "Bash(glslc water.vert -o water_vert.spv)",
+      "Bash(glslc collider_wire.vert -o collider_wire_vert.spv)",
+      "Bash(glslc shadow.vert -o shadow_vert.spv)",
+      "Bash(glslc flatcolor.vert -o flatcolor_vert.spv)"
     ]
   }
 }

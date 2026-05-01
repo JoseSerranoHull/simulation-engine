@@ -13,7 +13,7 @@ namespace GE::Scripts {
  * @brief Creates a GameScriptComponent by type name string.
  *
  * Register new script types here. Returning nullptr is safe — FBSceneAdapter skips it.
- * Used by FBSceneAdapter::adaptObject() to attach scripts data-driven from the scene JSON.
+ * Used by FBSceneAdapter::adaptObject() to attach scripts data-driven from the scene binary.
  */
 std::shared_ptr<GameScriptComponent> CreateScript(const std::string& typeName);
 

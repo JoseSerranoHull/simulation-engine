@@ -534,57 +534,6 @@
     <None Include="config\simulation_scripts_demo.ini">
       <Filter>Config Files\Legacy Lab</Filter>
     </None>
-    <None Include="config\flatbufferConfig\showcases\01_multiplayer.json">
-      <Filter>Config Files\Showcases</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\showcases\02_shapes_and_materials.json">
-      <Filter>Config Files\Showcases</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\showcases\03_animation_platforms.json">
-      <Filter>Config Files\Showcases</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\showcases\04_spawner_factory.json">
-      <Filter>Config Files\Showcases</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\showcases\05_cloth_simulation.json">
-      <Filter>Config Files\Showcases</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\showcases\06_flocking_boids.json">
-      <Filter>Config Files\Showcases</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\01_shapes_and_collisions.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\02_materials_and_physics.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\03_cameras_and_views.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\04_animation_platforms.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\05_spawner_factory.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\06_cloth_simulation.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\07_flocking_boids.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\old_showcases\08_grand_showcase.json">
-      <Filter>Config Files\Legacy Lab</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\tests\cloth_test.json">
-      <Filter>Config Files\Tests</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\tests\flock_test.json">
-      <Filter>Config Files\Tests</Filter>
-    </None>
-    <None Include="config\flatbufferConfig\tests\test_fb_scene.json">
-      <Filter>Config Files\Tests</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <!-- core headers -->

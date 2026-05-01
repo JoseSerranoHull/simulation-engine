@@ -199,15 +199,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CLAUDE.md" />
-    <None Include="config\flatbufferConfig\showcases\01_multiplayer.json" />
-    <None Include="config\flatbufferConfig\showcases\02_shapes_and_materials.json" />
-    <None Include="config\flatbufferConfig\showcases\03_animation_platforms.json" />
-    <None Include="config\flatbufferConfig\showcases\04_spawner_factory.json" />
-    <None Include="config\flatbufferConfig\showcases\05_cloth_simulation.json" />
-    <None Include="config\flatbufferConfig\showcases\06_flocking_boids.json" />
-    <None Include="config\flatbufferConfig\tests\cloth_test.json" />
-    <None Include="config\flatbufferConfig\tests\flock_test.json" />
-    <None Include="config\flatbufferConfig\tests\test_fb_scene.json" />
     <None Include="config\simulation_lab2.ini" />
     <None Include="config\simulation_lab3.ini" />
     <None Include="config\simulation_lab4.ini" />

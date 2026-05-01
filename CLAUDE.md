@@ -36,16 +36,15 @@ simulation-engine/
 │   ├── simulation_lab2.ini
 │   ├── simulation_lab3.ini
 │   └── flatbufferConfig/               # FlatBuffers binary scenes (FlatBuffersScenario)
-│       ├── 01_shapes_and_collisions.bin/.json
-│       ├── 02_materials_and_physics.bin/.json
-│       ├── 03_cameras_and_views.bin/.json
-│       ├── 04_animation_platforms.bin/.json
-│       ├── 05_spawner_factory.bin/.json
-│       ├── 06_cloth_simulation.bin/.json
-│       ├── 07_flocking_boids.bin/.json
-│       ├── 08_grand_showcase.bin/.json   # Default startup scene
-│       ├── test_fb_scene.bin/.json       # Legacy test scene (kept for TC-008)
-│       └── showcases/                    # Original demo scenes (kept for backward compat)
+│       ├── showcases/                    # Active demo scenes (.bin loaded directly at runtime)
+│       │   ├── 01_multiplayer.bin
+│       │   ├── 02_shapes_and_materials.bin
+│       │   ├── 03_animation_platforms.bin
+│       │   ├── 04_spawner_factory.bin
+│       │   ├── 05_cloth_simulation.bin
+│       │   └── 06_flocking_boids.bin
+│       ├── old_showcases/               # Legacy scenes (kept for backward compat)
+│       └── tests/                       # Test scenes (cloth_test.bin, flock_test.bin, etc.)
 ├── flatbuffers/                        # FlatBuffers schema + generated header
 │   ├── Scene.fbs                       # Schema source — edit this to extend scene format
 │   └── Scene_generated.h               # Patched by hand (do NOT regenerate via flatc — version mismatch)

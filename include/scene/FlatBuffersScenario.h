@@ -65,6 +65,9 @@ namespace GE {
         GE::Systems::ScriptSystem*              m_scriptSystem      { nullptr };
         GE::Systems::ColliderVisualizerSystem*  m_visualizerSystem  { nullptr };
 
+        // --- Cloth sphere spawner (scene 05 only; UINT32_MAX = not present) ---
+        uint32_t  m_clothSpawnerEntityID { UINT32_MAX };
+
         // --- Material interaction registry (populated at load, passed to PhysicsSystem) ---
         GE::Physics::MaterialInteractionRegistry m_interactionRegistry;
 

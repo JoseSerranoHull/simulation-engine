@@ -30,6 +30,9 @@
 #include "components/ClothComponent.h"
 #include "components/FlockingComponent.h"
 #include "scene/Scene.h"
+#include "game-scripts/ClothSphereSpawnerScript.h"
+#include "assets/GeometryUtils.h"
+#include "assets/Model.h"
 
 /* parasoft-begin-suppress ALL */
 #include "imgui.h"
@@ -209,6 +212,52 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     m_spawnerSystem = ss;
     em->RegisterSystem(ss);
 
+    // 12b. If cloth is present, create an invisible manager entity that spawns spheres on SPACE
+    {
+        auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
+        constexpr std::size_t FLATCOLOR_IDX = 8U;
+        if (clothArr.GetCount() > 0U && m_pipelines.size() > FLATCOLOR_IDX) {
+            GE::Graphics::GraphicsPipeline* const flatColorPipeline =
+                m_pipelines[FLATCOLOR_IDX].get();
+
+            auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
+            flatMat->SetCastsShadows(false);
+
+            const float SR = 0.18f;
+            auto sphereData = GeometryUtils::generateSphere(16U, SR, -SR,
+                                                            glm::vec3(0.9f, 0.35f, 0.1f));
+
+            auto sphereMesh = am->processMeshData(
+                sphereData, flatMat, ctx.cmd, ctx.stagingBuffers, ctx.stagingMemories);
+
+            if (sphereMesh) {
+                GE::Assets::Mesh*     const rawMesh = sphereMesh.get();
+                GE::Assets::Material* const rawMat  = flatMat.get();
+
+                auto dummyModel = std::make_unique<Model>();
+                dummyModel->addMesh(std::move(sphereMesh));
+                m_ownedModels.push_back(std::move(dummyModel));
+
+                const uint32_t managerID = em->CreateEntity();
+                m_clothSpawnerEntityID = managerID;
+
+                GE::Components::Transform mgrTr;
+                mgrTr.m_localPosition = glm::vec3(0.0f);
+                mgrTr.m_worldPosition = glm::vec3(0.0f);
+                em->AddComponent(managerID, mgrTr);
+
+                GE::Components::Tag mgrTag;
+                mgrTag.m_name = "ClothSphereSpawner";
+                em->AddComponent(managerID, mgrTag);
+
+                auto script = std::make_shared<GE::Scripts::ClothSphereSpawnerScript>(rawMesh, rawMat);
+                script->SetEntityID(managerID);
+                em->AddComponent(managerID,
+                    GE::Components::ScriptComponent{ std::move(script) });
+            }
+        }
+    }
+
     // 13. Register ColliderVisualizerSystem (debug wireframe overlay; on by default)
     auto* vs = new GE::Systems::ColliderVisualizerSystem(ctx);
     vs->m_enabled = true;   // toggle via Simulation → Show Collider Wireframes
@@ -362,6 +411,12 @@ void FlatBuffersScenario::OnUnload() {
                 }
             }
         }
+    }
+
+    // Destroy cloth sphere-spawner manager entity before unregistering ScriptSystem
+    if (m_clothSpawnerEntityID != UINT32_MAX && em != nullptr) {
+        em->DestroyEntity(m_clothSpawnerEntityID);
+        m_clothSpawnerEntityID = UINT32_MAX;
     }
 
     if ((m_scriptSystem != nullptr) && (em != nullptr)) {
@@ -719,6 +774,8 @@ void FlatBuffersScenario::OnGUI() {
         if (em != nullptr) {
             auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
             if (clothArr.GetCount() > 0U && ImGui::BeginMenu("Cloth")) {
+                ImGui::TextDisabled("SPACE: launch sphere into cloth");
+                ImGui::Separator();
                 for (uint32_t i = 0U; i < clothArr.GetCount(); ++i) {
                     GE::Components::ClothComponent& cc = clothArr.Data()[i];
                     ImGui::PushID(static_cast<int>(i));
@@ -729,8 +786,12 @@ void FlatBuffersScenario::OnGUI() {
                     ImGui::SliderFloat("Shear K",   &cc.shearK,   0.0f,   500.0f);
                     ImGui::SliderFloat("Flexion K", &cc.flexionK, 0.0f,   250.0f);
                     ImGui::SliderFloat("Damping",   &cc.damping,  0.0f,     1.0f);
-                    ImGui::SliderFloat("Wind X",    &cc.windX,  -10.0f,    10.0f);
-                    ImGui::SliderFloat("Wind Z",    &cc.windZ,  -10.0f,    10.0f);
+                    ImGui::Separator();
+                    ImGui::Checkbox("Wind", &cc.windEnabled);
+                    if (cc.windEnabled) {
+                        ImGui::SliderFloat("Wind X", &cc.windX, -10.0f, 10.0f);
+                        ImGui::SliderFloat("Wind Z", &cc.windZ, -10.0f, 10.0f);
+                    }
 
                     ImGui::Separator();
                     ImGui::Text("Tearing");

@@ -23,8 +23,10 @@ ClothSystem::ClothSystem() {
     m_state  = SystemState::Running;
 }
 
-static constexpr float GRAVITY    = -9.81f;
-static constexpr float MIN_LENGTH = 1e-6f;
+static constexpr float GRAVITY          = -9.81f;
+static constexpr float MIN_LENGTH       = 1e-6f;
+static constexpr float CLOTH_RESTITUTION = 0.20f;  // fraction of normal velocity reflected back
+static constexpr float CLOTH_FRICTION    = 0.70f;  // fraction of tangential velocity retained
 
 // Apply spring force between two particles (A and B), rest length = restLen.
 // Adds F to A, subtracts F from B. Pinned particles receive no force.
@@ -84,9 +86,11 @@ void ClothSystem::OnUpdate(float dt) {
             p.force  = glm::vec3{ 0.0f,
                                   GRAVITY * cc.particleMass,
                                   0.0f };
-            p.force += glm::vec3{ cc.windX * cc.particleMass,
-                                  0.0f,
-                                  cc.windZ * cc.particleMass };
+            if (cc.windEnabled) {
+                p.force += glm::vec3{ cc.windX * cc.particleMass,
+                                      0.0f,
+                                      cc.windZ * cc.particleMass };
+            }
         }
 
         // ---------------------------------------------------------------
@@ -141,12 +145,32 @@ void ClothSystem::OnUpdate(float dt) {
             const glm::vec3 sphereCenter = tr->m_worldPosition;
             const float     sphereRadius = sc.radius;
 
+            int       collisionCount = 0;
+            glm::vec3 totalNormal{ 0.0f };
+
             for (auto& p : cc.particles) {
                 if (p.pinned) { continue; }
                 const glm::vec3 diff = p.position - sphereCenter;
                 const float     dist = glm::length(diff);
                 if (dist < sphereRadius && dist > MIN_LENGTH) {
-                    p.position = sphereCenter + glm::normalize(diff) * sphereRadius;
+                    const glm::vec3 normal = diff / dist;
+                    p.position = sphereCenter + normal * sphereRadius;
+                    totalNormal += normal;
+                    ++collisionCount;
+                }
+            }
+
+            // Apply reaction impulse to sphere — cloth pushes back
+            if (collisionCount > 0 && glm::dot(totalNormal, totalNormal) > MIN_LENGTH) {
+                auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(seid);
+                if (rb != nullptr && !rb->isStatic) {
+                    const glm::vec3 avgNormal = glm::normalize(totalNormal);
+                    const float     vAlongN   = glm::dot(rb->velocity, avgNormal);
+                    if (vAlongN < 0.0f) {   // only when moving into the cloth
+                        const glm::vec3 vNorm = vAlongN * avgNormal;
+                        const glm::vec3 vTang = rb->velocity - vNorm;
+                        rb->velocity = (-CLOTH_RESTITUTION * vNorm) + (CLOTH_FRICTION * vTang);
+                    }
                 }
             }
         }

@@ -69,6 +69,7 @@ struct ClothComponent {
     bool      burnActive { false };
 
     // Runtime ImGui tweakables (benign race between main thread write and physics thread read)
+    bool  windEnabled { false };
     float windX { 0.0f }, windZ { 0.0f };
 };
 

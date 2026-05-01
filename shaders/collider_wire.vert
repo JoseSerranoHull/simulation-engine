@@ -4,6 +4,7 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;  // unused — present for Vertex format compatibility
 layout(location = 3) in vec3 inNormal;    // unused
+layout(location = 4) in vec3 inTangent;   // unused — present for Vertex format compatibility
 
 layout(location = 0) out vec3 fragColor;
 

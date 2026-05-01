@@ -456,4 +456,141 @@ em->AddComponent<GE::Components::ScriptComponent>(id,
 
 ---
 
+---
+
+## 8.7 Trigger Volumes
+
+### What Is a Trigger?
+
+A **trigger volume** is a collider that detects overlap with other objects but does **not** push them away. Instead of applying forces, it fires events — `OnTriggerEnter` when an object enters the volume, and `OnTriggerExit` when it leaves.
+
+Common uses:
+- A checkpoint zone that registers a lap time when a player drives through it
+- A door that opens when the player approaches
+- A danger area that applies a heat effect to every entity inside it
+
+### Enabling a Trigger
+
+Any collider (except `PlaneCollider`) can become a trigger by setting `isTrigger = true`. The field is exposed in the entity inspector:
+
+```
+Entity Inspector — SphereCollider
+  [v] Sphere Collider
+      Radius: [0.180]
+      Is Trigger: [✓]      ← tick this box
+```
+
+Supported collider types with `isTrigger`:
+- `SphereCollider` ✓
+- `BoxCollider` ✓
+- `CapsuleCollider` ✓
+- `CylinderCollider` ✓
+- `PlaneCollider` ✗ (planes are used as infinite floors/walls; trigger semantics don't apply)
+
+### How PhysicsSystem Handles Triggers
+
+All 12 collision passes in `PhysicsSystem::ResolveCollisions()` follow the same pattern:
+
+```cpp
+// source/systems/PhysicsSystem.cpp — same guard in every collision pass
+if (aCol.isTrigger || bCol.isTrigger) {
+    // Record the contact pair — but apply NO impulse, NO positional correction
+    GE::Scripts::EntityPair pair { std::min(aID, bID), std::max(aID, bID) };
+    m_currentTriggers.insert(pair);
+    continue;   // Skip all physics response for this pair
+}
+```
+
+`m_currentTriggers` is a `std::unordered_set<EntityPair>` populated fresh every tick. It's passed to `ScriptSystem` for event dispatch.
+
+### How ScriptSystem Dispatches Events
+
+`ScriptSystem` uses **set-difference** between the current frame's trigger contacts and the previous frame's:
+
+```cpp
+// source/systems/ScriptSystem.cpp — DispatchCollisionEvents()
+const auto& currentTriggers = m_physicsSystem->GetCurrentTriggers();
+
+// --- OnTriggerEnter: pairs that appear this frame but weren't there last frame ---
+for (const auto& pair : currentTriggers) {
+    if (m_prevTriggers.find(pair) == m_prevTriggers.end()) {
+        FireTriggerEnter(pair.first,  pair.second);   // Script on A: "B entered"
+        FireTriggerEnter(pair.second, pair.first);    // Script on B: "A entered"
+    }
+}
+
+// --- OnTriggerExit: pairs present last frame but gone this frame ---
+for (const auto& pair : m_prevTriggers) {
+    if (currentTriggers.find(pair) == currentTriggers.end()) {
+        FireTriggerExit(pair.first,  pair.second);
+        FireTriggerExit(pair.second, pair.first);
+    }
+}
+
+m_prevTriggers = currentTriggers;   // Remember for next frame
+```
+
+This gives exactly-once `Enter` at the moment of first overlap, and exactly-once `Exit` at the moment of separation — regardless of how many frames the overlap lasts.
+
+### Writing a Trigger Script
+
+```cpp
+// Example: a zone that logs which entity entered it
+class CheckpointScript final : public GE::Scripts::GameScriptComponent {
+public:
+    const char* GetScriptName() const override { return "Checkpoint"; }
+
+    void OnTriggerEnter(GE::ECS::EntityID other) override {
+        // 'other' is the EntityID of whatever just entered this trigger volume
+        auto* em  = GetEntityManager();
+        auto* tag = em->TryGetTIComponent<GE::Components::Tag>(other);
+        const std::string name = tag ? tag->m_name : std::to_string(other);
+        GE_LOG_INFO("Checkpoint reached by: " + name);
+    }
+
+    void OnTriggerExit(GE::ECS::EntityID other) override {
+        GE_LOG_INFO("Entity " + std::to_string(other) + " left checkpoint");
+    }
+};
+```
+
+### Full Setup: Trigger Zone with a Script
+
+```cpp
+// In FlatBuffersScenario::OnLoad() or in a scene JSON adapter —
+// create an entity that acts as an invisible trigger zone:
+
+const GE::ECS::EntityID zoneID = em->CreateEntity();
+
+// Transform: position the zone in world space
+GE::Components::Transform tr;
+tr.m_localPosition = glm::vec3(5.0f, 1.0f, 0.0f);
+tr.m_worldPosition = tr.m_localPosition;
+tr.m_worldMatrix   = glm::translate(glm::mat4(1.0f), tr.m_localPosition);
+em->AddComponent(zoneID, tr);
+
+// Collider: a sphere with isTrigger=true — no mesh, invisible
+em->AddComponent(zoneID, GE::Components::SphereCollider{ 2.0f, true /* isTrigger */ });
+
+// Script: attach the checkpoint behaviour
+auto script = std::make_shared<CheckpointScript>();
+script->SetEntityID(zoneID);
+em->AddComponent(zoneID, GE::Components::ScriptComponent{ std::move(script) });
+```
+
+No `RigidBody` is needed — the trigger zone is stationary and has no physics mass. No `MeshRenderer` is needed — it's invisible. The `SphereCollider` with `isTrigger=true` is the only requirement for detection to work.
+
+### Trigger vs. Collision: Summary
+
+| Property | `isTrigger = false` | `isTrigger = true` |
+|----------|---------------------|---------------------|
+| Overlap detected? | ✓ | ✓ |
+| Positional correction? | ✓ (pushed apart) | ✗ |
+| Velocity impulse? | ✓ | ✗ |
+| `OnCollisionEnter/Exit` fired? | ✓ (if script present) | ✗ |
+| `OnTriggerEnter/Exit` fired? | ✗ | ✓ (if script present) |
+| Can walk through? | ✗ (blocked) | ✓ (passes through) |
+
+---
+
 *Next: [Chapter 9 — Animation & Spawning](09_Animation_Spawning.md)*

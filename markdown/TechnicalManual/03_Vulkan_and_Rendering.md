@@ -500,4 +500,139 @@ void main() {
 
 ---
 
+---
+
+## 3.11 PBR Textures and Normal Mapping
+
+### The Vertex Format
+
+Every geometry vertex is described by the `Vertex` struct:
+
+```cpp
+// include/assets/Vertex.h
+namespace GE::Assets {
+
+struct Vertex {
+    // Layout matches std140 alignment — no padding needed between fields.
+    glm::vec3 position { 0.0f, 0.0f, 0.0f };   // Location 0
+    glm::vec3 color    { 1.0f, 1.0f, 1.0f };   // Location 1  (flat-color pipeline only)
+    glm::vec2 texcoord { 0.0f, 0.0f };          // Location 2  (UV coordinates)
+    glm::vec3 normal   { 0.0f, 1.0f, 0.0f };   // Location 3  (geometric surface normal)
+    glm::vec3 tangent  { 1.0f, 0.0f, 0.0f };   // Location 4  (U-axis for TBN matrix)
+
+    static constexpr uint32_t ATTRIBUTE_COUNT = 5U;
+    static constexpr uint32_t LOC_TANGENT     = 4U;
+
+    static VkVertexInputBindingDescription getBindingDescription();
+    static std::array<VkVertexInputAttributeDescription, ATTRIBUTE_COUNT>
+           getAttributeDescriptions();
+};
+
+} // namespace GE::Assets
+```
+
+All pipelines (Phong, Gouraud, flat-color, shadow, wire) declare all 5 attributes in their vertex input state. Shaders that don't use the tangent (e.g. Gouraud, flat-color, shadow) still declare `layout(location = 4) in vec3 inTangent` to avoid Vulkan validation warnings — they simply discard the value.
+
+### What Is PBR?
+
+**Physically-Based Rendering (PBR)** is a shading model that approximates how real light interacts with surfaces by parametrising materials with physically measurable quantities:
+
+| Texture | Meaning | Example values |
+|---------|---------|---------------|
+| **Albedo** | Base colour (no lighting) | `(0.8, 0.6, 0.3)` = tan wood |
+| **Normal map** | Per-texel surface orientation perturbation | Blue-ish images store (X,Y,Z) tangent-space normals |
+| **AO (Ambient Occlusion)** | How much ambient light reaches each point | 1.0 = fully lit, 0 = occluded crevice |
+| **Metallic** | Is the surface a metal? | 0 = dielectric (wood, rubber), 1 = conductor (steel) |
+| **Roughness** | How rough/glossy is the surface? | 0 = mirror, 1 = chalk |
+
+The engine binds all five textures to descriptor set 1, bindings 0–4, for any material using the Phong pipeline:
+
+```glsl
+// shaders/phong.frag — set 1 bindings
+layout(set = 1, binding = 0) uniform sampler2D albedoSampler;
+layout(set = 1, binding = 1) uniform sampler2D normalSampler;
+layout(set = 1, binding = 2) uniform sampler2D aoSampler;
+layout(set = 1, binding = 3) uniform sampler2D metallicSampler;
+layout(set = 1, binding = 4) uniform sampler2D roughnessSampler;
+```
+
+Objects that have no texture use placeholder 1×1 textures:
+- `textures/white.png` — AO=1.0, roughness=1.0 (fully lit, rough)
+- `textures/black.png` — metallic=0.0 (dielectric, e.g. rubber or wood)
+- `textures/flat_normal.png` — RGB=(128,128,255) → tangent-space `(0,0,1)` = no perturbation
+
+### Normal Mapping: TBN Matrix
+
+A **normal map** stores surface normals in **tangent space** — a local coordinate system aligned with the UV map. To use them in world-space lighting, they must be transformed by the TBN matrix:
+
+```
+        N (geometric normal, world space)
+        │
+        │  B (bitangent = N × T)
+        │ /
+        │/_____ T (tangent = U-axis direction)
+```
+
+In `phong.vert`, the tangent is transformed alongside the normal:
+
+```glsl
+// shaders/phong.vert
+layout(location = 4) in vec3 inTangent;
+layout(location = 5) out vec3 fragTangent;
+
+void main() {
+    mat3 normalMatrix = mat3(transpose(inverse(push.model)));
+    fragNormal  = normalMatrix * inNormal;
+    fragTangent = normalize(normalMatrix * inTangent);
+    // ... position transform ...
+}
+```
+
+In `phong.frag`, Gram-Schmidt re-orthogonalises the interpolated tangent (which may drift from perpendicular due to interpolation) before constructing the TBN matrix:
+
+```glsl
+// shaders/phong.frag — TBN construction (Phong branch only)
+vec3 N_geom = normalize(fragNormal);
+vec3 T      = normalize(fragTangent - dot(fragTangent, N_geom) * N_geom); // Gram-Schmidt
+vec3 B      = cross(N_geom, T);
+mat3 TBN    = mat3(T, B, N_geom);
+
+// Decode: [0,1] → [-1,1], then rotate into world space
+vec3 normalSample = texture(normalSampler, fragTexCoord).rgb * 2.0 - 1.0;
+vec3 N = normalize(TBN * normalSample);
+// N replaces N_geom in all subsequent lighting calculations
+```
+
+**Why Gram-Schmidt?** Hardware interpolation is linear, not spherical. If T and N were exactly perpendicular at every vertex, they may not remain perpendicular at interpolated positions between vertices. The re-orthogonalisation corrects this per-fragment.
+
+### Generating Tangents Per Shape
+
+Each procedural geometry generator in `GeometryUtils.cpp` computes analytically-derived tangents:
+
+| Shape | Tangent formula | Rationale |
+|-------|----------------|-----------|
+| Sphere | `(-sinθ, 0, cosθ)` | Longitude direction (θ = azimuth angle) — perpendicular to normal, aligned with U |
+| Cylinder (walls) | `(-sinθ, 0, cosθ)` | Same as sphere (revolution around Y) |
+| Capsule | `(-sinθ, 0, cosθ)` | Same as sphere |
+| Box | Face-specific fixed vectors | E.g. +X face → T=(0,0,-1), +Y face → T=(1,0,0) |
+| Plane | `(1, 0, 0)` | U-axis is always +X for flat geometry |
+
+These are perpendicular to the geometric normal at every vertex by construction, which minimises TBN error before interpolation.
+
+### Toggling Between Owner Colors and PBR
+
+The Phong pipeline requires a descriptor set 1 (5 textures). The flat-color pipeline has no set 1 — it uses vertex colors instead. Switching between them requires recreating the material descriptors, which is done by reloading the scene:
+
+```cpp
+// source/scene/fb/FBSceneContext.h
+struct FBSceneContext {
+    bool useOwnerColors { true };   // true = flat-color (set 0 only)
+                                    // false = Phong (set 0 + set 1 textures)
+};
+```
+
+The `Display → Material Colors` ImGui menu calls `requestScenarioChange()` with `useOwnerColors` flipped — the scene reloads with the opposite pipeline configuration. This is safe because `requestScenarioChange()` defers the reload to the next render frame after `vkDeviceWaitIdle()`.
+
+---
+
 *Next: [Chapter 4 — Scene Management](04_Scene_Management.md)*

@@ -476,4 +476,120 @@ if (ImGui::CollapsingHeader("Network")) {
 
 ---
 
+---
+
+## 7.10 Auto-Connect Peer Negotiation
+
+### The Problem with Manual Configuration
+
+The original Network menu required each user to:
+1. Type three remote peer IP addresses and ports by hand
+2. Manually choose a peer ID (1–4) without knowing which IDs other players have taken
+3. Click "Connect" per peer
+
+This breaks down immediately in a classroom: two students both choose peer ID 1, neither knows it, and positions flicker/fight silently. There is no error — the engine just corrupts state.
+
+### How Auto-Connect Works
+
+`NetworkBridge::BeginAutoConnect()` implements a **LAN discovery handshake** that assigns slots automatically:
+
+```
+Step 1 — Broadcast DiscoveryHello
+    New client ──▶ UDP broadcast to 255.255.255.255:54000
+                ──▶ UDP broadcast to 255.255.255.255:54001
+                ──▶ UDP broadcast to 255.255.255.255:54002
+                ──▶ UDP broadcast to 255.255.255.255:54003
+
+Step 2 — Existing peers respond
+    Peer A (slot 1) ──▶ DiscoveryReply { slotId=1 }  ──▶ New client
+    Peer B (slot 2) ──▶ DiscoveryReply { slotId=2 }  ──▶ New client
+
+Step 3 — Slot assignment
+    New client: "Slots 1 and 2 are taken. I'll take slot 3."
+
+Step 4 — Announce
+    New client ──▶ PeerAnnounce { slotId=3 } ──▶ broadcast
+    Peer A now knows about Peer C (slot 3) ← Bidirectional!
+    Peer B now knows about Peer C (slot 3) ← Bidirectional!
+```
+
+The state machine in `NetworkBridge`:
+
+```cpp
+// source/core/NetworkBridge.cpp — BeginAutoConnect() (simplified)
+void NetworkBridge::BeginAutoConnect() {
+    // 1. Bind a socket on any free port
+    m_svc->Init(0 /* ephemeral port */);
+
+    // 2. Broadcast DiscoveryHello to all four game ports
+    for (uint8_t port = 54000; port <= 54003; ++port) {
+        m_svc->SendTo("255.255.255.255", port, helloPacket);
+    }
+
+    // 3. Listen for replies (timed out after ~1.5s)
+    m_acState = AutoConnectState::Discovering;
+}
+
+// ... after replies arrive:
+// m_discoveredSlots = {1, 2}
+uint8_t slot = 0U;
+for (uint8_t s = 1U; s <= 4U; ++s) {
+    if (m_discoveredSlots.find(s) == m_discoveredSlots.end()) { slot = s; break; }
+}
+// slot = 3  (lowest free)
+
+// 4. Rebind on the permanent game port for slot 3 (54002)
+m_svc->Shutdown();
+m_svc->Init(54000 + slot - 1);  // port 54002
+
+// 5. Announce to all existing peers
+m_svc->Broadcast(PeerAnnounce{ slot });
+m_acState = AutoConnectState::Done;
+```
+
+### ImGui UI Flow
+
+The Network menu shows different UI depending on connection state:
+
+```
+[Auto Connect]    ← State: None
+    Status: Discovering...    ← State: Discovering (yellow text)
+[Disconnect]      ← State: Done — red button replaces Auto Connect
+    My IP: 192.168.1.15   Port: 54002   Peer ID: 3   ← status info
+```
+
+Manual connection fields become **read-only** (greyed out with `ImGui::BeginDisabled`) once auto-connect succeeds, and vice versa — the two modes are mutually exclusive.
+
+### Connection Isolation Per Scene
+
+Every scene switch or restart calls `disconnectNetwork()` inside `OnUnload()`:
+
+```cpp
+// source/scene/FlatBuffersScenario.cpp — OnUnload()
+void FlatBuffersScenario::OnUnload() {
+    disconnectNetwork();   // Always drop network so each scene starts fresh
+    // ...
+}
+
+void FlatBuffersScenario::disconnectNetwork() {
+    svc->Shutdown();              // Close the UDP socket
+    bridge->ClearRemoteStates();  // Erase all tracked remote entity states
+    bridge->ResetAutoConnect();   // Reset discovery state machine
+    m_netInitialised = false;
+    m_connectionMethod = ConnectionMethod::None;
+}
+```
+
+This means:
+- Players must reconnect after switching scenes — connections are per-scene, not persistent
+- Restarting a scene also disconnects — prevents stale entity IDs from the previous session bleeding in
+
+### Why Scene Changes Are NOT Synchronised
+
+`NetworkBridge::BroadcastSceneChange()` exists in the codebase but is **intentionally not called** from any UI or game logic. Each client picks its own scene independently.
+
+The infrastructure is present if force-sync is ever needed (lab exercise requiring all clients in the same scene), but leaving it unhooked gives more flexibility: one player can stay in the multiplayer arena while another browses the cloth simulation.
+
+---
+
 *Next: [Chapter 8 — Gameplay Scripting & Services](08_Scripting_and_Services.md)*

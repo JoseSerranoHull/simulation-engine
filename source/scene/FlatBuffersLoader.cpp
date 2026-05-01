@@ -1,12 +1,11 @@
 /* parasoft-begin-suppress ALL */
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <vector>
 #include <algorithm>
 /* parasoft-end-suppress ALL */
 
-// Windows API for file dialog and process creation
+// Windows API for file dialog
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -39,7 +38,7 @@ std::string FlatBuffersLoader::openFileDialog(const std::string& initialDir) {
     ofn.hwndOwner       = nullptr;
     ofn.lpstrFile       = szFile;
     ofn.nMaxFile        = sizeof(szFile);
-    ofn.lpstrFilter     = "FlatBuffers Files\0*.bin;*.fbs;*.json\0All Files\0*.*\0";
+    ofn.lpstrFilter     = "FlatBuffers Binary Files\0*.bin\0All Files\0*.*\0";
     ofn.nFilterIndex    = 1;
     ofn.lpstrTitle      = "Select FlatBuffers Scene";
     ofn.lpstrInitialDir = absDir.empty() ? nullptr : absDir.c_str();
@@ -52,115 +51,7 @@ std::string FlatBuffersLoader::openFileDialog(const std::string& initialDir) {
 }
 
 // ===========================================================================
-// SECTION 2: findFlatc()
-// ===========================================================================
-
-std::string FlatBuffersLoader::findFlatc() {
-    // Priority 1: user-editable config file
-    {
-        std::ifstream cfg("./config/flatbufferConfig/flatc_path.txt");
-        if (cfg.is_open()) {
-            std::string line;
-            if (std::getline(cfg, line) && !line.empty()) {
-                // Trim trailing carriage return if present
-                if (!line.empty() && line.back() == '\r') { line.pop_back(); }
-                if (std::filesystem::exists(line)) {
-                    return line;
-                }
-            }
-        }
-    }
-
-    // Priority 2: known location based on USERNAME
-    char* username = nullptr;
-    std::size_t usernameLen = 0U;
-    _dupenv_s(&username, &usernameLen, "USERNAME");
-    if (username != nullptr) {
-        std::string candidate = std::string("C:\\Users\\") + username +
-                                "\\flatbuffers\\Release\\flatc.exe";
-        free(username);
-        if (std::filesystem::exists(candidate)) {
-            return candidate;
-        }
-    }
-
-    GE_LOG_WARN("FlatBuffersLoader: flatc.exe not found — binary-only mode.");
-    return "";
-}
-
-// ===========================================================================
-// SECTION 3: compileFbJson()
-// ===========================================================================
-
-std::string FlatBuffersLoader::compileFbJson(const std::string& jsonPath,
-                                              const std::string& outDir)
-{
-    const std::string flatcPath = findFlatc();
-    if (flatcPath.empty()) {
-        GE_LOG_ERROR("FlatBuffersLoader: Cannot compile .json — flatc not found.");
-        return "";
-    }
-
-    // Ensure output directory exists
-    std::error_code ec;
-    std::filesystem::create_directories(outDir, ec);
-    if (ec) {
-        GE_LOG_ERROR("FlatBuffersLoader: Failed to create output dir: " + outDir);
-        return "";
-    }
-
-    // Build command line: flatc --binary -o outDir ./flatbuffers/Scene.fbs jsonPath
-    // Note: CreateProcess modifies the command string, so use a non-const buffer
-    const std::string cmd = "\"" + flatcPath + "\" --binary -o \"" + outDir +
-                            "\" ./flatbuffers/Scene.fbs \"" + jsonPath + "\"";
-
-    std::vector<char> cmdBuf(cmd.begin(), cmd.end());
-    cmdBuf.push_back('\0');
-
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    ZeroMemory(&pi, sizeof(pi));
-    si.cb = sizeof(si);
-
-    const BOOL created = CreateProcessA(
-        nullptr,
-        cmdBuf.data(),
-        nullptr, nullptr,
-        FALSE,
-        CREATE_NO_WINDOW,
-        nullptr, nullptr,
-        &si, &pi);
-
-    if (!created) {
-        GE_LOG_ERROR("FlatBuffersLoader: CreateProcess failed for flatc.");
-        return "";
-    }
-
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    DWORD exitCode = 0U;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    if (exitCode != 0U) {
-        GE_LOG_ERROR("FlatBuffersLoader: flatc exited with code " +
-                     std::to_string(static_cast<int>(exitCode)));
-        return "";
-    }
-
-    // Derive the output .bin path: outDir/<stem>.bin
-    const std::filesystem::path stem =
-        std::filesystem::path(jsonPath).stem();
-    const std::string destPath =
-        (std::filesystem::path(outDir) / (stem.string() + ".bin")).string();
-
-    return destPath;
-}
-
-// ===========================================================================
-// SECTION 4: copyBin()
+// SECTION 2: copyBin()
 // ===========================================================================
 
 std::string FlatBuffersLoader::copyBin(const std::string& binPath,
@@ -188,29 +79,21 @@ std::string FlatBuffersLoader::copyBin(const std::string& binPath,
 }
 
 // ===========================================================================
-// SECTION 5: pickAndPrepare()
+// SECTION 3: pickAndPrepare()
 // ===========================================================================
 
 std::string FlatBuffersLoader::pickAndPrepare(const std::string& outDir) {
-    // Ensure managed directory exists before opening dialog
     std::error_code ec;
     std::filesystem::create_directories(outDir, ec);
 
     const std::string selected = openFileDialog(outDir);
     if (selected.empty()) { return ""; }
 
-    const std::string ext = std::filesystem::path(selected).extension().string();
-
-    if (ext == ".json" || ext == ".JSON") {
-        return compileFbJson(selected, outDir);
-    }
-
-    // .bin or anything else — copy to managed dir
     return copyBin(selected, outDir);
 }
 
 // ===========================================================================
-// SECTION 6: scanDirectory()
+// SECTION 4: scanDirectory()
 // ===========================================================================
 
 std::vector<std::string> FlatBuffersLoader::scanDirectory(const std::string& dir) {
@@ -219,8 +102,7 @@ std::vector<std::string> FlatBuffersLoader::scanDirectory(const std::string& dir
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
         if (ec) { break; }
-        const auto ext = entry.path().extension();
-        if (ext == ".bin" || ext == ".fbs") {
+        if (entry.path().extension() == ".bin") {
             results.push_back(entry.path().string());
         }
     }

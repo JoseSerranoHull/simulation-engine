@@ -9,26 +9,20 @@ namespace GE::Scene {
 
     /**
      * @class FlatBuffersLoader
-     * @brief Static utility that drives the full "pick → compile → load" workflow for
-     *        FlatBuffers scene binaries. Windows-only (GetOpenFileNameA, CreateProcess).
+     * @brief Static utility for loading FlatBuffers binary scene files.
+     *        Windows-only (GetOpenFileNameA).
      *
      *        Workflow:
-     *          1. openFileDialog() — Windows native open-file dialog filtered to .bin/.json
-     *          2. If .json selected: compileFbJson() runs flatc to produce .bin in outDir
-     *             If .bin selected: copyBin() copies the file to outDir
+     *          1. openFileDialog() — Windows native open-file dialog filtered to .bin
+     *          2. copyBin() copies the selected file to outDir
      *          3. Caller receives the final .bin path and calls requestScenarioChange()
-     *
-     *        flatc discovery order:
-     *          a. First line of ./config/flatbufferConfig/flatc_path.txt (user-editable)
-     *          b. %USERPROFILE%\flatbuffers\Release\flatc.exe (discovered location)
-     *          c. Returns "" → binary-only mode (no .json compilation)
      */
     class FlatBuffersLoader {
     public:
         /**
-         * @brief Opens a Windows file dialog, prepares the selected file, and returns
-         *        the destination .bin path in outDir.
-         * @param outDir Managed directory to receive the prepared binary.
+         * @brief Opens a Windows file dialog, copies the selected .bin, and returns
+         *        the destination path in outDir.
+         * @param outDir Managed directory to receive the binary.
          * @return Full path of the ready-to-load .bin, or "" on cancel/error.
          */
         static std::string pickAndPrepare(const std::string& outDir);
@@ -40,16 +34,8 @@ namespace GE::Scene {
         static std::vector<std::string> scanDirectory(const std::string& dir);
 
     private:
-        // Opens GetOpenFileNameA filtered to *.bin;*.fbs;*.json, starting in initialDir. Returns path or "".
+        // Opens GetOpenFileNameA filtered to *.bin, starting in initialDir. Returns path or "".
         static std::string openFileDialog(const std::string& initialDir);
-
-        // Discovers flatc.exe using the priority order documented above.
-        static std::string findFlatc();
-
-        // Runs flatc --binary to compile jsonPath into outDir.
-        // Returns destination .bin path on success, "" on failure.
-        static std::string compileFbJson(const std::string& jsonPath,
-                                          const std::string& outDir);
 
         // Copies an existing .bin file into outDir (overwrites if present).
         // Returns destination path on success, "" on failure.

@@ -7,6 +7,7 @@
 #include "ecs/EntityManager.h"
 #include "components/Transform.h"
 #include "components/PhysicsComponents.h"
+#include "components/ClothComponent.h"
 
 /* parasoft-begin-suppress ALL */
 #include <cstring>
@@ -61,6 +62,19 @@ ColliderVisualizerSystem::ColliderVisualizerSystem(GE::Graphics::GpuUploadContex
         );
         vkMapMemory(vkCtx->device, m_springLineVertMem, 0U, bufSize, 0U, &m_springLineMapped);
     }
+
+    // --- Allocate cloth debug buffer (springs + particle crosses + normals) ---
+    {
+        GE::Graphics::VulkanContext* vkCtx = ServiceLocator::GetContext();
+        const VkDeviceSize bufSize = sizeof(GE::Assets::Vertex) * m_clothDebugMaxVerts;
+        GE::Graphics::VulkanUtils::createBuffer(
+            vkCtx->device, vkCtx->physicalDevice, bufSize,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            m_clothDebugBuf, m_clothDebugMem
+        );
+        vkMapMemory(vkCtx->device, m_clothDebugMem, 0U, bufSize, 0U, &m_clothDebugMapped);
+    }
 }
 
 ColliderVisualizerSystem::~ColliderVisualizerSystem() {
@@ -96,6 +110,12 @@ ColliderVisualizerSystem::~ColliderVisualizerSystem() {
         vkUnmapMemory  (ctx->device, m_springLineVertMem);
         vkDestroyBuffer(ctx->device, m_springLineVertBuf, nullptr);
         vkFreeMemory   (ctx->device, m_springLineVertMem, nullptr);
+    }
+
+    if (m_clothDebugBuf != VK_NULL_HANDLE) {
+        vkUnmapMemory  (ctx->device, m_clothDebugMem);
+        vkDestroyBuffer(ctx->device, m_clothDebugBuf, nullptr);
+        vkFreeMemory   (ctx->device, m_clothDebugMem, nullptr);
     }
 }
 
@@ -386,6 +406,130 @@ void ColliderVisualizerSystem::RecordPass(
                     VK_SHADER_STAGE_VERTEX_BIT, 0U,
                     static_cast<uint32_t>(sizeof(glm::mat4)), &model);
                 vkCmdDrawIndexed(cb, m_hemiIdxCount, 1U, 0U, 0, 0U);
+            }
+        }
+    }
+
+    // --- Cloth Debug Lines: springs / particle crosses / surface normals ---
+    // Buffer layout: all vertex data written sequentially; one vkCmdDraw call emits all.
+    // Identity push constant used — vertices are already in world space.
+    if ((m_showClothSprings || m_showParticles || m_showNormals) &&
+         m_clothDebugMapped != nullptr)
+    {
+        auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
+
+        if (clothArr.GetCount() > 0U) {
+            auto*          verts    = static_cast<GE::Assets::Vertex*>(m_clothDebugMapped);
+            uint32_t       vc       = 0U;
+            const uint32_t maxVerts = m_clothDebugMaxVerts;
+
+            // Append one line segment to the buffer.
+            auto pushLine = [&](const glm::vec3& a, const glm::vec3& b,
+                                const glm::vec3& col) {
+                if (vc + 2U > maxVerts) { return; }
+                verts[vc++] = GE::Assets::Vertex{ a, col, {}, {} };
+                verts[vc++] = GE::Assets::Vertex{ b, col, {}, {} };
+            };
+
+            // Colour palette for spring types and states.
+            static constexpr glm::vec3 COL_STRUCTURAL{ 1.0f, 1.0f, 1.0f };   // white
+            static constexpr glm::vec3 COL_SHEAR     { 0.0f, 0.8f, 1.0f };   // cyan
+            static constexpr glm::vec3 COL_FLEXION   { 1.0f, 0.9f, 0.0f };   // yellow
+            static constexpr glm::vec3 COL_TORN      { 1.0f, 0.15f, 0.15f }; // red
+            static constexpr glm::vec3 COL_HOT       { 1.0f, 0.40f, 0.0f };  // orange — burning endpoint
+            static constexpr glm::vec3 COL_NORMAL_VEC{ 0.1f, 1.0f, 0.2f };  // green
+
+            static constexpr float NORMAL_LEN    = 0.06f; // world-unit length of normal arrow
+            static constexpr float PARTICLE_HALF = 0.04f; // half-size of the particle cross glyph
+
+            // 4-stage heat colour (matches FlatBuffersScenario vertex colour gradient).
+            auto heatCol = [](float heat, bool burned) -> glm::vec3 {
+                static constexpr glm::vec3 COLD   { 0.60f, 0.75f, 1.0f };
+                static constexpr glm::vec3 YELLOW { 1.00f, 0.95f, 0.0f };
+                static constexpr glm::vec3 ORANGE { 1.00f, 0.40f, 0.0f };
+                static constexpr glm::vec3 RED    { 0.80f, 0.05f, 0.0f };
+                static constexpr glm::vec3 CHARRED{ 0.05f, 0.04f, 0.02f };
+                if (burned)       { return CHARRED; }
+                if (heat < 0.001f){ return COLD;    }
+                if (heat < 0.25f) { return glm::mix(COLD,   YELLOW, heat / 0.25f);              }
+                if (heat < 0.55f) { return glm::mix(YELLOW, ORANGE, (heat - 0.25f) / 0.30f);   }
+                if (heat < 0.80f) { return glm::mix(ORANGE, RED,    (heat - 0.55f) / 0.25f);   }
+                return               glm::mix(RED,    CHARRED,(heat - 0.80f) / 0.20f);
+            };
+
+            for (uint32_t ci = 0U; ci < clothArr.GetCount(); ++ci) {
+                const GE::Components::ClothComponent& cc = clothArr.Data()[ci];
+                if (cc.particles.empty()) { continue; }
+
+                // ---- Spring lines ----
+                if (m_showClothSprings) {
+                    using ST = GE::Components::SpringType;
+                    for (const GE::Components::ClothSpring& s : cc.springs) {
+                        if (!s.active) {
+                            if (m_showTornSprings) {
+                                pushLine(cc.particles[s.a].position,
+                                         cc.particles[s.b].position, COL_TORN);
+                            }
+                            continue;
+                        }
+                        if (s.type == ST::Structural && !m_showStructural) { continue; }
+                        if (s.type == ST::Shear      && !m_showShear)      { continue; }
+                        if (s.type == ST::Flexion    && !m_showFlexion)    { continue; }
+
+                        // Override colour if either endpoint is heating up.
+                        const bool hotA = cc.particles[s.a].heat > 0.05f;
+                        const bool hotB = cc.particles[s.b].heat > 0.05f;
+                        glm::vec3 col = (hotA || hotB) ? COL_HOT :
+                                        (s.type == ST::Shear)   ? COL_SHEAR :
+                                        (s.type == ST::Flexion) ? COL_FLEXION :
+                                                                   COL_STRUCTURAL;
+
+                        pushLine(cc.particles[s.a].position,
+                                 cc.particles[s.b].position, col);
+                    }
+                }
+
+                // ---- Particle crosses + surface normals ----
+                if (m_showParticles || m_showNormals) {
+                    // Normals come from the persistently-mapped cloth vertex buffer.
+                    const GE::Assets::Vertex* meshVerts =
+                        (cc.mappedVertices != nullptr)
+                        ? static_cast<const GE::Assets::Vertex*>(cc.mappedVertices)
+                        : nullptr;
+
+                    for (uint32_t pi = 0U;
+                         pi < static_cast<uint32_t>(cc.particles.size()); ++pi)
+                    {
+                        const GE::Components::ClothParticle& p = cc.particles[pi];
+                        const glm::vec3& pos = p.position;
+
+                        if (m_showParticles) {
+                            const glm::vec3 col = heatCol(p.heat, p.burned);
+                            // Three axis-aligned lines forming a cross glyph.
+                            pushLine(pos - glm::vec3{PARTICLE_HALF, 0, 0},
+                                     pos + glm::vec3{PARTICLE_HALF, 0, 0}, col);
+                            pushLine(pos - glm::vec3{0, PARTICLE_HALF, 0},
+                                     pos + glm::vec3{0, PARTICLE_HALF, 0}, col);
+                            pushLine(pos - glm::vec3{0, 0, PARTICLE_HALF},
+                                     pos + glm::vec3{0, 0, PARTICLE_HALF}, col);
+                        }
+
+                        if (m_showNormals && meshVerts != nullptr) {
+                            const glm::vec3 n = meshVerts[pi].normal;
+                            pushLine(pos, pos + n * NORMAL_LEN, COL_NORMAL_VEC);
+                        }
+                    }
+                }
+            }
+
+            if (vc > 0U) {
+                const glm::mat4 identity{ 1.0f };
+                vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                    static_cast<uint32_t>(sizeof(glm::mat4)), &identity);
+
+                vkCmdBindVertexBuffers(cb, 0U, 1U, &m_clothDebugBuf, &zeroOffset);
+                vkCmdDraw(cb, vc, 1U, 0U, 0U);
             }
         }
     }

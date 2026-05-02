@@ -335,15 +335,33 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
                                               : (center - cc.particles[vi-1].position);
             verts[vi].tangent = (glm::dot(tang, tang) > 1e-8f) ? glm::normalize(tang) : glm::vec3(1.0f, 0.0f, 0.0f);
 
-            // Heat-based color: cold = cloth color, heating → orange, burned → near-black
-            const float heat = cc.particles[vi].heat;
-            if (cc.particles[vi].burned) {
-                verts[vi].color = glm::vec3{ 0.05f, 0.05f, 0.05f };
-            } else if (heat > 0.0f) {
-                const glm::vec3 orange{ 1.0f, 0.2f, 0.0f };
-                verts[vi].color = glm::mix(cc.color, orange, glm::clamp(heat, 0.0f, 1.0f));
+            // 4-stage heat colour gradient: cold → yellow → orange → red → charred.
+            // In texture mode (Phong pipeline) the vertex color is multiplied into
+            // the albedo texture sample (albedo *= fragVertexColor in phong.frag).
+            // Cold particles use white so the multiply leaves the texture unchanged.
+            const float heat  = cc.particles[vi].heat;
+            const bool  burned = cc.particles[vi].burned;
+
+            static constexpr glm::vec3 YELLOW  { 1.00f, 0.95f, 0.00f };
+            static constexpr glm::vec3 ORANGE  { 1.00f, 0.40f, 0.00f };
+            static constexpr glm::vec3 RED     { 0.80f, 0.05f, 0.00f };
+            static constexpr glm::vec3 CHARRED { 0.05f, 0.04f, 0.02f };
+
+            const glm::vec3 coldColor = cc.useTextureMode
+                                        ? glm::vec3{ 1.0f, 1.0f, 1.0f }
+                                        : cc.color;
+            if (burned) {
+                verts[vi].color = CHARRED;
+            } else if (heat <= 0.001f) {
+                verts[vi].color = coldColor;
+            } else if (heat < 0.25f) {
+                verts[vi].color = glm::mix(coldColor, YELLOW, heat / 0.25f);
+            } else if (heat < 0.55f) {
+                verts[vi].color = glm::mix(YELLOW,  ORANGE,  (heat - 0.25f) / 0.30f);
+            } else if (heat < 0.80f) {
+                verts[vi].color = glm::mix(ORANGE,  RED,     (heat - 0.55f) / 0.25f);
             } else {
-                verts[vi].color = cc.color;
+                verts[vi].color = glm::mix(RED,     CHARRED, (heat - 0.80f) / 0.20f);
             }
         }
     }
@@ -812,15 +830,24 @@ void FlatBuffersScenario::OnGUI() {
                     if (clothArr.GetCount() > 1U) {
                         ImGui::TextDisabled("Cloth %u (%dx%d)", i, cc.rows, cc.cols);
                     }
-                    ImGui::SliderFloat("Spring K",  &cc.springK,  1.0f,  1000.0f);
-                    ImGui::SliderFloat("Shear K",   &cc.shearK,   0.0f,   500.0f);
-                    ImGui::SliderFloat("Flexion K", &cc.flexionK, 0.0f,   250.0f);
-                    ImGui::SliderFloat("Damping",   &cc.damping,  0.0f,     1.0f);
+                    ImGui::SliderInt  ("Constraint Iters", &cc.constraintIters, 1,     8);
+                    ImGui::SliderFloat("Spring K",        &cc.springK,         1.0f,  1000.0f);
+                    ImGui::SliderFloat("Shear K",         &cc.shearK,          0.0f,   500.0f);
+                    ImGui::SliderFloat("Flexion K",       &cc.flexionK,        0.0f,   250.0f);
+                    ImGui::SliderFloat("Damping",          &cc.damping,          0.0f,  1.0f);
+                    ImGui::Separator();
+                    ImGui::Text("Tearing");
+                    ImGui::SliderFloat("Tear Threshold",   &cc.tearThreshold,    1.0f, 10.0f);
+                    ImGui::SliderFloat("Tear Roughness",   &cc.tearRoughness,    0.0f,  0.2f);
+                    ImGui::SliderFloat("Stress Transfer",  &cc.stressTransferRate, 0.0f, 1.0f);
                     ImGui::Separator();
                     ImGui::Checkbox("Wind", &cc.windEnabled);
                     if (cc.windEnabled) {
-                        ImGui::SliderFloat("Wind X", &cc.windX, -10.0f, 10.0f);
-                        ImGui::SliderFloat("Wind Z", &cc.windZ, -10.0f, 10.0f);
+                        ImGui::SliderFloat("Wind X",     &cc.windX,         -10.0f, 10.0f);
+                        ImGui::SliderFloat("Wind Z",     &cc.windZ,         -10.0f, 10.0f);
+                        ImGui::SliderFloat("Drag Coeff", &cc.dragCoeff,       0.1f,  4.0f);
+                        ImGui::SliderFloat("Gust Amp",   &cc.gustAmplitude,   0.0f,  1.0f);
+                        ImGui::SliderFloat("Gust Freq",  &cc.gustFrequency,   0.1f,  3.0f);
                     }
 
                     ImGui::Separator();
@@ -833,21 +860,66 @@ void FlatBuffersScenario::OnGUI() {
 
                     ImGui::Separator();
                     ImGui::Text("Burning");
-                    ImGui::Checkbox("Enable Burn", &cc.burnActive);
-                    ImGui::SliderFloat("Burn Radius", &cc.burnRadius, 0.1f, 5.0f);
-                    ImGui::SliderFloat("Burn Rate",   &cc.burnRate,   0.1f, 5.0f);
-                    if (ImGui::Button("Place Burn at Centre")) {
-                        if (!cc.particles.empty()) {
-                            glm::vec3 avg{ 0.0f };
-                            for (const auto& p : cc.particles) { avg += p.position; }
-                            cc.burnCenter = avg / static_cast<float>(cc.particles.size());
-                        }
+                    ImGui::SliderFloat("Heat Conduct.", &cc.heatConductivity, 0.0f, 2.0f);
+                    ImGui::SliderFloat("Shrink Scale",  &cc.shrinkScale,      0.0f, 0.8f);
+                    ImGui::SliderFloat("Curl Amount",   &cc.curlAmount,       0.0f, 0.15f);
+                    ImGui::SliderFloat("Burn Rate",     &cc.burnRate,         0.1f, 5.0f);
+
+                    // Helper: compute average particle world position for "place at centre".
+                    auto clothCentre = [&]() -> glm::vec3 {
+                        if (cc.particles.empty()) { return glm::vec3{ 0.0f }; }
+                        glm::vec3 avg{ 0.0f };
+                        for (const auto& p : cc.particles) { avg += p.position; }
+                        return avg / static_cast<float>(cc.particles.size());
+                    };
+
+                    if (ImGui::Button("+ Add Burn Source")) {
+                        GE::Components::BurnSource src;
+                        src.center = clothCentre();
+                        src.radius = 0.8f;
+                        src.active = true;
+                        cc.burnSources.push_back(src);
                     }
-                    ImGui::DragFloat3("Burn Center", &cc.burnCenter.x, 0.05f);
+
+                    uint32_t toRemove = UINT32_MAX;
+                    for (uint32_t bi = 0U; bi < static_cast<uint32_t>(cc.burnSources.size()); ++bi) {
+                        GE::Components::BurnSource& src = cc.burnSources[bi];
+                        ImGui::PushID(static_cast<int>(bi));
+                        ImGui::Checkbox("Active", &src.active);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove"))  { toRemove = bi; }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Centre"))  { src.center = clothCentre(); }
+                        ImGui::SliderFloat("Radius", &src.radius, 0.05f, 5.0f);
+                        ImGui::DragFloat3("Center",  &src.center.x, 0.05f);
+                        ImGui::PopID();
+                    }
+                    if (toRemove < static_cast<uint32_t>(cc.burnSources.size())) {
+                        cc.burnSources.erase(
+                            cc.burnSources.begin() + static_cast<std::ptrdiff_t>(toRemove));
+                    }
 
                     ImGui::PopID();
                     if (i + 1U < clothArr.GetCount()) { ImGui::Separator(); }
                 }
+
+                // --- Debug visualisation (controls the ColliderVisualizerSystem buffers) ---
+                if (m_visualizerSystem != nullptr) {
+                    ImGui::Separator();
+                    ImGui::Text("Debug Visualisation");
+                    ImGui::Checkbox("Springs",   &m_visualizerSystem->m_showClothSprings);
+                    if (m_visualizerSystem->m_showClothSprings) {
+                        ImGui::Indent();
+                        ImGui::Checkbox("Structural", &m_visualizerSystem->m_showStructural);
+                        ImGui::Checkbox("Shear",      &m_visualizerSystem->m_showShear);
+                        ImGui::Checkbox("Flexion",    &m_visualizerSystem->m_showFlexion);
+                        ImGui::Checkbox("Torn",       &m_visualizerSystem->m_showTornSprings);
+                        ImGui::Unindent();
+                    }
+                    ImGui::Checkbox("Particles", &m_visualizerSystem->m_showParticles);
+                    ImGui::Checkbox("Normals",   &m_visualizerSystem->m_showNormals);
+                }
+
                 ImGui::EndMenu();
             }
         }

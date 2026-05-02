@@ -23,6 +23,7 @@ layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragGouraudColor;
 layout(location = 4) out vec4 fragPosLightSpace;
 layout(location = 5) out vec3 fragTangent;
+layout(location = 6) out vec3 fragVertexColor;
 
 // --- Data Structures ---
 struct SparkLight {
@@ -73,4 +74,9 @@ void main() {
         float diff = max(dot(normalize(fragNormal), L), 0.2);
         fragGouraudColor = ubo.lightColor * diff;
     }
+
+    // 5. VERTEX COLOUR PASSTHROUGH
+    // inColor carries heat gradient (cold→yellow→orange→red→charred) written
+    // by FlatBuffersScenario::OnUpdate(). Passed to phong.frag to tint albedo.
+    fragVertexColor = inColor;
 }

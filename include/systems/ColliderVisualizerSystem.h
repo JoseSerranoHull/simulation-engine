@@ -62,6 +62,15 @@ public:
     /** @brief ImGui toggle — set to false to hide all collider overlays. */
     bool m_enabled{ true };
 
+    // --- Cloth debug visualisation flags ---
+    bool m_showClothSprings  { false }; // master toggle for cloth spring lines
+    bool m_showStructural    { true  }; // white structural springs
+    bool m_showShear         { true  }; // cyan shear springs
+    bool m_showFlexion       { true  }; // yellow flexion springs
+    bool m_showTornSprings   { false }; // red torn (inactive) springs
+    bool m_showParticles     { false }; // per-particle cross glyph coloured by heat
+    bool m_showNormals       { false }; // green surface normal vectors
+
 private:
     /**
      * @brief Uploads one vertex + index buffer pair via the provided command buffer.
@@ -116,6 +125,14 @@ private:
     VkDeviceMemory   m_springLineVertMem  { VK_NULL_HANDLE };
     mutable void*    m_springLineMapped   { nullptr };  // mutable: written in const RecordPass
     uint32_t         m_springLineMaxVerts { 512U };     // max 256 springs × 2 endpoints
+
+    // --- Cloth debug buffer (host-coherent, persistently mapped, rebuilt each frame) ---
+    // Combined buffer for spring lines, particle crosses, and surface normal vectors.
+    // Sized for a 50×50 cloth with all visualisations active — ~50 K line vertices.
+    VkBuffer         m_clothDebugBuf     { VK_NULL_HANDLE };
+    VkDeviceMemory   m_clothDebugMem     { VK_NULL_HANDLE };
+    mutable void*    m_clothDebugMapped  { nullptr };
+    uint32_t         m_clothDebugMaxVerts{ 50000U };
 };
 
 } // namespace GE::Systems

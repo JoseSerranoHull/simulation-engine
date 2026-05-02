@@ -169,7 +169,10 @@
       "Bash(glslc flatcolor.vert -o flatcolor_vert.spv)",
       "Bash(Get-ChildItem *)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" phong.vert -o phong.vert.spv)",
+      "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" phong.frag -o phong.frag.spv)",
+      "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" flatcolor.frag -o flatcolor.frag.spv)"
     ]
   }
 }

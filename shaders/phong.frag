@@ -16,6 +16,7 @@ layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec3 fragGouraudColor;
 layout(location = 4) in vec4 fragPosLightSpace;
 layout(location = 5) in vec3 fragTangent;
+layout(location = 6) in vec3 fragVertexColor;
 
 // --- Data Structures ---
 struct SparkLight {
@@ -101,17 +102,26 @@ vec3 calculateSparkLighting(vec3 N, vec3 fragPos, vec3 albedo) {
 
 void main() {
     // 1. INITIAL SETUP
-    vec3 albedo = texture(texSampler, fragTexCoord).rgb;
+    // fragVertexColor carries the heat gradient written by FlatBuffersScenario::OnUpdate().
+    // Cold cloth writes white (1,1,1) in texture mode so this multiply is a no-op when unheated.
+    vec3 albedo = texture(texSampler, fragTexCoord).rgb * fragVertexColor;
     float shadow = calculateShadow(fragPosLightSpace);
 
     // 2. DYNAMIC AMBIENT CALCULATION
     float ao = texture(aoSampler, fragTexCoord).r;
     vec3 ambientResult = albedo * ao * (ubo.lightColor * 0.05);
 
+    // Emissive glow: hot particles self-illuminate without affecting cold or textured-cold cloth.
+    // warmth = R - B: high for warm heat-gradient colours (yellow/orange/red), ~0 for
+    // grey/white cold cloth and near-black charred particles. Computed once for both branches.
+    float warmth   = clamp(fragVertexColor.r - fragVertexColor.b, 0.0, 1.0);
+    float emissive = smoothstep(0.2, 0.7, warmth) * 0.45;
+
     if (ubo.useGouraud == 1) {
         // 3. GOURAUD FALLBACK MODE
         vec3 sparkContribution = calculateSparkLighting(normalize(fragNormal), fragPos, albedo);
-        outColor = vec4(ambientResult + (albedo * fragGouraudColor * shadow) + sparkContribution, 1.0);
+        outColor = vec4(ambientResult + (albedo * fragGouraudColor * shadow) + sparkContribution
+                        + fragVertexColor * emissive, 1.0);
     } else {
         // 4. PHONG / PBR-LITE MODE
         float metallic  = texture(metallicSampler,  fragTexCoord).r;
@@ -131,23 +141,24 @@ void main() {
         vec3 H = normalize(L + V);
 
         float diff = max(dot(N, L), 0.0);
-        
+
         // Specular logic based on material roughness
-        float specPower = mix(128.0, 2.0, roughness); 
+        float specPower = mix(128.0, 2.0, roughness);
         float spec = pow(max(dot(N, H), 0.0), specPower) * 0.5;
-        
+
         // Metal workflow: Tint reflections and darken diffuse
         vec3 specularTint = mix(vec3(1.0), albedo, metallic);
         vec3 diffuseColor = albedo * (1.0 - metallic);
 
         // 5. LIGHTING COMPOSITION
-        vec3 diffuseResult = (diffuseColor * diff * ubo.lightColor) * shadow;
+        vec3 diffuseResult  = (diffuseColor * diff * ubo.lightColor) * shadow;
         vec3 specularResult = (specularTint * spec * ubo.lightColor) * shadow;
 
         // Spark Light contribution
         vec3 sparkContribution = calculateSparkLighting(N, fragPos, albedo);
 
         // Final Fragment Output
-        outColor = vec4(ambientResult + diffuseResult + specularResult + sparkContribution, 1.0);
+        outColor = vec4(ambientResult + diffuseResult + specularResult + sparkContribution
+                        + fragVertexColor * emissive, 1.0);
     }
 }

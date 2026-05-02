@@ -1,5 +1,9 @@
 #pragma once
 
+/* parasoft-begin-suppress ALL */
+#include <vector>
+/* parasoft-end-suppress ALL */
+
 #include "ecs/IECSystem.h"
 #include "ecs/EntityManager.h"
 
@@ -25,6 +29,13 @@ public:
 
     void       OnUpdate(float dt) override;
     ERROR_CODE Shutdown()         override { return ERROR_CODE::OK; }
+
+private:
+    // Heat diffusion work buffer — resized lazily, reused each tick to avoid allocation.
+    std::vector<float> m_heatDelta;
+
+    // Accumulated physics time driving sinusoidal gust oscillation.
+    float m_simTime { 0.0f };
 };
 
 } // namespace GE::Systems

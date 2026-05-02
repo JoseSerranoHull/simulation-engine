@@ -698,13 +698,19 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             }
         }
 
-        // Default burn center: lower-middle of the hanging cloth.
+        // Seed one default (inactive) burn source at the lower-middle of the hanging cloth.
         // X/Z = centre of the grid span; Y estimated as bottom of fully-hung cloth.
-        cc.burnCenter = {
-            origin.x + (cc.cols - 1) * 0.5f * cc.cellSize,
-            origin.y - (cc.rows - 1) * cc.cellSize,
-            origin.z + (cc.rows - 1) * 0.5f * cc.cellSize
-        };
+        {
+            GE::Components::BurnSource defaultSrc;
+            defaultSrc.center = {
+                origin.x + (cc.cols - 1) * 0.5f * cc.cellSize,
+                origin.y - (cc.rows - 1) * cc.cellSize,
+                origin.z + (cc.rows - 1) * 0.5f * cc.cellSize
+            };
+            defaultSrc.radius = 0.8f;
+            defaultSrc.active = false;
+            cc.burnSources.push_back(defaultSrc);
+        }
 
         // Resolve owner color
         cc.color = resolveColor(obj, ctx);
@@ -818,6 +824,10 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             clothMat->SetCastsShadows(false);
         }
 
+        // Record whether we're using the textured Phong pipeline so OnUpdate()
+        // writes white vertex colors for cold particles (albedo × (1,1,1) = unchanged).
+        cc.useTextureMode = clothHasTexture;
+
         auto meshPtr = std::make_unique<GE::Assets::Mesh>(
             cc.vertexBuffer,
             cc.indexCount,
@@ -855,17 +865,17 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             // Shear: diagonal neighbours
             for (int r = 0; r < R-1; ++r) {
                 for (int c = 0; c < C-1; ++c) {
-                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c),   static_cast<uint16_t>((r+1)*C+c+1), restShear, cc.shearK, true });
-                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c+1), static_cast<uint16_t>((r+1)*C+c),   restShear, cc.shearK, true });
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c),   static_cast<uint16_t>((r+1)*C+c+1), restShear, cc.shearK, true, 0.0f, GE::Components::SpringType::Shear });
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c+1), static_cast<uint16_t>((r+1)*C+c),   restShear, cc.shearK, true, 0.0f, GE::Components::SpringType::Shear });
                 }
             }
             // Flexion: skip-one horizontal + vertical
             for (int r = 0; r < R; ++r)
                 for (int c = 0; c < C-2; ++c)
-                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>(r*C+c+2), restFlex, cc.flexionK, true });
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>(r*C+c+2), restFlex, cc.flexionK, true, 0.0f, GE::Components::SpringType::Flexion });
             for (int r = 0; r < R-2; ++r)
                 for (int c = 0; c < C; ++c)
-                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>((r+2)*C+c), restFlex, cc.flexionK, true });
+                    cc.springs.push_back({ static_cast<uint16_t>(r*C+c), static_cast<uint16_t>((r+2)*C+c), restFlex, cc.flexionK, true, 0.0f, GE::Components::SpringType::Flexion });
         }
 
         ctx.em->AddComponent(id, cc);

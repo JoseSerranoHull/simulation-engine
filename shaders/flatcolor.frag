@@ -41,5 +41,11 @@ void main() {
     float specular = pow(max(dot(N, H), 0.0), 32.0) * 0.3;
 
     vec3 result = albedo * (ambient + diffuse * ubo.lightColor) + specular * ubo.lightColor;
-    outColor = vec4(result, 1.0);
+
+    // Emissive glow: hot particles (yellow/orange/red) self-illuminate.
+    // warmth = R - B: high for warm hues, ~0 for grey/white/black, so cold cloth and
+    // charred (near-black) particles don't glow. Avoids touching non-cloth geometry.
+    float warmth  = clamp(fragColor.r - fragColor.b, 0.0, 1.0);
+    float emissive = smoothstep(0.2, 0.7, warmth) * 0.45;
+    outColor = vec4(result + fragColor * emissive, 1.0);
 }

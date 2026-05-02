@@ -91,7 +91,7 @@ namespace GE::Networking::Packets {
     // -------------------------------------------------------------------------
     struct DiscoveryHello {
         Header header { PacketType::DiscoveryHello };
-        // No payload — sender identity (IP + temp socket port) comes from recvfrom
+        char   scenePath[128] {};  ///< scene this peer is currently in; empty = any
     };
 
     // -------------------------------------------------------------------------
@@ -101,6 +101,7 @@ namespace GE::Networking::Packets {
         Header  header { PacketType::DiscoveryResponse };
         uint8_t peerID { 0 };   ///< 1–4: which slot this peer currently occupies
         uint8_t _pad[3]{};
+        char    scenePath[128] {};  ///< scene this peer is currently in
     };
 
     // -------------------------------------------------------------------------

@@ -112,7 +112,7 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
         handleAnimationSync(data, size);
         break;
     case Networking::Packets::PacketType::DiscoveryHello:
-        handleDiscoveryHello(senderAddr, senderPort);
+        handleDiscoveryHello(senderAddr, senderPort, data, size);
         break;
     case Networking::Packets::PacketType::PeerAnnounce:
         if (size >= sizeof(Networking::Packets::PeerAnnounce)) {
@@ -142,6 +142,9 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
     // Drop out-of-order / duplicate packets
     const uint8_t peerIdx = senderId - 1U;
     if (peerIdx >= Networking::NetworkService::MAX_PEERS) { return; }
+
+    // Drop packets from peers not registered for the current scene
+    if (!((m_acceptedPeerMask.load(std::memory_order_relaxed) >> peerIdx) & 1U)) { return; }
 
     if (pkt.header.sequence <= m_lastSeenSequence[peerIdx]) { return; }
     m_lastSeenSequence[peerIdx] = pkt.header.sequence;
@@ -244,6 +247,7 @@ void NetworkBridge::ClearRemoteStates()
 {
     std::lock_guard<std::mutex> lock(m_remoteStatesMutex);
     m_remoteStates.clear();
+    m_acceptedPeerMask.store(0, std::memory_order_relaxed);
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +281,13 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
 
     Networking::Packets::SpawnObject pkt{};
     std::memcpy(&pkt, data, sizeof(pkt));
+
+    // Drop packets from peers not registered for the current scene
+    {
+        const uint8_t peerIdx = pkt.header.senderId - 1U;
+        if (peerIdx >= Networking::NetworkService::MAX_PEERS) { return; }
+        if (!((m_acceptedPeerMask.load(std::memory_order_relaxed) >> peerIdx) & 1U)) { return; }
+    }
 
     auto* tr = m_entityManager->TryGetTIComponent<GE::Components::Transform>(pkt.entityId);
     auto* rb = m_entityManager->TryGetTIComponent<GE::Components::RigidBody>(pkt.entityId);
@@ -402,6 +413,13 @@ void NetworkBridge::handleAnimationSync(const uint8_t* data, std::size_t size)
     Networking::Packets::AnimationSync pkt{};
     std::memcpy(&pkt, data, sizeof(pkt));
 
+    // Drop packets from peers not registered for the current scene
+    {
+        const uint8_t peerIdx = pkt.header.senderId - 1U;
+        if (peerIdx >= Networking::NetworkService::MAX_PEERS) { return; }
+        if (!((m_acceptedPeerMask.load(std::memory_order_relaxed) >> peerIdx) & 1U)) { return; }
+    }
+
     auto* ac = m_entityManager->TryGetTIComponent<
         GE::Components::AnimatedObjectComponent>(pkt.entityId);
     if (ac == nullptr) { return; }
@@ -410,19 +428,65 @@ void NetworkBridge::handleAnimationSync(const uint8_t* data, std::size_t size)
 }
 
 // ---------------------------------------------------------------------------
+// SetCurrentScene — thread-safe write of the active scene path
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::SetCurrentScene(const std::string& path)
+{
+    std::lock_guard<std::mutex> lock(m_scenePathMutex);
+    m_currentScenePath = path;
+}
+
+void NetworkBridge::RegisterScenePeer(uint8_t peerId)
+{
+    if (peerId < 1U || peerId > Networking::NetworkService::MAX_PEERS) { return; }
+    m_acceptedPeerMask.fetch_or(
+        static_cast<uint8_t>(1U << (peerId - 1U)), std::memory_order_relaxed);
+    GE_LOG_INFO("NetworkBridge: registered scene peer " + std::to_string(peerId));
+}
+
+// ---------------------------------------------------------------------------
 // handleDiscoveryHello — existing peer responds to a new peer's broadcast probe
 // ---------------------------------------------------------------------------
 
-void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPort)
+void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPort,
+                                          const uint8_t* data, std::size_t size)
 {
     if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
     const uint8_t myId = m_service->GetLocalPeerId();
     if (myId < 1U || myId > 4U) { return; }
 
+    // Parse incoming scene path
+    std::string incomingScene;
+    if (size >= sizeof(Networking::Packets::DiscoveryHello)) {
+        Networking::Packets::DiscoveryHello hello{};
+        std::memcpy(&hello, data, sizeof(hello));
+        hello.scenePath[sizeof(hello.scenePath) - 1] = '\0';
+        incomingScene = hello.scenePath;
+    }
+
+    // Reject peers on a different scene (both sides must have a scene set to filter)
+    {
+        std::lock_guard<std::mutex> lock(m_scenePathMutex);
+        if (!incomingScene.empty() && !m_currentScenePath.empty()
+            && incomingScene != m_currentScenePath) {
+            GE_LOG_INFO("NetworkBridge: ignoring DiscoveryHello — scene mismatch ("
+                        + incomingScene + ")");
+            return;
+        }
+    }
+
     Networking::Packets::DiscoveryResponse resp{};
     resp.header.type     = Networking::Packets::PacketType::DiscoveryResponse;
     resp.header.senderId = myId;
     resp.peerID          = myId;
+    {
+        std::lock_guard<std::mutex> lock(m_scenePathMutex);
+        const std::size_t len = std::min(m_currentScenePath.size(),
+                                         sizeof(resp.scenePath) - 1U);
+        std::memcpy(resp.scenePath, m_currentScenePath.c_str(), len);
+        resp.scenePath[len] = '\0';
+    }
     m_service->SendRaw(senderAddr, senderPort, &resp, sizeof(resp));
 
     GE_LOG_INFO("NetworkBridge: sent DiscoveryResponse (peer " + std::to_string(myId) + ")");
@@ -443,6 +507,7 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
 
     const uint16_t peerPort = static_cast<uint16_t>(54000U + peerID - 1U);
     m_service->AddPeer(peerID, ipBuf, peerPort);
+    RegisterScenePeer(peerID);  // arrived via scene-matched discovery chain
 
     GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID) +
                 " announced itself from " + ipBuf);
@@ -485,6 +550,13 @@ void NetworkBridge::BeginAutoConnect()
         }
         if (stopToken.stop_requested()) { return; }
 
+        // Capture scene path for this discovery session (set by OnLoad before UI is accessible)
+        std::string localScene;
+        {
+            std::lock_guard<std::mutex> lock(m_scenePathMutex);
+            localScene = m_currentScenePath;
+        }
+
         // --- Open temporary socket ---
         WSADATA wsa{};
         WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -520,6 +592,11 @@ void NetworkBridge::BeginAutoConnect()
         // --- Broadcast DiscoveryHello to all four game ports ---
         Networking::Packets::DiscoveryHello hello{};
         hello.header.senderId = 0U;  // not yet assigned
+        {
+            const std::size_t len = std::min(localScene.size(), sizeof(hello.scenePath) - 1U);
+            std::memcpy(hello.scenePath, localScene.c_str(), len);
+            hello.scenePath[len] = '\0';
+        }
 
         sockaddr_in dest{};
         dest.sin_family      = AF_INET;
@@ -548,7 +625,7 @@ void NetworkBridge::BeginAutoConnect()
             const int ready = select(0, &readSet, nullptr, nullptr, &tv);
             if (ready <= 0) { continue; }
 
-            char buf[64]{};
+            char buf[256]{};  // must hold DiscoveryResponse (136 bytes)
             sockaddr_in from{};
             int fromLen = static_cast<int>(sizeof(from));
             const int n = recvfrom(tempSock, buf, static_cast<int>(sizeof(buf)),
@@ -563,6 +640,16 @@ void NetworkBridge::BeginAutoConnect()
                 continue;
             }
             if (resp.peerID < 1U || resp.peerID > 4U) { continue; }
+
+            // Scene filter: ignore peers on a different scene
+            resp.scenePath[sizeof(resp.scenePath) - 1] = '\0';
+            if (!localScene.empty() && resp.scenePath[0] != '\0'
+                && std::string(resp.scenePath) != localScene) {
+                GE_LOG_INFO("NetworkBridge: skipping DiscoveryResponse from peer "
+                            + std::to_string(resp.peerID) + " — scene mismatch ("
+                            + std::string(resp.scenePath) + ")");
+                continue;
+            }
 
             discovered[resp.peerID] = from.sin_addr.s_addr;
         }
@@ -585,9 +672,20 @@ void NetworkBridge::BeginAutoConnect()
         }
 
         // --- Initialise game socket ---
-        const uint16_t gamePort = static_cast<uint16_t>(BASE_PORT + slot - 1U);
-        if (!m_service->Init(gamePort)) {
-            m_autoConnectStatus = "Failed: could not bind port " + std::to_string(gamePort);
+        // Fall back through higher slots if the preferred port is already bound by
+        // another local instance running on a different scene.
+        uint16_t gamePort = 0U;
+        while (slot <= 4U) {
+            gamePort = static_cast<uint16_t>(BASE_PORT + slot - 1U);
+            if (m_service->Init(gamePort)) { break; }
+            GE_LOG_INFO("NetworkBridge: port " + std::to_string(gamePort)
+                        + " in use, trying next slot");
+            ++slot;
+            // Skip slots already occupied by discovered same-scene peers
+            while (slot <= 4U && discovered.count(slot)) { ++slot; }
+        }
+        if (slot > 4U) {
+            m_autoConnectStatus = "Failed: all ports 54000-54003 in use";
             m_autoConnectState.store(AutoConnectState::Failed);
             return;
         }
@@ -601,6 +699,7 @@ void NetworkBridge::BeginAutoConnect()
             inet_ntop(AF_INET, &addr, ipBuf, sizeof(ipBuf));
             const uint16_t peerPort = static_cast<uint16_t>(BASE_PORT + peerID - 1U);
             m_service->AddPeer(peerID, ipBuf, peerPort);
+            RegisterScenePeer(peerID);  // scene was verified during DiscoveryResponse filtering
             if (!connectedStr.empty()) { connectedStr += ", "; }
             connectedStr += "P" + std::to_string(peerID) + "(" + ipBuf + ")";
         }

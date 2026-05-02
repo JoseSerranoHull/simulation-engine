@@ -129,7 +129,8 @@
         },
         "owner": "ONE"
       },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
 
     {
@@ -173,7 +174,8 @@
         },
         "owner": "TWO"
       },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
 
     {
@@ -217,7 +219,8 @@
         },
         "owner": "THREE"
       },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     },
     {
       "name": "SphereD",
@@ -237,7 +240,8 @@
         },
         "owner": "FOUR"
       },
-      "collision_type": "SOLID"
+      "collision_type": "SOLID",
+      "script_type": "PlayerController"
     }
   ]
 }

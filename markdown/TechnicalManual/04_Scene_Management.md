@@ -207,6 +207,27 @@ flatc --binary -o config/flatbufferConfig/ flatbuffers/Scene.fbs -- scene.json
 
 > **Important:** `Scene_generated.h` is patched by hand and must NOT be regenerated via `flatc`. The installed `flatc` version produces incompatible enum style (flat enums vs. required scoped enums).
 
+### Schema Compatibility with Teacher-Provided `.bin` Files
+
+Our `flatbuffers/Scene.fbs` is the **teacher-provided schema with backwards-compatible extensions appended**. This was verified by diffing against the original `Scene.fbs` supplied by the assessors.
+
+**Union orderings are identical to the teacher's schema:**
+
+| Union | Teacher | Ours |
+|---|---|---|
+| `Shape` | Sphere=1, Plane=2, Capsule=3, Cylinder=4, **Cuboid**=5 | Identical |
+| `Behaviour` | StaticObject=1, SimulatedObject=2, AnimatedObject=3 | Identical for first 3; we add ClothObject=4, FlockAgent=5 |
+| `SpawnType` | SingleBurstSpawn=1, RepeatingSpawn=2 | Identical |
+| `SpawnLocation` | FixedLocation=1, RandomBox=2, RandomSphere=3 | Identical |
+| `SpawnerType` | SphereSpawner=1, CylinderSpawner=2, CapsuleSpawner=3, CuboidSpawner=4 | Identical |
+
+**All our extensions are backward-compatible:**
+- Extra fields on `Object`, `BaseSpawner`, `Scene` are **appended at the end** — FlatBuffers vtable layout means old binaries without these fields simply return field defaults
+- `ClothObject` (4) and `FlockAgent` (5) are beyond any discriminant a teacher-provided `.bin` would use
+- Both teacher and our schema use `table Cuboid` (not `Cube`) — names are identical
+
+**Conclusion:** A teacher-provided `.bin` compiled from the original `Scene.fbs` will load and run correctly in our engine without any modifications.
+
 ---
 
 ## 4.4 FlatBuffers Loading Pipeline

@@ -269,6 +269,10 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         m_peerEntries[i].peerId = i + 2;
     }
 
+    if (auto* nb = ServiceLocator::GetNetworkBridge()) {
+        nb->SetCurrentScene(m_configPath);
+    }
+
     GE_LOG_INFO("FlatBuffersScenario: Loaded '" + m_sceneName + "' from " + m_configPath);
     GE_LOG_INFO("FlatBuffersScenario: Network / Simulation / Display menus are only active when a .bin FlatBuffers scene is loaded.");
 }
@@ -387,6 +391,10 @@ void FlatBuffersScenario::OnUnload() {
     // Drop the network connection so each scene starts fresh.
     // Also prevents stale state if the same scene is restarted.
     disconnectNetwork();
+
+    if (auto* nb = ServiceLocator::GetNetworkBridge()) {
+        nb->SetCurrentScene("");
+    }
 
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
 
@@ -607,6 +615,7 @@ void FlatBuffersScenario::OnGUI() {
                         svc->GetLocalIPString().c_str(),
                         54000 + static_cast<int>(svc->GetLocalPeerId()) - 1,
                         static_cast<int>(svc->GetLocalPeerId()));
+                    ImGui::TextColored({0.8f, 0.8f, 1.0f, 1.0f}, "Scene: %s", m_sceneName.c_str());
                     ImGui::Unindent(8.0f);
                 }
             }
@@ -714,6 +723,23 @@ void FlatBuffersScenario::OnGUI() {
                 ImGui::PopStyleColor(3);
                 ImGui::SameLine();
                 ImGui::TextColored({0.2f, 1.0f, 0.2f, 1.0f}, "Connected (peer %d)", m_localPeerId);
+                ImGui::Indent(8.0f);
+                if (svc != nullptr) {
+                    ImGui::Text("My IP: %s   Port: %d   Peer ID: %d",
+                        svc->GetLocalIPString().c_str(),
+                        m_localPort,
+                        m_localPeerId);
+                }
+                ImGui::TextColored({0.8f, 0.8f, 1.0f, 1.0f}, "Scene: %s", m_sceneName.c_str());
+                for (int i = 0; i < 3; ++i) {
+                    if (m_peerEntries[i].connected) {
+                        ImGui::Text("  Peer %d  %s : %d",
+                            m_peerEntries[i].peerId,
+                            m_peerEntries[i].ip,
+                            m_peerEntries[i].port);
+                    }
+                }
+                ImGui::Unindent(8.0f);
             } else {
                 // Show Connect; disabled while auto-connect is negotiating OR connection is active
                 using ACS = GE::NetworkBridge::AutoConnectState;
@@ -735,15 +761,19 @@ void FlatBuffersScenario::OnGUI() {
                         }
                     }
                     if (m_netInitialised) {
+                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
                         for (int i = 0; i < 3; ++i) {
                             const char* ip = m_peerEntries[i].ip;
                             if (ip[0] != '\0') {
                                 svc->AddPeer(static_cast<uint8_t>(m_peerEntries[i].peerId), ip,
                                              static_cast<uint16_t>(m_peerEntries[i].port));
+                                if (nb != nullptr) {
+                                    nb->RegisterScenePeer(
+                                        static_cast<uint8_t>(m_peerEntries[i].peerId));
+                                }
                                 m_peerEntries[i].connected = true;
                             }
                         }
-                        GE::NetworkBridge* nb = ServiceLocator::GetNetworkBridge();
                         if (nb != nullptr) { nb->BroadcastAnimationStates(); }
                         m_connectionMethod = ConnectionMethod::Manual;
                     }

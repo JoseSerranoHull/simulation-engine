@@ -106,6 +106,20 @@ namespace GE {
          */
         void ClearRemoteStates();
 
+        /**
+         * @brief Registers the current scene path used for discovery filtering.
+         *        Call from FlatBuffersScenario::OnLoad (with path) and OnUnload (with "").
+         *        Thread-safe — networking thread reads this during discovery.
+         */
+        void SetCurrentScene(const std::string& path);
+
+        /**
+         * @brief Marks a peer as scene-compatible so its state packets are accepted.
+         *        Call alongside every AddPeer (auto-connect, manual connect, PeerAnnounce).
+         *        Cleared by ClearRemoteStates() on scene change / disconnect.
+         */
+        void RegisterScenePeer(uint8_t peerId);
+
         // --- Auto-connect (LAN peer discovery) ---
 
         enum class AutoConnectState { Idle, Discovering, Done, Failed };
@@ -179,6 +193,14 @@ namespace GE {
         /// Sequence counter for packets we emit.
         uint16_t m_outSequence { 0 };
 
+        /// Current scene path — used to filter discovery to same-scene peers only.
+        std::string m_currentScenePath;
+        std::mutex  m_scenePathMutex;
+
+        /// Bitmask of scene-matched peers whose state packets should be applied.
+        /// Bit (peerId-1) is set by RegisterScenePeer; cleared by ClearRemoteStates.
+        std::atomic<uint8_t> m_acceptedPeerMask { 0 };
+
         /// Throttle: time-point of the last broadcast.
         std::chrono::steady_clock::time_point m_lastBroadcast {};
 
@@ -197,7 +219,8 @@ namespace GE {
         void handleSceneChange    (const uint8_t* data, std::size_t size);
         void handleSpawnObject    (const uint8_t* data, std::size_t size);
         void handleAnimationSync  (const uint8_t* data, std::size_t size);
-        void handleDiscoveryHello (uint32_t senderAddr, uint16_t senderPort);
+        void handleDiscoveryHello (uint32_t senderAddr, uint16_t senderPort,
+                                   const uint8_t* data, std::size_t size);
         void handlePeerAnnounce   (uint8_t peerID, uint32_t senderAddr);
     };
 

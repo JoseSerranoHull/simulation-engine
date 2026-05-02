@@ -166,7 +166,10 @@
       "Bash(glslc water.vert -o water_vert.spv)",
       "Bash(glslc collider_wire.vert -o collider_wire_vert.spv)",
       "Bash(glslc shadow.vert -o shadow_vert.spv)",
-      "Bash(glslc flatcolor.vert -o flatcolor_vert.spv)"
+      "Bash(glslc flatcolor.vert -o flatcolor_vert.spv)",
+      "Bash(Get-ChildItem *)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

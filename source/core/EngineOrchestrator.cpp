@@ -182,10 +182,10 @@ void EngineOrchestrator::initVulkan() {
 /**
  * @brief Enters the multi-threaded execution loop.
  *
- * Thread map (0-indexed cores):
- *   Core 0 (0x01) — main thread: GLFW poll + Vulkan render + ImGui
- *   Core 1 (0x02) — networking placeholder (Session 4 will fill this in)
- *   Core 3 (0x08) — physics: fixed-timestep accumulator + SimulationState writes
+ * Thread map — spec uses 1-indexed cores; masks use 0-indexed bits:
+ *   Core 1 (0x01, bit 0) — main thread:       GLFW poll + Vulkan render + ImGui
+ *   Core 2–3 (0x06, bits 1–2) — networking:   UDP poll + NetworkBridge::ApplyReceivedState
+ *   Core 4   (0x08, bit 3)    — simulation:    fixed-timestep accumulator + ECS physics
  */
 void EngineOrchestrator::run() {
     // --- Spawn physics thread (Core 4, affinity bit 3) ---

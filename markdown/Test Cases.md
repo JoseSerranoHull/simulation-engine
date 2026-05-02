@@ -312,3 +312,23 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 **Common failures:**
 - Gravity toggle has no effect → `m_gravityEnabled` not wired into `PhysicsSystem::Integrate()`; verify the flag guards the `rb.forceAccum += GRAVITY * rb.mass` line.
 - Cloth unaffected → ClothSystem applies gravity independently; this is expected (ClothSystem has its own gravity constant). The toggle only affects RigidBody-based entities.
+
+---
+
+## Known Testing Limitations (Same-Machine Only)
+
+The following behaviours differ when running two or more engine instances on the **same physical machine** vs. the intended deployment of **one instance per PC** (as required by the final lab brief: *"minimum two peers on separate physical PCs in RBB-335"*). They are not bugs in the production configuration.
+
+### Peer slot assignment when multiple scenes are active simultaneously
+
+**Observed on same machine:** If Instance A is connected to scenario 01 as Peer 1 (port 54000) and Instance B auto-connects to scenario 02, the scene filter correctly prevents them from joining each other. However, port 54000 is already bound by Instance A on the local OS. Instance B falls back to port 54001 and becomes Peer 2 — it will own the **green** objects even though it is the only peer on scenario 02.
+
+**On separate machines:** Each machine has its own port namespace. Instance B successfully binds port 54000 on its own NIC and becomes Peer 1 (red objects) as expected. There is no conflict.
+
+**Root cause:** UDP ports are OS-global; the engine maps Peer 1 → port 54000, Peer 2 → port 54001, etc. Two instances on different scenes cannot share port 54000 on the same machine even though they are logically independent sessions.
+
+**Workaround for same-machine testing:** Start both instances on the **same scenario** if you need Peer 1 / Peer 2 colours to be correct. When testing scene isolation (different scenarios, no cross-talk), the peer slot number will be higher than 1 but the isolation behaviour itself is correct.
+
+### Auto Connect requiring staggered clicks
+
+When two instances click **Auto Connect** simultaneously on the same machine, both may try the same discovery slot. The 0–300 ms random jitter in `BeginAutoConnect` mitigates most collisions, but for deterministic same-machine testing click Instance A first, wait for it to report a slot, then click Instance B.

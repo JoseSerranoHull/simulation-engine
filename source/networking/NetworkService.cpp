@@ -82,6 +82,8 @@ void NetworkService::Shutdown() {
         m_socket      = INVALID_SOCK;
         m_initialised = false;
         WSACleanup();
+        // Clear peer table so stale peers don't receive broadcasts after reconnect
+        for (auto& peer : m_peers) { peer = PeerEntry{}; }
         GE_LOG_INFO("NetworkService: shut down.");
     }
 }

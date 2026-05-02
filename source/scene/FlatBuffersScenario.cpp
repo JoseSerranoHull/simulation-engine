@@ -308,6 +308,16 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
         const GE::Components::ClothComponent& cc = clothArr.Data()[i];
         if (cc.mappedVertices == nullptr || cc.vertexCount == 0U) { continue; }
 
+        // Cloth particles are stored in WORLD space. The Renderer applies the cloth
+        // entity's world matrix as the model push-constant, so vertices must be in
+        // LOCAL space (relative to the entity origin) to avoid double-counting the
+        // entity's position offset.
+        const GE::ECS::EntityID clothEid = clothArr.Index()[i];
+        const GE::Components::Transform* clothTr =
+            em->TryGetTIComponent<GE::Components::Transform>(clothEid);
+        const glm::vec3 entityWorldPos =
+            (clothTr != nullptr) ? clothTr->m_worldPosition : glm::vec3{ 0.0f };
+
         auto* verts = static_cast<GE::Assets::Vertex*>(cc.mappedVertices);
         const int R = cc.rows;
         const int C = cc.cols;
@@ -317,7 +327,7 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
             const int c = static_cast<int>(vi) % C;
             const glm::vec3 center = cc.particles[vi].position;
 
-            verts[vi].position = center;
+            verts[vi].position = center - entityWorldPos; // world → local space
 
             // Per-vertex normal: central-difference cross product of deformed neighbor positions.
             // At boundary vertices the missing neighbor is replaced by the current vertex (half step).
@@ -840,6 +850,12 @@ void FlatBuffersScenario::OnGUI() {
                     ImGui::SliderFloat("Tear Threshold",   &cc.tearThreshold,    1.0f, 10.0f);
                     ImGui::SliderFloat("Tear Roughness",   &cc.tearRoughness,    0.0f,  0.2f);
                     ImGui::SliderFloat("Stress Transfer",  &cc.stressTransferRate, 0.0f, 1.0f);
+                    if (ImGui::Button("Reset Cloth")) {
+                        for (auto& s : cc.springs) { s.active = true; s.stressAccum = 0.0f; }
+                        for (auto& p : cc.particles) {
+                            p.heat = 0.0f; p.burned = false; p.wasCurled = false;
+                        }
+                    }
                     ImGui::Separator();
                     ImGui::Checkbox("Wind", &cc.windEnabled);
                     if (cc.windEnabled) {
@@ -848,14 +864,6 @@ void FlatBuffersScenario::OnGUI() {
                         ImGui::SliderFloat("Drag Coeff", &cc.dragCoeff,       0.1f,  4.0f);
                         ImGui::SliderFloat("Gust Amp",   &cc.gustAmplitude,   0.0f,  1.0f);
                         ImGui::SliderFloat("Gust Freq",  &cc.gustFrequency,   0.1f,  3.0f);
-                    }
-
-                    ImGui::Separator();
-                    ImGui::Text("Tearing");
-                    ImGui::SliderFloat("Tear Threshold", &cc.tearThreshold, 1.1f, 10.0f);
-                    if (ImGui::Button("Reset Springs")) {
-                        for (auto& s : cc.springs) { s.active = true; }
-                        for (auto& p : cc.particles) { p.heat = 0.0f; p.burned = false; }
                     }
 
                     ImGui::Separator();

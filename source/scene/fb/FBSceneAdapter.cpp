@@ -715,14 +715,17 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         // Resolve owner color
         cc.color = resolveColor(obj, ctx);
 
-        // Build initial vertex data (flat grid)
+        // Build initial vertex data (flat grid).
+        // Vertices are stored in LOCAL space (relative to the entity's origin) so that
+        // the Renderer's model-matrix push-constant (tr->m_worldMatrix) correctly
+        // translates them to world space without double-counting the entity offset.
         const uint32_t vCount = static_cast<uint32_t>(cc.rows * cc.cols);
         std::vector<GE::Assets::Vertex> verts(vCount);
         for (int r = 0; r < cc.rows; ++r) {
             for (int c = 0; c < cc.cols; ++c) {
                 const int idx = r * cc.cols + c;
                 GE::Assets::Vertex& v = verts[idx];
-                v.position = cc.particles[idx].position;
+                v.position = cc.particles[idx].position - origin; // world → local
                 v.color    = cc.color;
                 v.texcoord = glm::vec2{
                     static_cast<float>(c) / static_cast<float>(cc.cols - 1),

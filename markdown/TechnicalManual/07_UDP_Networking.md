@@ -1,417 +1,503 @@
-# Chapter 7 — UDP Peer-to-Peer Networking: State Sync & Dead Reckoning
+# Chapter 7 — UDP Peer-to-Peer Networking
 
 ## 7.1 Why UDP Instead of TCP?
 
-For physics state synchronisation in a multiplayer simulation, the properties of UDP are exactly what we want:
+For physics state synchronisation in a real-time multiplayer simulation, UDP has exactly the right properties:
 
 | Property | TCP | UDP | Why UDP Wins |
-|---------|-----|-----|-------------|
-| **Delivery** | Guaranteed | Best-effort | Old physics state is useless — drop it |
+|---|---|---|---|
+| **Delivery** | Guaranteed | Best-effort | An old physics position is useless — drop it |
 | **Order** | Maintained | Out-of-order possible | We track sequence numbers ourselves |
 | **Latency** | Higher (retransmit delays) | Lower | No waiting for lost packets |
-| **Overhead** | Higher (connection state) | Lower | 4-byte header instead of 20 |
+| **Overhead** | Higher (connection state) | Lower | We add only a 4-byte header |
 
-**The key insight:** If we send position updates at 60Hz and a packet is lost, we don't need the old position — we already have a newer one (or we can predict using dead reckoning). Retransmitting a stale physics update is worse than ignoring it.
+**The key insight:** If we send position updates at 60 Hz and a packet is lost, we do not need the old position — we can predict where the entity is using its last known velocity (**dead reckoning**). Retransmitting a stale physics update would be worse than ignoring it.
 
 ---
 
-## 7.2 Architecture: Strict Layer Decoupling
+## 7.2 Architecture: Three-Layer Design
 
-One of the most important design constraints in this engine is that **networking code must not depend on ECS or Vulkan**. This keeps the networking layer portable, testable, and reusable.
+One of the most important design constraints in this engine is that **networking code must not depend on ECS or Vulkan**. This keeps the networking layer portable, testable, and easy to reason about. The design splits into three layers:
 
-```mermaid
-graph LR
-    subgraph ECS["ECS Layer\n(include/ecs/, include/components/)"]
-        EM["EntityManager\nTransform\nRigidBody"]
-    end
-
-    subgraph Bridge["Bridge Layer\n(include/core/NetworkBridge.h)"]
-        NB["NetworkBridge\n— Only class that sees BOTH layers —\nBroadcastOwnedStates()\nUpdateRemoteEntities(dt)\nApplyReceivedState()"]
-    end
-
-    subgraph Net["Network Layer\n(include/networking/)"]
-        NS["NetworkService\n— Pure UDP socket —\nInit(port)\nBroadcast(data)\nPoll(callback)"]
-        PKT["Packets.h\nHeader\nStateUpdate\nSceneChange\nSpawnObject"]
-    end
-
-    subgraph Wire["Network Wire"]
-        P1["Peer 1"]
-        P2["Peer 2"]
-        P3["Peer 3"]
-        P4["Peer 4"]
-    end
-
-    EM <--> NB
-    NB <--> NS
-    NS <--> PKT
-    NS <--> Wire
-
-    style Bridge fill:#c62828,color:#fff
+```
+┌─────────────────────────────────────────────┐
+│           ECS Layer                         │
+│  EntityManager · Transform · RigidBody      │
+│  (include/ecs/, include/components/)        │
+└───────────────────┬─────────────────────────┘
+                    │ ← Only NetworkBridge crosses this boundary
+┌───────────────────▼─────────────────────────┐
+│           Bridge Layer                      │
+│  NetworkBridge   (include/core/)            │
+│  · BroadcastOwnedStates()                  │
+│  · UpdateRemoteEntities(dt)                 │
+│  · ApplyReceivedState()                     │
+│  · BeginAutoConnect(hostIP)                 │
+└───────────────────┬─────────────────────────┘
+                    │
+┌───────────────────▼─────────────────────────┐
+│           Network Layer                     │
+│  NetworkService  (include/networking/)      │
+│  · Init(port) · Poll(cb) · Broadcast(data) │
+│                                             │
+│  Packets.h — all packet struct definitions  │
+└─────────────────────────────────────────────┘
 ```
 
-The rule: `NetworkService.h` and `Packets.h` must **never** include `EntityManager.h`, `Transform.h`, or any Vulkan header. `NetworkBridge` is the only permitted bridge.
+**The rule:** `NetworkService.h` and `Packets.h` must **never** include `EntityManager.h`, `Transform.h`, or any Vulkan header. `NetworkBridge` is the **only** class permitted to include both.
 
 ---
 
-## 7.3 Packet Definitions
+## 7.3 Packet Definitions (`include/networking/Packets.h`)
+
+Every datagram starts with a 4-byte `Header` followed by a packet-type-specific payload. All structs are `#pragma pack(1)` so there is no compiler padding — what you see is exactly what goes over the wire.
 
 ```cpp
-// include/networking/Packets.h
-
-// Packet type identifier (1 byte)
 enum class PacketType : uint8_t {
-    Heartbeat   = 0,   // Keep-alive ping (header only, 4 bytes total)
-    StateUpdate = 1,   // Physics state broadcast
-    SceneChange = 2,   // Request all peers to load a new scene
-    SpawnObject = 3    // Activate a pre-pooled entity on all peers
+    Heartbeat         = 0,  // Keep-alive, no payload (4 bytes total)
+    StateUpdate       = 1,  // Physics state — sent ~60×/sec per owned entity
+    SceneChange       = 2,  // Tell peers to load a new scene
+    SpawnObject       = 3,  // Activate a pooled entity on all peers
+    AnimationSync     = 4,  // Sync animated object timer state
+    DiscoveryHello    = 5,  // Auto-connect probe from a new peer
+    DiscoveryResponse = 6,  // Reply from an already-connected peer
+    PeerAnnounce      = 7,  // Broadcast after auto-connect: "I am Peer N"
 };
 
-// Common header for all packets (4 bytes, aligned)
+// ── Header — 4 bytes ───────────────────────────────────────────────────────
 struct Header {
     PacketType type     { PacketType::Heartbeat };
-    uint8_t    senderId { 0 };       // Peer ID of the sender (1–4)
-    uint16_t   sequence { 0 };       // Monotonically increasing; drop if <= last seen
+    uint8_t    senderId { 0 };    // Peer ID of the sender (1–4)
+    uint16_t   sequence { 0 };   // Monotonically increasing; drop if ≤ last seen
 };
+static_assert(sizeof(Header) == 4);
 
-// Physics state broadcast — sent ~60 times/sec per owned entity
+// ── StateUpdate — 60 bytes ─────────────────────────────────────────────────
+// Sent once per physics tick per owned entity, throttled to ~60 packets/sec.
 struct StateUpdate {
-    Header    header    {};
-    uint32_t  entityId  { 0 };
-    glm::vec3 position  { 0.0f };
-    float     orientation[4] { 0.0f, 0.0f, 0.0f, 1.0f };  // quaternion x,y,z,w
-    // Note: float[4] instead of glm::quat to avoid including glm/gtc/quaternion.hpp
-    // in a pure networking header
+    Header    header          {};
+    uint32_t  entityId        { 0 };
+    glm::vec3 position        { 0.0f };
+    float     orientation[4]  { 0.0f, 0.0f, 0.0f, 1.0f }; // quaternion x,y,z,w
+    // Note: stored as float[4] rather than glm::quat to avoid including
+    // glm/gtc/quaternion.hpp in a pure networking header.
     glm::vec3 linearVelocity  { 0.0f };
     glm::vec3 angularVelocity { 0.0f };
 };
 
-// Request all peers to switch to a different scene file
+// ── SceneChange — 132 bytes ────────────────────────────────────────────────
+// Sent 3× for reliability (UDP has no retransmit). Receiver queues the path
+// for the main thread to pick up safely via PollPendingSceneChange().
 struct SceneChange {
-    Header header {};
-    char   path[256] {};   // Relative path to .bin file
+    Header header      {};
+    char   scenePath[128] {};   // Relative path to the .bin file
 };
 
-// Activate a pre-created entity (from spawner pool) on remote peers
+// ── SpawnObject — activates a pre-pooled entity on remote peers ────────────
 struct SpawnObject {
-    Header    header       {};
-    uint32_t  entityId     { 0 };
-    uint8_t   ownerPeerId  { 0 };
-    uint8_t   shapeType    { 0 };   // 0=sphere, 1=box, etc.
-    glm::vec3 position     { 0.0f };
-    glm::vec3 scale        { 1.0f };
-    glm::vec3 linVelocity  { 0.0f };
-    float     mass         { 1.0f };
+    Header    header          {};
+    uint32_t  entityId        { 0 };
+    uint8_t   ownerPeerId     { 0 };
+    uint8_t   shapeType       { 0 };   // 0=sphere, 1=box, 2=capsule
+    uint8_t   _pad[2]         {};
+    glm::vec3 position        { 0.0f };
+    glm::vec3 scale           { 1.0f };
+    glm::vec3 linearVelocity  { 0.0f };
+    float     mass            { 1.0f };
+};
+
+// ── AnimationSync — syncs animated platform timers after connecting ─────────
+struct AnimationSync {
+    Header   header   {};
+    uint32_t entityId { 0 };
+    float    elapsed  { 0.0f };  // Current time along the waypoint path
+    uint8_t  reversed { 0 };     // 0=forward, 1=reversed
+    uint8_t  _pad[3]  {};
+};
+
+// ── Discovery packets (auto-connect handshake) ─────────────────────────────
+// DiscoveryHello: sent by a new peer probing for existing peers.
+struct DiscoveryHello {
+    Header header { PacketType::DiscoveryHello };
+    char   scenePath[128] {};  // The scene the new peer is currently on
+};
+
+// DiscoveryResponse: reply from an already-connected peer.
+struct DiscoveryResponse {
+    Header  header { PacketType::DiscoveryResponse };
+    uint8_t peerID { 0 };      // 1–4: which slot this peer currently occupies
+    uint8_t _pad[3]{};
+    char    scenePath[128] {}; // The scene this peer is on (for scene filtering)
+};
+
+// PeerAnnounce: broadcast after auto-connect so existing peers can add us.
+struct PeerAnnounce {
+    Header  header { PacketType::PeerAnnounce };
+    uint8_t peerID { 0 };      // Slot just claimed (1–4)
+    uint8_t _pad[3]{};
 };
 ```
 
 ---
 
-## 7.4 NetworkService: The Raw UDP Layer
+## 7.4 NetworkService — The Raw UDP Layer
+
+`NetworkService` (`include/networking/NetworkService.h`) wraps Winsock2. It knows nothing about the ECS — it just sends bytes to addresses.
 
 ```cpp
-// include/networking/NetworkService.h
 namespace GE::Networking {
 
 class NetworkService {
 public:
     static constexpr uint8_t MAX_PEERS = 4;
 
-    using ReceiveCallback = std::function<void(uint8_t senderId,
-                                               const uint8_t* data,
-                                               std::size_t size)>;
+    // Callback type for received packets.
+    // senderAddr/senderPort are in network byte order (from recvfrom).
+    using ReceiveCallback = std::function<void(
+        uint8_t senderId, const uint8_t* data, std::size_t size,
+        uint32_t senderAddr, uint16_t senderPort)>;
 
-    // Initialise: create a UDP socket and bind to localPort
-    bool Init(uint16_t localPort);
+    bool    Init(uint16_t localPort);  // Bind a non-blocking UDP socket
+    void    Shutdown();                // Close socket + clear peer table
 
-    // Add a peer to the address book
-    void AddPeer(uint8_t peerId, const std::string& ip, uint16_t port);
+    void    AddPeer(uint8_t peerId, const std::string& ip, uint16_t port);
+    void    Send(uint8_t peerId, const void* data, std::size_t size);
+    void    Broadcast(const void* data, std::size_t size); // Send to all peers
 
-    // Send to a specific peer
-    void Send(uint8_t peerId, const void* data, std::size_t size);
+    void    Poll(const ReceiveCallback& cb); // Non-blocking drain of recv queue
+    void    SendRaw(uint32_t addr, uint16_t port,
+                    const void* data, std::size_t size); // One-off unicast
+    bool    EnableBroadcast();         // Sets SO_BROADCAST on the socket
+    std::string GetLocalIPString() const; // Returns "192.168.x.x"
 
-    // Send to all registered peers
-    void Broadcast(const void* data, std::size_t size);
-
-    // Non-blocking receive: calls cb for each packet received
-    // waitMs: max milliseconds to wait if no packet is ready (0 = pure non-blocking)
-    void Poll(const ReceiveCallback& cb, int waitMs = 0);
-
-    void Shutdown();
-
-    bool IsConnected() const { return m_initialised; }
+    bool    IsConnected()    const { return m_initialised; }
     uint8_t GetLocalPeerId() const { return m_localPeerId; }
+    void    SetLocalPeerId(uint8_t id) { m_localPeerId = id; }
 
 private:
-    // SOCKET stored as uintptr_t to hide <winsock2.h> from this header
-    // (Winsock's SOCKET type is uintptr_t on all Windows platforms)
-    uintptr_t m_socket { static_cast<uintptr_t>(-1) };
+    // SOCKET stored as uintptr_t to keep <winsock2.h> out of this header.
+    // Every file including NetworkService.h would otherwise transitively
+    // pull in winsock2.h, which clashes with <windows.h> unless ordered correctly.
+    uintptr_t m_socket { ~static_cast<uintptr_t>(0) };  // INVALID_SOCKET sentinel
+    bool      m_initialised { false };
+    uint8_t   m_localPeerId { 1 };
 
     struct PeerEntry {
         bool     active { false };
-        uint32_t addr   { 0 };    // sin_addr.s_addr in network byte order
-        uint16_t port   { 0 };    // sin_port in network byte order
+        uint32_t addr   { 0 };  // sin_addr.s_addr, network byte order
+        uint16_t port   { 0 };  // sin_port, network byte order
     };
     std::array<PeerEntry, MAX_PEERS> m_peers {};
-
-    bool    m_initialised { false };
-    uint8_t m_localPeerId { 1 };
 };
 
 } // namespace GE::Networking
 ```
 
-### Why `uintptr_t` for the socket?
+### Key implementation detail — `Shutdown()` clears the peer table
 
-Windows defines `SOCKET` as `UINT_PTR` (= `uintptr_t` on 64-bit). If we used `SOCKET` in the header, every file that includes `NetworkService.h` would transitively include `<winsock2.h>` — which clashes with `<windows.h>` unless included in the right order. Hiding it as `uintptr_t` prevents this.
-
-### Socket Initialisation (Non-blocking)
+When `Shutdown()` is called (e.g., when a player changes scene), it not only closes the socket but also zeros all `m_peers` entries:
 
 ```cpp
-// source/networking/NetworkService.cpp
-bool NetworkService::Init(uint16_t localPort) {
-    WSADATA wsa;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
-
-    m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);   // UDP socket
-
-    // Non-blocking mode: recv() returns immediately if no data
-    u_long mode = 1;
-    ioctlsocket(static_cast<SOCKET>(m_socket), FIONBIO, &mode);
-
-    // Bind to local port
-    sockaddr_in addr {};
-    addr.sin_family      = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port        = htons(localPort);
-    bind(static_cast<SOCKET>(m_socket),
-         reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-
-    m_initialised = true;
-    return true;
+void NetworkService::Shutdown() {
+    if (m_initialised) {
+        closesocket(static_cast<SOCKET>(m_socket));
+        m_socket      = INVALID_SOCK;
+        m_initialised = false;
+        WSACleanup();
+        for (auto& peer : m_peers) { peer = PeerEntry{}; }  // ← Clear peer table
+    }
 }
 ```
 
----
+**Why this matters:** Without this, a player who switches scenes and reconnects would still have the old peer table. `BroadcastOwnedStates()` would keep sending state updates to the old peers — leaking physics data to a completely different scene session. Clearing on shutdown ensures each connection starts from a clean slate.
 
-## 7.5 NetworkBridge: The ECS–Network Seam
-
-`NetworkBridge` lives in `include/core/` (not `include/networking/`) precisely because it must include both ECS headers and networking headers. It is the only class with this privilege.
-
-### Outgoing: BroadcastOwnedStates
-
-Called once per physics tick, throttled to ~60 packets/sec per entity:
+### `Poll()` — non-blocking receive loop
 
 ```cpp
-// source/core/NetworkBridge.cpp
+void NetworkService::Poll(const ReceiveCallback& cb) {
+    static char buf[2048];
+    sockaddr_in from{};
+    int fromLen = sizeof(from);
+
+    for (;;) {
+        const int n = recvfrom(static_cast<SOCKET>(m_socket),
+                               buf, sizeof(buf), 0,
+                               reinterpret_cast<sockaddr*>(&from), &fromLen);
+
+        if (n == SOCKET_ERROR) {
+            if (WSAGetLastError() == WSAEWOULDBLOCK) break; // No more data
+            if (WSAGetLastError() == WSAECONNRESET)  continue; // ICMP "port unreachable"
+            break;
+        }
+
+        if (n < static_cast<int>(sizeof(Packets::Header))) continue; // Too small
+
+        Packets::Header hdr{};
+        std::memcpy(&hdr, buf, sizeof(hdr));
+
+        // Pass raw bytes + sender address to the bridge callback
+        cb(hdr.senderId,
+           reinterpret_cast<const uint8_t*>(buf), static_cast<std::size_t>(n),
+           from.sin_addr.s_addr, from.sin_port);
+    }
+}
+```
+
+The networking jthread calls `Poll()` in a tight loop with a 1 ms sleep, pinned to CPU cores 2–3 via `SetThreadAffinityMask`.
+
+---
+
+## 7.5 NetworkBridge — The ECS–Network Seam
+
+`NetworkBridge` (`include/core/NetworkBridge.h`) is the **only** class permitted to include both ECS headers and networking headers. It translates between the two worlds.
+
+### Sending — `BroadcastOwnedStates()`
+
+Called on the physics thread after every physics tick, throttled to ~60 packets/sec. Only entities owned by the local peer are broadcast:
+
+```cpp
 void NetworkBridge::BroadcastOwnedStates() {
-    if (!m_service || !m_service->IsConnected()) return;
+    if (!m_service->IsConnected()) return;
 
+    // Throttle: don't send more often than once every 1/60 s
     const auto now = std::chrono::steady_clock::now();
-    const float dtSinceLastBroadcast =
-        std::chrono::duration<float>(now - m_lastBroadcastTime).count();
+    if (std::chrono::duration<float>(now - m_lastBroadcast).count()
+        < (1.0f / 60.0f)) return;
+    m_lastBroadcast = now;
 
-    if (dtSinceLastBroadcast < (1.0f / 60.0f)) return;   // Throttle to 60/sec
-    m_lastBroadcastTime = now;
+    const uint8_t localId = m_service->GetLocalPeerId();
+    // OwnerType::ONE == 0, TWO == 1, ... maps 1-indexed peer ID to enum
+    const auto localOwner = static_cast<GE::Components::OwnerType>(localId - 1U);
 
-    auto* em            = ServiceLocator::GetEntityManager();
-    const uint8_t myId  = m_service->GetLocalPeerId();
+    auto& ownerArr = em->GetCompArr<GE::Components::OwnerComponent>();
 
-    auto& owners = em->GetCompArr<GE::Components::OwnerComponent>();
-    for (uint32_t i = 0; i < owners.GetCount(); ++i) {
-        if (owners.Data()[i].peerId != myId) continue;  // Only broadcast owned entities
+    for (uint32_t i = 0; i < ownerArr.GetCount(); ++i) {
+        if (ownerArr.Data()[i].owner != localOwner) continue; // Skip remote entities
 
-        EntityID eid = owners.Index()[i];
-        auto* tr = em->GetTIComponent<GE::Components::Transform>(eid);
-        auto* rb = em->GetTIComponent<GE::Components::RigidBody>(eid);
+        const uint32_t eid = ownerArr.Index()[i];
+        auto* tr = em->TryGetTIComponent<Transform>(eid);
+        auto* rb = em->TryGetTIComponent<RigidBody>(eid);
         if (!tr || !rb) continue;
 
-        StateUpdate pkt;
+        Packets::StateUpdate pkt{};
         pkt.header.type     = PacketType::StateUpdate;
-        pkt.header.senderId = myId;
-        pkt.header.sequence = ++m_outSequence;
-
+        pkt.header.senderId = localId;
+        pkt.header.sequence = m_outSequence++;
         pkt.entityId        = eid;
-        pkt.position        = tr->m_position;
+        pkt.position        = tr->m_worldPosition;
         pkt.linearVelocity  = rb->velocity;
         pkt.angularVelocity = rb->angularVelocity;
 
-        // Extract quaternion from rotation matrix (mat4→quat decomposition)
-        glm::quat q = glm::quat_cast(glm::mat3(tr->m_worldMatrix));
-        pkt.orientation[0] = q.x;
-        pkt.orientation[1] = q.y;
-        pkt.orientation[2] = q.z;
-        pkt.orientation[3] = q.w;
+        // Decompose world matrix to quaternion, store as x,y,z,w floats
+        const glm::quat q = glm::quat_cast(glm::mat3(tr->m_worldMatrix));
+        pkt.orientation[0] = q.x; pkt.orientation[1] = q.y;
+        pkt.orientation[2] = q.z; pkt.orientation[3] = q.w;
 
         m_service->Broadcast(&pkt, sizeof(pkt));
     }
 }
 ```
 
-### Incoming: ApplyReceivedState
+### Receiving — `ApplyReceivedState()`
 
-Called by the networking thread's `Poll()` callback when a packet arrives:
+Called by the networking thread's poll callback when a packet arrives. Dispatches to a handler based on `PacketType`:
 
 ```cpp
 void NetworkBridge::ApplyReceivedState(uint8_t senderId,
-                                       const uint8_t* data, std::size_t size)
+                                       const uint8_t* data, std::size_t size,
+                                       uint32_t senderAddr, uint16_t senderPort)
 {
-    if (size < sizeof(Header)) return;
-    Header hdr;
+    if (size < sizeof(Packets::Header)) return;
+    Packets::Header hdr{};
     std::memcpy(&hdr, data, sizeof(hdr));
 
     switch (hdr.type) {
     case PacketType::StateUpdate:
-        handleStateUpdate(senderId, data, size);
-        break;
+        handleStateUpdate(senderId, data, size);    break;
     case PacketType::SceneChange:
-        handleSceneChange(data, size);
-        break;
+        handleSceneChange(data, size);              break;
     case PacketType::SpawnObject:
-        handleSpawnObject(data, size);
-        break;
-    default:
-        break;
+        handleSpawnObject(data, size);              break;
+    case PacketType::AnimationSync:
+        handleAnimationSync(data, size);            break;
+    case PacketType::DiscoveryHello:
+        handleDiscoveryHello(senderAddr, senderPort, data, size); break;
+    case PacketType::PeerAnnounce:
+        handlePeerAnnounce(pkt.peerID, senderAddr); break;
+    default: break;
     }
 }
+```
 
-void NetworkBridge::handleStateUpdate(uint8_t senderId,
-                                      const uint8_t* data, std::size_t size) {
-    if (size < sizeof(StateUpdate)) return;
-    StateUpdate pkt;
-    std::memcpy(&pkt, data, sizeof(pkt));
+### Scene-Matched Peer Filtering — The Accepted Peer Mask
 
-    // Sequence-drop guard: ignore out-of-order packets
-    auto& seqTracker = m_lastInSequence[senderId];
-    if (pkt.header.sequence <= seqTracker) return;   // Old packet — drop
-    seqTracker = pkt.header.sequence;
+Once connected, the engine must ensure it only applies state from peers that are **on the same scene**. A peer that switches to a different scene should stop affecting your simulation immediately.
 
-    // Store in remote entity state map for UpdateRemoteEntities to apply
-    auto& rs = m_remoteStates[pkt.entityId];
-    rs.authPosition   = pkt.position;
-    rs.authVelocity   = pkt.linearVelocity;
-    rs.authTimeSec    = currentTimeSec();
-    rs.blendTimer     = RemoteEntityState::BLEND_DURATION;  // Start 120ms blend
+This is solved with an atomic bitmask: `m_acceptedPeerMask` (1 bit per peer slot, peer `N` → bit `N-1`).
+
+```cpp
+// In NetworkBridge (private):
+std::atomic<uint8_t> m_acceptedPeerMask { 0 };  // cleared on scene change
+
+// Set when a peer is registered through scene-matched auto-connect or manual connect:
+void NetworkBridge::RegisterScenePeer(uint8_t peerId) {
+    m_acceptedPeerMask.fetch_or(1U << (peerId - 1U));
 }
+
+// Cleared when the scene changes (via ClearRemoteStates()):
+void NetworkBridge::ClearRemoteStates() {
+    std::lock_guard lock(m_remoteStatesMutex);
+    m_remoteStates.clear();
+    m_acceptedPeerMask.store(0);  // ← All peers become untrusted after a scene change
+}
+```
+
+Every state-applying handler checks this mask first:
+
+```cpp
+void NetworkBridge::handleStateUpdate(uint8_t senderId, ...) {
+    const uint8_t peerIdx = senderId - 1U;
+    if (peerIdx >= MAX_PEERS) return;
+
+    // Drop packets from peers not registered for the current scene
+    if (!((m_acceptedPeerMask.load() >> peerIdx) & 1U)) return;
+
+    // ...rest of handler (sequence check, dead reckoning update)
+}
+```
+
+The same mask check guards `handleSpawnObject` and `handleAnimationSync`.
+
+### Scene Path Registration — `SetCurrentScene()`
+
+`NetworkBridge` needs to know the current scene path for two reasons:
+1. To include it in `DiscoveryHello` / `DiscoveryResponse` packets (so peers can reject mismatched scenes)
+2. To filter out `DiscoveryHello` from peers on different scenes
+
+```cpp
+// Called from FlatBuffersScenario::OnLoad() after loading the scene binary
+void NetworkBridge::SetCurrentScene(const std::string& path) {
+    std::lock_guard lock(m_scenePathMutex);
+    m_currentScenePath = path;
+}
+// Called from FlatBuffersScenario::OnUnload() before teardown
+// -> called with "" to clear
 ```
 
 ---
 
 ## 7.6 Dead Reckoning + Blend Correction
 
-Between received packets, remote entities must still move smoothly. The engine uses **dead reckoning** — extrapolating position from the last known velocity:
+Between received packets (arriving at ~60 Hz), remote entities must still move smoothly. The engine uses **dead reckoning** — predicting position from the last known velocity:
 
 ```
-predicted_pos = lastPos + lastVel * (time since last packet)
+predictedPos = lastAuthPosition + lastAuthVelocity × (time since last packet)
 ```
 
-However, when a new packet arrives, the predicted position and the new authoritative position may disagree (the remote physics didn't match our prediction exactly). Snapping immediately causes visual jitter. Instead, the engine **blends** over 120ms:
+However, predictions drift. When a new authoritative packet arrives, snapping to the corrected position causes a visible teleport. Instead, the engine blends from the current rendered position toward the prediction over **120 milliseconds**:
 
 ```cpp
-// include/core/NetworkBridge.h
+// Dead-reckoning state per remote entity (NetworkBridge private struct):
 struct RemoteEntityState {
-    glm::vec3 authPosition  { 0.0f };    // Authoritative position from last packet
-    glm::vec3 authVelocity  { 0.0f };    // Authoritative velocity from last packet
-    glm::vec3 renderPosition { 0.0f };   // Current interpolated render position
-    double    authTimeSec   { 0.0 };     // Wall-clock time of last received packet
-    float     blendTimer    { 0.0f };    // Seconds remaining in blend window
-    static constexpr float BLEND_DURATION = 0.12f;  // 120ms blend window
+    glm::vec3 authPosition  { 0.0f };  // Last received authoritative position
+    glm::vec3 authVelocity  { 0.0f };  // Last received authoritative velocity
+    glm::vec3 renderPosition{ 0.0f };  // Current interpolated position on screen
+    double    authTimeSec   { 0.0  };  // Wall-clock time of last packet
+    float     blendTimer    { 0.0f };  // Seconds left in the blend window
+    static constexpr float BLEND_DURATION = 0.12f;  // 120 ms blend
 };
 ```
 
 ```cpp
-// source/core/NetworkBridge.cpp — UpdateRemoteEntities()
+// NetworkBridge::UpdateRemoteEntities() — runs on physics thread each tick
 void NetworkBridge::UpdateRemoteEntities(float dt) {
-    if (!m_service || !m_service->IsConnected()) return;
-
-    const double now = currentTimeSec();
-    auto* em         = ServiceLocator::GetEntityManager();
+    std::lock_guard lock(m_remoteStatesMutex);
 
     for (auto& [entityId, rs] : m_remoteStates) {
-        auto* tr = em->GetTIComponent<GE::Components::Transform>(entityId);
-        if (!tr) continue;
+        auto* tr = em->TryGetTIComponent<Transform>(entityId);
+        auto* rb = em->TryGetTIComponent<RigidBody>(entityId);
+        if (!tr || !rb) continue;
 
-        // Dead reckoning: predict where the remote body should be now
-        float dtSincePacket      = static_cast<float>(now - rs.authTimeSec);
-        glm::vec3 predictedPos   = rs.authPosition + rs.authVelocity * dtSincePacket;
+        // Guard: if no packet received in 2 s, peer has likely disconnected
+        const float dtSincePacket = static_cast<float>(
+            std::chrono::duration<double>(now - rs.authTimeSec).count());
+        if (dtSincePacket > 2.0f) continue;
+
+        // Dead-reckoning prediction
+        const glm::vec3 predictedPos = rs.authPosition + rs.authVelocity * dtSincePacket;
 
         if (rs.blendTimer > 0.0f) {
-            // Active blend: lerp from current render position toward prediction
-            float alpha          = dt / rs.blendTimer;
-            rs.renderPosition    = glm::mix(tr->m_position, predictedPos,
-                                            glm::clamp(alpha, 0.0f, 1.0f));
-            rs.blendTimer       -= dt;
+            // Active blend: lerp from current position toward the prediction
+            const float alpha = glm::clamp(dt / rs.blendTimer, 0.0f, 1.0f);
+            rs.renderPosition = glm::mix(tr->m_worldPosition, predictedPos, alpha);
+            rs.blendTimer    -= dt;
         } else {
-            // Pure dead reckoning: jump straight to prediction
-            rs.renderPosition    = predictedPos;
+            rs.renderPosition = predictedPos;  // Pure dead reckoning
         }
 
-        // Apply interpolated position to the transform
-        tr->m_position = rs.renderPosition;
+        tr->m_localPosition  = rs.renderPosition;
+        tr->m_worldPosition  = rs.renderPosition;
+        tr->m_worldMatrix[3] = glm::vec4(rs.renderPosition, 1.0f);
+        rb->velocity         = rs.authVelocity;
     }
 }
 ```
 
-### Dead Reckoning Timeline
-
-```mermaid
-sequenceDiagram
-    participant NET as Network Thread
-    participant PT as Physics Thread (UpdateRemoteEntities)
-    participant TR as Transform (Visible Position)
-
-    Note over TR: Entity at position P0
-
-    NET->>NET: Packet received: authPos=P1, authVel=V1
-    NET->>NET: blendTimer = 0.12s
-    NET->>NET: authTimeSec = now
-
-    loop 0..120ms (blendTimer > 0)
-        PT->>PT: predict = P1 + V1 * dtSincePacket
-        PT->>TR: renderPos = lerp(current, predict, dt/blendTimer)
-        Note over TR: Smooth interpolation toward prediction
-    end
-
-    loop After 120ms (pure dead reckoning)
-        PT->>PT: predict = P1 + V1 * dtSincePacket
-        PT->>TR: renderPos = predict
-        Note over TR: Position extrapolated from last packet
-    end
-
-    NET->>NET: New packet: authPos=P2, authVel=V2
-    NET->>NET: blendTimer = 0.12s (reset — new blend starts)
+**Timeline walkthrough:**
+```
+t=0.000s  Packet arrives: authPos=P1, authVel=V1 → blendTimer=0.12
+t=0.016s  predict=P1+V1×0.016; renderPos=lerp(current, predict, 0.016/0.12)
+t=0.032s  predict=P1+V1×0.032; renderPos=lerp(current, predict, 0.032/0.104)
+  ...     (smooth lerp for 120 ms)
+t=0.120s  blendTimer=0; renderPos=P1+V1×0.120   (pure dead reckoning)
+t=0.133s  blendTimer=0; renderPos=P1+V1×0.133
+  ...
+t=0.200s  New packet: authPos=P2, authVel=V2 → blendTimer=0.12 (reset)
 ```
 
 ---
 
 ## 7.7 Scene Change Synchronisation
 
-When one peer changes scene, all peers should change simultaneously:
+When a player changes scene, all connected peers are notified to switch too. The packet is sent **3 times** to compensate for potential UDP loss:
 
 ```cpp
-// source/core/NetworkBridge.cpp
-void NetworkBridge::handleSceneChange(const uint8_t* data, std::size_t size) {
-    if (size < sizeof(SceneChange)) return;
-    SceneChange pkt;
-    std::memcpy(&pkt, data, sizeof(pkt));
-    pkt.path[255] = '\0';   // Safety: null-terminate
+void NetworkBridge::BroadcastSceneChange(const std::string& path) {
+    if (!m_service->IsConnected()) return;
 
-    // Defer the scene change safely (processed in drawFrame() after GPU idle)
-    ServiceLocator::GetExperience()->requestScenarioChange(std::string(pkt.path));
+    Packets::SceneChange pkt{};
+    pkt.header.type     = PacketType::SceneChange;
+    pkt.header.senderId = m_service->GetLocalPeerId();
+    pkt.header.sequence = m_outSequence++;
+
+    const std::size_t len = std::min(path.size(), sizeof(pkt.scenePath) - 1U);
+    std::memcpy(pkt.scenePath, path.c_str(), len);
+
+    for (int i = 0; i < 3; ++i) {          // Sent 3× for reliability
+        m_service->Broadcast(&pkt, sizeof(pkt));
+    }
 }
 ```
 
-To trigger a scene change on all peers:
-```cpp
-// In FlatBuffersScenario::OnGUI() (simplified):
-if (ImGui::Button("Change Scene (All Peers)")) {
-    SceneChange pkt;
-    pkt.header.type     = PacketType::SceneChange;
-    pkt.header.senderId = m_localPeerId;
-    strncpy(pkt.path, newScenePath.c_str(), 255);
-    m_networkService->Broadcast(&pkt, sizeof(pkt));
+On the receiving end, the networking thread writes the path to a thread-safe pending queue:
 
-    // Also change locally
-    ServiceLocator::GetExperience()->requestScenarioChange(newScenePath);
+```cpp
+void NetworkBridge::handleSceneChange(const uint8_t* data, std::size_t size) {
+    Packets::SceneChange pkt{};
+    std::memcpy(&pkt, data, sizeof(pkt));
+    pkt.scenePath[127] = '\0';   // Safety null-terminate
+
+    std::lock_guard lock(m_pendingNetworkSceneMutex);
+    m_pendingNetworkScene = std::string(pkt.scenePath);
+}
+```
+
+The main thread polls this once per frame and triggers the scene change safely after `vkDeviceWaitIdle`:
+
+```cpp
+// EngineOrchestrator::drawFrame()
+if (auto pending = m_networkBridge->PollPendingSceneChange()) {
+    requestScenarioChange(*pending);   // GPU-safe deferred switch
 }
 ```
 
@@ -419,178 +505,301 @@ if (ImGui::Button("Change Scene (All Peers)")) {
 
 ## 7.8 Spawn Synchronisation
 
-Spawners pre-create entities at scene load time. When a spawner activates an entity, it broadcasts to all peers:
+Spawners pre-create a pool of entities at scene load time (they exist but are invisible at `y = −1000`). When a spawner fires, it activates the entity locally and tells all peers to do the same via `SpawnObject`:
 
 ```cpp
-// source/systems/SpawnerSystem.cpp — broadcast spawn
-void SpawnerSystem::broadcastSpawn(EntityID id, const SpawnerComponent& sc,
-                                   const glm::vec3& pos, const glm::vec3& vel) {
-    auto* bridge = ServiceLocator::GetNetworkBridge();
-    if (!bridge) return;
-
-    SpawnObject pkt;
+// Called from SpawnerSystem — only the spawner's owner peer does this
+void NetworkBridge::BroadcastSpawnObject(uint32_t entityId, uint8_t ownerPeerId,
+                                          uint8_t shapeType,
+                                          const glm::vec3& pos,
+                                          const glm::vec3& scale,
+                                          const glm::vec3& vel, float mass)
+{
+    Packets::SpawnObject pkt{};
     pkt.header.type     = PacketType::SpawnObject;
-    pkt.header.senderId = m_localPeerId;
-    pkt.entityId        = id;
-    pkt.ownerPeerId     = sc.ownerPeerId;
+    pkt.header.senderId = m_service->GetLocalPeerId();
+    pkt.header.sequence = m_outSequence++;
+    pkt.entityId        = entityId;
+    pkt.ownerPeerId     = ownerPeerId;
+    pkt.shapeType       = shapeType;
     pkt.position        = pos;
-    pkt.linVelocity     = vel;
-    pkt.mass            = lookupMass(id);
-
-    bridge->GetService()->Broadcast(&pkt, sizeof(pkt));
+    pkt.scale           = scale;
+    pkt.linearVelocity  = vel;
+    pkt.mass            = mass;
+    m_service->Broadcast(&pkt, sizeof(pkt));
 }
 ```
 
-Remote peers receive the `SpawnObject` packet and activate the matching pre-created entity (looked up by `entityId`) at the given position.
+Remote peers receive this and move the matching pool entity (same `entityId`) to the broadcast position, enabling gravity, and setting its initial velocity.
 
 ---
 
-## 7.9 The ImGui Network Menu
-
-`FlatBuffersScenario::OnGUI()` provides the connection UI:
-
-```cpp
-// Simplified from source/scene/FlatBuffersScenario.cpp
-if (ImGui::CollapsingHeader("Network")) {
-    ImGui::Text("Local Peer ID: %d", m_localPeerId);
-    ImGui::InputInt("Local Port", &m_localPort);
-
-    for (int i = 0; i < 3; ++i) {
-        ImGui::InputText("IP", m_peerEntries[i].ip, 64);
-        ImGui::InputInt("Port", &m_peerEntries[i].port);
-        ImGui::InputInt("Peer ID", &m_peerEntries[i].peerId);
-    }
-
-    if (ImGui::Button("Connect") && !m_netInitialised) {
-        if (m_networkService->Init(static_cast<uint16_t>(m_localPort))) {
-            for (auto& pe : m_peerEntries) {
-                m_networkService->AddPeer(static_cast<uint8_t>(pe.peerId),
-                                         pe.ip,
-                                         static_cast<uint16_t>(pe.port));
-            }
-            m_netInitialised = true;
-        }
-    }
-}
-```
-
----
-
----
-
-## 7.10 Auto-Connect Peer Negotiation
+## 7.9 Auto-Connect Peer Negotiation
 
 ### The Problem with Manual Configuration
 
-The original Network menu required each user to:
-1. Type three remote peer IP addresses and ports by hand
-2. Manually choose a peer ID (1–4) without knowing which IDs other players have taken
-3. Click "Connect" per peer
+The manual connect approach requires each user to:
+1. Look up another machine's IP address (run `ipconfig`)
+2. Type it into the engine's Network menu
+3. Agree on peer IDs (1–4) without any coordination mechanism
+4. Both click "Connect" at the right time
 
-This breaks down immediately in a classroom: two students both choose peer ID 1, neither knows it, and positions flicker/fight silently. There is no error — the engine just corrupts state.
+In a classroom setting this breaks down — two students both pick peer ID 1, neither realises it, and physics state flickers silently. Auto-connect eliminates all of this.
 
-### How Auto-Connect Works
+### How Auto-Connect Works — Two Modes
 
-`NetworkBridge::BeginAutoConnect()` implements a **LAN discovery handshake** that assigns slots automatically:
+`NetworkBridge::BeginAutoConnect(const std::string& hostIP)` runs a discovery handshake in a background `std::jthread`. The `hostIP` parameter determines the send strategy:
+
+| Mode | `hostIP` value | What happens |
+|---|---|---|
+| **Host / First peer** | `""` (empty) | Broadcasts `DiscoveryHello` to `255.255.255.255` on ports 54000–54003. Works reliably on the same machine or a LAN with UDP broadcast enabled. |
+| **Joiner** | `"192.168.x.x"` | Unicasts `DiscoveryHello` directly to the host's IP on ports 54000–54003. Deterministic and works on any network. |
+
+### The Full Handshake
 
 ```
-Step 1 — Broadcast DiscoveryHello
-    New client ──▶ UDP broadcast to 255.255.255.255:54000
-                ──▶ UDP broadcast to 255.255.255.255:54001
-                ──▶ UDP broadcast to 255.255.255.255:54002
-                ──▶ UDP broadcast to 255.255.255.255:54003
+Step 1 — Joiner sends DiscoveryHello (with its current scene path)
+    New peer ──► unicast/broadcast ──► 192.168.1.10:54000 (existing Peer 1)
+                                    ──► 192.168.1.10:54001
+                                    ──► 192.168.1.10:54002
+                                    ──► 192.168.1.10:54003
 
-Step 2 — Existing peers respond
-    Peer A (slot 1) ──▶ DiscoveryReply { slotId=1 }  ──▶ New client
-    Peer B (slot 2) ──▶ DiscoveryReply { slotId=2 }  ──▶ New client
+Step 2 — Existing peer responds (scene-filtered!)
+    Peer 1 receives DiscoveryHello:
+      · Checks: does incoming scenePath == my scenePath?
+      · If NO  → silently ignore (different scene session, no connection)
+      · If YES → send DiscoveryResponse { peerID=1, scenePath="…01_multiplayer…" }
+                 to the sender's temp socket (port 54998)
 
-Step 3 — Slot assignment
-    New client: "Slots 1 and 2 are taken. I'll take slot 3."
+Step 3 — Joiner picks lowest free slot
+    Joiner collects responses for 1.5 s:
+      · discovered = { 1: "192.168.1.10" }
+      · Tries slot 1 (taken) → tries slot 2 → binds port 54001 successfully
+      · Sets localPeerId = 2
 
-Step 4 — Announce
-    New client ──▶ PeerAnnounce { slotId=3 } ──▶ broadcast
-    Peer A now knows about Peer C (slot 3) ← Bidirectional!
-    Peer B now knows about Peer C (slot 3) ← Bidirectional!
+Step 4 — Joiner announces itself
+    Peer 2 ──► PeerAnnounce { peerID=2 } ──► broadcast to all game ports
+    Peer 1 receives it → handlePeerAnnounce() → AddPeer(2, "192.168.x.x", 54001)
+                       → RegisterScenePeer(2)  ← now Peer 1 accepts Peer 2's state
+    Both sides now trust each other: m_acceptedPeerMask has the right bit set.
 ```
 
-The state machine in `NetworkBridge`:
+### Scene Filtering During Discovery
+
+`DiscoveryHello` and `DiscoveryResponse` both carry a `scenePath[128]` field. The responder checks:
 
 ```cpp
-// source/core/NetworkBridge.cpp — BeginAutoConnect() (simplified)
-// hostIP: empty = broadcast (host mode); non-empty = unicast to that IP (joiner mode)
-void NetworkBridge::BeginAutoConnect(const std::string& hostIP) {
-    // 1. Bind a temporary socket on port 54998 for receiving responses
-    // (game socket is shut down first so it doesn't answer its own broadcast)
+void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPort,
+                                          const uint8_t* data, std::size_t size)
+{
+    // Parse incoming scene path
+    Packets::DiscoveryHello hello{};
+    std::memcpy(&hello, data, sizeof(hello));
+    const std::string incomingScene(hello.scenePath);
 
-    // 2. Send DiscoveryHello — unicast if hostIP given, broadcast otherwise
-    const auto destAddr = hostIP.empty() ? "255.255.255.255" : hostIP;
-    for (uint8_t port = 54000; port <= 54003; ++port) {
-        sendto(tempSock, helloPacket, destAddr, port);
+    // Scene filter: if both sides have a scene set and they differ → reject
+    {
+        std::lock_guard lock(m_scenePathMutex);
+        if (!incomingScene.empty() && !m_currentScenePath.empty()
+            && incomingScene != m_currentScenePath) {
+            return;  // Different scene — don't respond
+        }
     }
 
-    // 3. Listen for DiscoveryResponse replies (timed out after ~1.5s)
-    m_acState = AutoConnectState::Discovering;
+    // Build response with our own scene path
+    Packets::DiscoveryResponse resp{};
+    resp.header.type = PacketType::DiscoveryResponse;
+    resp.peerID      = m_service->GetLocalPeerId();
+    { /* copy m_currentScenePath into resp.scenePath */ }
+
+    m_service->SendRaw(senderAddr, senderPort, &resp, sizeof(resp));
 }
-
-// ... after replies arrive:
-// m_discoveredSlots = {1, 2}
-uint8_t slot = 0U;
-for (uint8_t s = 1U; s <= 4U; ++s) {
-    if (m_discoveredSlots.find(s) == m_discoveredSlots.end()) { slot = s; break; }
-}
-// slot = 3  (lowest free)
-
-// 4. Rebind on the permanent game port for slot 3 (54002)
-m_svc->Shutdown();
-m_svc->Init(54000 + slot - 1);  // port 54002
-
-// 5. Announce to all existing peers
-m_svc->Broadcast(PeerAnnounce{ slot });
-m_acState = AutoConnectState::Done;
 ```
 
-### ImGui UI Flow
+The joiner applies the same filter when collecting responses — it ignores any `DiscoveryResponse` whose `scenePath` doesn't match its own. This means **two peers on different scenes will never accidentally join each other's session**.
 
-The Network menu shows different UI depending on connection state:
+### Port Fallback
 
-```
-[Auto Connect]    ← State: None
-    Status: Discovering...    ← State: Discovering (yellow text)
-[Disconnect]      ← State: Done — red button replaces Auto Connect
-    My IP: 192.168.1.15   Port: 54002   Peer ID: 3   ← status info
-```
-
-Manual connection fields become **read-only** (greyed out with `ImGui::BeginDisabled`) once auto-connect succeeds, and vice versa — the two modes are mutually exclusive.
-
-### Connection Isolation Per Scene
-
-Every scene switch or restart calls `disconnectNetwork()` inside `OnUnload()`:
+On the same machine (common during development), two instances may both want port 54000. When `Init(gamePort)` fails with `WSAEADDRINUSE`, the engine automatically tries the next slot:
 
 ```cpp
-// source/scene/FlatBuffersScenario.cpp — OnUnload()
-void FlatBuffersScenario::OnUnload() {
-    disconnectNetwork();   // Always drop network so each scene starts fresh
-    // ...
-}
-
-void FlatBuffersScenario::disconnectNetwork() {
-    svc->Shutdown();              // Close the UDP socket
-    bridge->ClearRemoteStates();  // Erase all tracked remote entity states
-    bridge->ResetAutoConnect();   // Reset discovery state machine
-    m_netInitialised = false;
-    m_connectionMethod = ConnectionMethod::None;
+uint16_t gamePort = 0U;
+while (slot <= 4U) {
+    gamePort = static_cast<uint16_t>(BASE_PORT + slot - 1U);
+    if (m_service->Init(gamePort)) break;         // Success
+    ++slot;                                        // Port taken — try next
+    while (slot <= 4U && discovered.count(slot)) ++slot; // Skip known peers
 }
 ```
 
-This means:
-- Players must reconnect after switching scenes — connections are per-scene, not persistent
-- Restarting a scene also disconnects — prevents stale entity IDs from the previous session bleeding in
+On separate physical machines this is never needed — each machine has its own port namespace.
 
-### Why Scene Changes Are NOT Synchronised
+### Auto-Connect Code Skeleton
 
-`NetworkBridge::BroadcastSceneChange()` exists in the codebase but is **intentionally not called** from any UI or game logic. Each client picks its own scene independently.
+```cpp
+void NetworkBridge::BeginAutoConnect(const std::string& hostIP) {
+    m_autoConnectState.store(AutoConnectState::Discovering);
 
-The infrastructure is present if force-sync is ever needed (lab exercise requiring all clients in the same scene), but leaving it unhooked gives more flexibility: one player can stay in the multiplayer arena while another browses the cloth simulation.
+    m_discoveryThread = std::jthread([this, hostIP](std::stop_token st) {
+        // 1. Shut down game socket so it doesn't answer its own broadcast
+        m_service->Shutdown();
+
+        // 2. Random jitter 0–300 ms (reduces simultaneous-click slot collisions)
+        std::this_thread::sleep_for(std::chrono::milliseconds(rng(0, 300)));
+
+        // 3. Capture local scene path for this discovery session
+        std::string localScene;
+        { std::lock_guard lock(m_scenePathMutex); localScene = m_currentScenePath; }
+
+        // 4. Open temporary socket on port 54998 (receives DiscoveryResponses)
+        SOCKET tempSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        setsockopt(tempSock, SOL_SOCKET, SO_BROADCAST, ...);
+        bind(tempSock, INADDR_ANY:54998, ...);
+
+        // 5. Build hello packet with scene path
+        Packets::DiscoveryHello hello{};
+        std::memcpy(hello.scenePath, localScene.c_str(), ...);
+
+        // 6. Send — unicast to host IP, or broadcast if no host IP given
+        sockaddr_in dest{};
+        if (!hostIP.empty()) {
+            inet_pton(AF_INET, hostIP.c_str(), &dest.sin_addr);
+        } else {
+            dest.sin_addr.s_addr = INADDR_BROADCAST;
+        }
+        for (int p = 0; p < 4; ++p) {
+            dest.sin_port = htons(BASE_PORT + p);
+            sendto(tempSock, &hello, sizeof(hello), ...);
+        }
+
+        // 7. Collect DiscoveryResponses for 1.5 s, filter by scene
+        std::map<uint8_t, uint32_t> discovered;
+        // ... receive loop, check scenePath matches localScene ...
+
+        closesocket(tempSock);
+
+        // 8. Pick lowest free slot, bind game socket, register discovered peers
+        // 9. Broadcast PeerAnnounce so existing peers can add us back
+        m_autoConnectState.store(AutoConnectState::Done);
+    });
+}
+```
+
+---
+
+## 7.10 The Network Menu (ImGui)
+
+`FlatBuffersScenario::OnGUI()` draws the Network menu. It has two independent sections:
+
+### Auto Connect Section
+
+```
+Host IP: [________________]  [Auto Connect]
+                              ↑ or [Disconnect] when connected (red)
+Status: Peer 1 | Port 54000 | No peers found yet     ← green when Done
+  My IP: 192.168.1.10   Port: 54000   Peer ID: 1
+  Scene: Multiplayer Arena
+```
+
+- **Host IP field** (empty = host/broadcaster, filled = joiner/unicaster)
+- When auto-connected, the field and button are replaced by a red **Disconnect** button
+- The status line changes colour: yellow=discovering, green=done, red=failed
+- The indented block shows the local IP that other peers should type into their Host IP field
+
+### Manual Configuration Section
+
+```
+── Manual Configuration ──
+Local Peer  [-] 1 [+]  ● (Red)    Port: [7000]
+
+Remote Peers (up to 3)
+  Peer A   ID: [-] 2 [+]   IP: [127.0.0.1      ]   Port: [7001] [OK]
+  Peer B   ID: [-] 3 [+]   IP: [                ]   Port: [7002]
+  Peer C   ID: [-] 4 [+]   IP: [                ]   Port: [7003]
+
+[Connect]   Connected (peer 1)
+  My IP: 192.168.1.10   Port: 7000   Peer ID: 1
+  Scene: Multiplayer Arena
+    Peer 2  127.0.0.1 : 7001
+```
+
+Manual connect is for cases where you already know the exact IPs and ports (cross-machine, verified in the lab). Auto-connect and manual connect are mutually exclusive — each disables the other's controls while active.
+
+### Dead Reckoning Status
+
+At the bottom of the Network menu:
+```
+Dead Reckoning
+Tracked remote entities: 3
+```
+
+This shows how many remote entities the engine is currently interpolating. Useful for debugging — if this is 0 while connected, state packets aren't arriving.
+
+---
+
+## 7.11 Thread Model and Affinity
+
+The engine uses three threads with CPU affinity pinned per the assessment spec:
+
+```
+Core 1  (mask 0x01) — Main thread
+    GLFW poll → Vulkan render → ImGui → drawFrame()
+    Reads front SimulationState snapshot (double-buffered)
+
+Core 4  (mask 0x08) — Physics jthread
+    Fixed-step accumulator loop
+    BroadcastOwnedStates() + UpdateRemoteEntities() per tick
+    Writes back SimulationState buffer
+
+Cores 2–3  (mask 0x06) — Networking jthread
+    NetworkService::Poll() in tight loop (1 ms sleep)
+    NetworkBridge::ApplyReceivedState() per packet
+    Writes only to m_remoteStates (mutex-guarded) and m_pendingNetworkScene
+```
+
+The **double-buffered `SimulationState`** decouples physics and render rates — the physics thread writes to the back buffer while the render thread reads from the front buffer. A mutex swap at the end of each physics step moves the new state to the front.
+
+```cpp
+// set in EngineOrchestrator::run():
+SetThreadAffinityMask(GetCurrentThread(), 0x01);                         // Core 1 — main
+SetThreadAffinityMask(physicsThread.native_handle(),    0x08);           // Core 4 — physics
+SetThreadAffinityMask(networkingThread.native_handle(), 0x06);           // Cores 2–3 — net
+```
+
+---
+
+## 7.12 Connection Lifecycle Summary
+
+```
+1. Scene loaded (OnLoad)
+   → SetCurrentScene(m_configPath)      ← registers scene path for discovery filter
+
+2. User clicks Auto Connect (host, empty Host IP)
+   → BeginAutoConnect("")
+   → broadcasts DiscoveryHello, finds no peers
+   → binds port 54000, localPeerId = 1
+   → shows "My IP: 192.168.x.x" in Network menu
+
+3. Second machine clicks Auto Connect (types host's IP)
+   → BeginAutoConnect("192.168.1.10")
+   → unicasts DiscoveryHello to 192.168.1.10:54000–54003
+   → host responds with DiscoveryResponse { peerID=1 }
+   → joiner takes slot 2, binds port 54001
+   → broadcasts PeerAnnounce { peerID=2 }
+   → host's handlePeerAnnounce() adds Peer 2, calls RegisterScenePeer(2)
+   → Both: m_acceptedPeerMask has peer's bit set → state packets accepted
+
+4. Physics loop (each tick)
+   → BroadcastOwnedStates() — sends owned entity state to all peers
+   → UpdateRemoteEntities(dt) — dead reckons + blends remote entities
+
+5. Scene change
+   → OnUnload() calls disconnectNetwork()
+       → Shutdown() closes socket + clears m_peers
+       → ClearRemoteStates() clears m_remoteStates + zeroes m_acceptedPeerMask
+       → SetCurrentScene("") clears scene path
+   → Must reconnect after loading new scene
+```
 
 ---
 

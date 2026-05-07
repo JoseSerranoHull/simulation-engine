@@ -517,7 +517,7 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
 // BeginAutoConnect — LAN peer discovery jthread
 // ---------------------------------------------------------------------------
 
-void NetworkBridge::BeginAutoConnect()
+void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
 {
     // If a previous discovery is still running, let it finish first
     if (m_discoveryThread.joinable()) {
@@ -529,7 +529,7 @@ void NetworkBridge::BeginAutoConnect()
     m_autoConnectState.store(AutoConnectState::Discovering);
     m_autoConnectStatus = "Discovering...";
 
-    m_discoveryThread = std::jthread([this](std::stop_token stopToken) {
+    m_discoveryThread = std::jthread([this, hostIP](std::stop_token stopToken) {
         static constexpr uint16_t BASE_PORT      = 54000U;
         static constexpr uint16_t DISCOVERY_PORT = 54998U;
         static constexpr int      WAIT_MS        = 1500;
@@ -598,9 +598,24 @@ void NetworkBridge::BeginAutoConnect()
             hello.scenePath[len] = '\0';
         }
 
+        // --- Send DiscoveryHello (unicast to host IP if given, broadcast otherwise) ---
         sockaddr_in dest{};
-        dest.sin_family      = AF_INET;
-        dest.sin_addr.s_addr = INADDR_BROADCAST;  // 255.255.255.255
+        dest.sin_family = AF_INET;
+
+        if (!hostIP.empty()) {
+            if (inet_pton(AF_INET, hostIP.c_str(), &dest.sin_addr) != 1) {
+                m_autoConnectStatus = "Failed: invalid host IP '" + hostIP + "'";
+                m_autoConnectState.store(AutoConnectState::Failed);
+                closesocket(tempSock);
+                WSACleanup();
+                return;
+            }
+            GE_LOG_INFO("NetworkBridge: unicasting DiscoveryHello to " + hostIP);
+        } else {
+            dest.sin_addr.s_addr = INADDR_BROADCAST;
+            GE_LOG_INFO("NetworkBridge: broadcasting DiscoveryHello");
+        }
+
         for (int p = 0; p < 4; ++p) {
             dest.sin_port = htons(static_cast<uint16_t>(BASE_PORT + p));
             sendto(tempSock,

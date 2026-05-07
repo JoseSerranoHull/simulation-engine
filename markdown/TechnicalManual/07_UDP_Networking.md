@@ -517,16 +517,18 @@ The state machine in `NetworkBridge`:
 
 ```cpp
 // source/core/NetworkBridge.cpp — BeginAutoConnect() (simplified)
-void NetworkBridge::BeginAutoConnect() {
-    // 1. Bind a socket on any free port
-    m_svc->Init(0 /* ephemeral port */);
+// hostIP: empty = broadcast (host mode); non-empty = unicast to that IP (joiner mode)
+void NetworkBridge::BeginAutoConnect(const std::string& hostIP) {
+    // 1. Bind a temporary socket on port 54998 for receiving responses
+    // (game socket is shut down first so it doesn't answer its own broadcast)
 
-    // 2. Broadcast DiscoveryHello to all four game ports
+    // 2. Send DiscoveryHello — unicast if hostIP given, broadcast otherwise
+    const auto destAddr = hostIP.empty() ? "255.255.255.255" : hostIP;
     for (uint8_t port = 54000; port <= 54003; ++port) {
-        m_svc->SendTo("255.255.255.255", port, helloPacket);
+        sendto(tempSock, helloPacket, destAddr, port);
     }
 
-    // 3. Listen for replies (timed out after ~1.5s)
+    // 3. Listen for DiscoveryResponse replies (timed out after ~1.5s)
     m_acState = AutoConnectState::Discovering;
 }
 

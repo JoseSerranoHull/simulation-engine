@@ -614,15 +614,33 @@ void FlatBuffersScenario::OnGUI() {
                 ImGui::PopStyleColor(3);
             } else {
                 // Show Auto Connect, disabled while discovering or locked out by manual
+                // Host IP input (disabled while discovering or manual is active)
+                {
+                    const bool inputDisabled = discovering || manualConnected;
+                    if (inputDisabled) { ImGui::BeginDisabled(); }
+                    ImGui::SetNextItemWidth(160.0f);
+                    ImGui::InputText("Host IP##AC", m_autoConnectHostIP, sizeof(m_autoConnectHostIP));
+                    if (inputDisabled) { ImGui::EndDisabled(); }
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                        ImGui::SetTooltip(
+                            "Leave blank to connect as host (broadcasts probe).\n"
+                            "Enter the host machine's IP shown in their Network menu to join.");
+                    }
+                    ImGui::SameLine(0.0f, 6.0f);
+                }
+
                 if (discovering || manualConnected) { ImGui::BeginDisabled(); }
                 if (ImGui::Button("Auto Connect") && bridge != nullptr) {
-                    bridge->BeginAutoConnect();
+                    bridge->BeginAutoConnect(m_autoConnectHostIP);
                 }
                 if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
                     ImGui::SetTooltip(manualConnected
                         ? "Disconnect manual connection first."
-                        : "Broadcasts a probe to peers 1-4 (ports 54000-54003).\n"
-                          "Stagger clicks ~2 s apart to avoid slot conflicts.");
+                        : (m_autoConnectHostIP[0] != '\0'
+                            ? "Unicasts probe directly to the host IP above.\n"
+                              "Connect the host first (blank field), then enter their IP here."
+                            : "Broadcasts probe on LAN (ports 54000-54003).\n"
+                              "Or enter the host's IP above for direct unicast."));
                 }
                 if (discovering || manualConnected) { ImGui::EndDisabled(); }
             }

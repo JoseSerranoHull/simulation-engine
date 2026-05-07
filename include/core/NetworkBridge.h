@@ -130,7 +130,7 @@ namespace GE {
          * picks the lowest free slot (1–4), initialises the game socket, and
          * registers all discovered peers. Safe to call from ImGui (returns immediately).
          */
-        void BeginAutoConnect();
+        void BeginAutoConnect(const std::string& hostIP = "");
 
         AutoConnectState   GetAutoConnectState()  const { return m_autoConnectState.load(); }
         const std::string& GetAutoConnectStatus() const { return m_autoConnectStatus; }

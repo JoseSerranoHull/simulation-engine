@@ -89,6 +89,8 @@ namespace GE {
         enum class ConnectionMethod { None, Auto, Manual };
         ConnectionMethod m_connectionMethod { ConnectionMethod::None };
 
+        char m_autoConnectHostIP[64] {};  ///< Leave empty to broadcast (host); fill with host's IP to unicast (joiner)
+
         // --- Helpers ---
         void buildCamerasFromContext(const GE::Scene::FB::FBSceneContext& ctx);
         void applyActiveCamera() const;

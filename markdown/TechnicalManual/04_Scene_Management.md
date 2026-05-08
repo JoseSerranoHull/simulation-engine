@@ -472,3 +472,131 @@ All `.bin` files are in `config/flatbufferConfig/`. The engine scans this direct
 ---
 
 *Next: [Chapter 5 — Physics System](05_Physics_System.md)*
+
+---
+
+## 4.9 Authoring a New Scene From Scratch
+
+This section walks through creating a brand-new scene — from empty JSON to a running simulation.
+
+### Overview
+
+```
+1. Write a .json file describing your scene objects
+2. Compile it to a .bin file with flatc
+3. Place the .bin in config/flatbufferConfig/showcases/
+4. Load it in the engine via the Scenes menu
+```
+
+### Step 1 — Start From a Template
+
+Copy an existing scene JSON as your starting point:
+
+```
+config/flatbufferConfig/01_multiplayer.json  → my_scene.json
+```
+
+Open `my_scene.json` and clear the `objects` array, leaving the structure intact:
+
+```json
+{
+  "camera": {
+    "position": { "x": 0, "y": 5, "z": 15 },
+    "target":   { "x": 0, "y": 0, "z": 0 }
+  },
+  "settings": {
+    "gravity_on": true,
+    "ambient_light": { "r": 0.1, "g": 0.1, "b": 0.1 }
+  },
+  "objects": []
+}
+```
+
+### Step 2 — Add a Static Floor
+
+```json
+{
+  "name": "Floor",
+  "position": { "x": 0, "y": 0, "z": 0 },
+  "rotation": { "x": 0, "y": 0, "z": 0 },
+  "scale":    { "x": 1, "y": 1, "z": 1 },
+  "shape": {
+    "type": "Plane",
+    "normal": { "x": 0, "y": 1, "z": 0 },
+    "size_x": 20.0,
+    "size_z": 20.0
+  },
+  "behaviour": {
+    "type": "StaticObject",
+    "mesh": "Plane",
+    "pipeline_index": 0
+  }
+}
+```
+
+`StaticObject` means no physics simulation — the object is immovable. `pipeline_index: 0`
+selects the Phong opaque pipeline.
+
+### Step 3 — Add a Simulated Ball
+
+```json
+{
+  "name": "Ball",
+  "position": { "x": 0, "y": 5, "z": 0 },
+  "rotation": { "x": 0, "y": 0, "z": 0 },
+  "scale":    { "x": 1, "y": 1, "z": 1 },
+  "shape": {
+    "type": "Sphere",
+    "radius": 0.5
+  },
+  "behaviour": {
+    "type": "SimulatedObject",
+    "mass": 1.0,
+    "restitution": 0.6,
+    "use_gravity": true,
+    "linear_damping": 0.01,
+    "mesh": "Sphere",
+    "pipeline_index": 0
+  }
+}
+```
+
+`SimulatedObject` creates an entity with `RigidBody`, `SphereCollider`, and `MeshRenderer`.
+
+### Step 4 — Compile to Binary
+
+Open a command prompt and run:
+
+```bat
+"C:\Users\your_name\flatbuffers\Release\flatc.exe" ^
+    --binary ^
+    -o "config/flatbufferConfig/showcases/" ^
+    "flatbuffers/Scene.fbs" ^
+    "config/flatbufferConfig/my_scene.json"
+```
+
+This produces `config/flatbufferConfig/showcases/my_scene.bin`.
+
+> **Important:** Use the flatc binary at `C:\Users\javie\flatbuffers\Release\flatc.exe`.
+> Do NOT use a flatc from OneDrive or a different path — it may silently produce a stale output.
+
+### Step 5 — Load in the Engine
+
+Launch the engine. Open **Scenes** in the menu bar. Your `.bin` file appears in the list.
+Click it to load.
+
+### Step 6 — Verify and Iterate
+
+The ball should fall from y=5, hit the floor at y=0, and bounce. If it falls through the
+floor, check that the Plane's `normal` is pointing upward `(0, 1, 0)`.
+
+### Common JSON Authoring Mistakes
+
+| Mistake | Error | Fix |
+|---------|-------|-----|
+| Wrong union type name | `flatc` compile error: unknown union value | Union type names are **PascalCase** exactly: `StaticObject`, `SimulatedObject`, `AnimatedObject`, `ClothObject`, `FlockAgent` |
+| Wrong shape type name | Compile error | Shape types: `Sphere`, `Plane`, `Cuboid`, `Capsule`, `Cylinder` — `Cube` is wrong, it must be `Cuboid` |
+| Missing required field | `flatc` compile warning, field defaults to 0 | Check `flatbuffers/Scene.fbs` for required vs optional fields |
+| Enum string wrong casing | Parse error at runtime | FlatBuffers enums are case-sensitive; `"phong"` ≠ `"Phong"` |
+| Compiling with wrong `.fbs` | Byte offsets mismatch — crash on load | Always use `flatbuffers/Scene.fbs` from the repo root, never an external copy |
+| `my_scene.bin` not in `showcases/` | Does not appear in Scenes menu | The scanner uses `recursive_directory_iterator` starting from `config/flatbufferConfig/` — any subdirectory works |

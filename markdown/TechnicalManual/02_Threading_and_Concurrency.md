@@ -196,7 +196,7 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
 
     auto  prevTime    = Clock::now();
     float accumulator = 0.0f;
-    const float fixedDt = 1.0f / m_physicsHz;  // e.g. 1/120 = 0.00833s
+    const float fixedDt = 1.0f / physicsHz;  // e.g. 1/120 = 0.00833s
 
     while (!st.stop_requested()) {
         // 1. Measure real elapsed time
@@ -369,3 +369,93 @@ This engine uses `std::jthread` throughout and requires `/std:c++20` in the Visu
 ---
 
 *Next: [Chapter 3 — Vulkan & Rendering](03_Vulkan_and_Rendering.md)*
+
+---
+
+## 2.10 Implementing Double-Buffering from Scratch
+
+The goal of double-buffering is to let two threads work independently without blocking each
+other. Here is the minimal correct implementation:
+
+### The Naive (Broken) Approach
+
+```cpp
+// Physics thread writes Transform data.
+// Render thread reads Transform data.
+// If both run at the same time: data race → crash or torn reads.
+std::mutex ecs_mutex;
+
+// Physics thread:
+while (running) {
+    std::lock_guard lock(ecs_mutex);     // <-- blocks renderer!
+    runPhysicsTick();
+}
+
+// Render thread:
+while (running) {
+    std::lock_guard lock(ecs_mutex);     // <-- blocks physics!
+    renderFrame();
+}
+```
+
+This is correct but produces stutter: when physics holds the lock for 4 ms at 250 Hz, the
+renderer is blocked 4 ms out of every tick.
+
+### The Double-Buffer Solution
+
+```cpp
+// Two copies of Transform data:
+SimulationState m_simBuffers[2];       // back + front
+std::atomic<int> m_frontSimIdx{0};     // which buffer is "ready for renderer"
+std::mutex       m_simMutex;           // only locks during the snapshot copy
+
+// Physics thread:
+while (!stopToken.stop_requested()) {
+    {
+        std::lock_guard lock(m_simMutex);   // short lock: only the physics tick itself
+        runPhysicsTick();
+        int back = 1 - m_frontSimIdx.load(std::memory_order_acquire);
+        copyTransformsTo(m_simBuffers[back]);   // write snapshot to back buffer
+        m_frontSimIdx.store(back, std::memory_order_release);  // publish
+    }
+    std::this_thread::yield();
+}
+
+// Render thread:
+while (!stopToken.stop_requested()) {
+    {
+        std::lock_guard lock(m_simMutex);   // short lock: only to read the snapshot
+        int front = m_frontSimIdx.load(std::memory_order_acquire);
+        applySnapshot(m_simBuffers[front]);  // copy Transform positions to ECS
+    }
+    renderFrame();   // rendering happens outside the lock
+}
+```
+
+**Why `memory_order_release` / `acquire`?**
+The `store(back, release)` ensures all writes to `m_simBuffers[back]` that happened before the
+store are visible to any thread that reads the index with `load(acquire)`. Without this pairing,
+the compiler or CPU could reorder the writes, and the renderer could see half-written data.
+
+In this engine: `include/core/EngineOrchestrator.h` — `m_simBuffers[2]`, `m_frontSimIdx`, `m_simMutex`.
+
+### Why `yield()` Matters
+
+After releasing the mutex, the physics thread calls `std::this_thread::yield()`. Without it,
+the physics thread can re-acquire the mutex before the renderer wakes up — the renderer
+effectively never runs. The `yield()` gives the OS scheduler a hint to switch to another thread.
+At 120 Hz, this costs nothing perceptible.
+
+---
+
+## 2.11 Common Threading Mistakes
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| Holding `m_simMutex` during the entire render pass | Physics stalls while rendering (jitter) | Only hold the mutex for the snapshot copy, not for the whole `drawFrame()` |
+| Forgetting `jthread::join()` on `std::thread` | `std::terminate` at shutdown | Use `std::jthread` — it joins automatically in its destructor |
+| Calling `vkDestroyPipeline` from a physics callback | Vulkan validation error, possible crash | All Vulkan calls must happen on the main thread; use `requestScenarioChange()` to defer |
+| Writing `m_frontSimIdx` from both threads | Undefined behaviour | Only the physics thread writes; only the render thread reads |
+| Using `memory_order_relaxed` on the front-index swap | Torn read: renderer sees new index before writes are visible | Use `release` on store, `acquire` on load |
+| Spawning threads before `initVulkan()` completes | Thread accesses uninitialized Vulkan handles | Spawn `m_physicsThread` and `m_networkingThread` at the end of `run()`, after construction |
+| Modifying the `activeScenario` pointer from the physics thread | Use-after-free when main thread switches scenes | The scenario pointer is only written by the main thread under `m_simMutex` |

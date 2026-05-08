@@ -636,3 +636,106 @@ The `Display → Material Colors` ImGui menu calls `requestScenarioChange()` wit
 ---
 
 *Next: [Chapter 4 — Scene Management](04_Scene_Management.md)*
+
+---
+
+## 3.12 Vulkan Initialization: Step-by-Step From Nothing
+
+This is the exact order in which the engine initializes Vulkan. Each step lists the Vulkan
+object created and the engine function responsible.
+
+```
+Step  1 — VkInstance
+           extensions: VK_KHR_surface, VK_EXT_debug_utils, platform surface ext
+           VulkanDevice::createInstance()
+
+Step  2 — VkDebugUtilsMessengerEXT
+           callback: forwards VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR/WARNING to Logger
+           VulkanDevice::setupDebugMessenger()
+
+Step  3 — VkSurfaceKHR
+           glfwCreateWindowSurface(instance, window, nullptr, &surface)
+           VulkanContext populated here
+
+Step  4 — VkPhysicalDevice (GPU selection)
+           Criteria: must support VK_KHR_swapchain, VK_KHR_dynamic_rendering (if used)
+           Prefer: VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+           VulkanDevice::pickPhysicalDevice()
+
+Step  5 — VkDevice + queues
+           Queue families: graphics (draws + computes), present (swapchain), transfer (uploads)
+           VulkanDevice::createLogicalDevice()
+           → vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue)
+
+Step  6 — SimpleAllocator (VRAM pool)
+           256 MB pre-allocated with vkAllocateMemory (ONE call for the whole engine)
+           GpuResourceManager::Init()
+
+Step  7 — VkSwapchainKHR
+           Format: VK_FORMAT_B8G8R8A8_SRGB  (if available, else B8G8R8A8_UNORM)
+           Present mode: VK_PRESENT_MODE_MAILBOX_KHR (lowest latency) → fallback FIFO
+           Image count: min(surfaceCaps.minImageCount + 1, maxImageCount)
+           VulkanDevice::createSwapChain()
+
+Step  8 — VkImageView × N (one per swapchain image)
+           VulkanDevice::createImageViews()
+
+Step  9 — VkRenderPass
+           Attachments: multisampled color, depth/stencil, resolve (single-sample final)
+           Subpasses: 1 (all geometry in one subpass)
+           VulkanDevice::createRenderPass()
+
+Step 10 — VkFramebuffer × N
+           Each framebuffer binds: colorImageView, depthImageView, swapchainImageView
+           VulkanDevice::createFramebuffers()
+
+Step 11 — VkCommandPool × 2
+           Graphics pool: VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+           Transfer pool: VK_COMMAND_POOL_CREATE_TRANSIENT_BIT (one-shot uploads)
+           VulkanDevice::createCommandPool()
+
+Step 12 — Synchronisation objects
+           Per frame-in-flight (MAX_FRAMES_IN_FLIGHT = 2):
+             imageAvailableSemaphore  (signal: swapchain image acquired)
+             renderFinishedSemaphore  (signal: rendering complete → present)
+             inFlightFence            (CPU waits: previous frame finished)
+           FrameSyncManager::create()
+
+Step 13 — Global descriptor set layout (set 0)
+           Bindings: 0 = UBO (vertex+fragment), 1 = shadow sampler (fragment)
+           Renderer::createDescriptorSetLayout()
+
+Step 14 — Shadow pipeline (engine-scoped)
+           Vertex: shadow.vert.spv   Fragment: shadow.frag.spv
+           Depth-only render pass (no color attachment)
+           EngineOrchestrator::initVulkan()
+
+Step 15 — Material pipelines (scenario-scoped)
+           Created in Scenario::createMaterialPipelines() during OnLoad()
+           8+ pipelines: Phong opaque/transparent, Gouraud, flat-color, shadow, skybox...
+           Destroyed in Scenario destructor (OnUnload)
+```
+
+### Why This Order Matters
+
+Dependencies flow downward. You cannot create a `VkDevice` without a `VkPhysicalDevice`. You
+cannot create the swapchain without the surface AND the device. You cannot create framebuffers
+without the render pass AND the swapchain image views. The order above is not arbitrary — each
+step requires results from all steps above it.
+
+---
+
+## 3.13 Vulkan Synchronisation Pitfalls
+
+These are the most common validation layer errors encountered when modifying the render pipeline.
+
+| Symptom / Error | Root Cause | Fix |
+|----------------|-----------|-----|
+| `VUID-vkDestroyPipeline-pipeline-00765` | Destroying a pipeline while GPU is still using it | Call `vkDeviceWaitIdle()` before any pipeline destroy. In this engine, always use `requestScenarioChange()` — it calls `vkDeviceWaitIdle` before `changeScenario()` |
+| `VUID-VkSubmitInfo-pWaitSemaphores-03243` | Semaphore signalled but never waited, or waited before signalled | Ensure every `imageAvailableSemaphore` signal (from `vkAcquireNextImageKHR`) is paired with exactly one wait in `vkQueueSubmit` |
+| GPU hang (engine freezes, never presents) | CPU submitted a second frame before waiting on the in-flight fence | Call `vkWaitForFences(device, 1, &inFlightFences[currentFrame], ...)` at the top of `drawFrame()` |
+| `VK_ERROR_OUT_OF_DATE_KHR` from `vkAcquireNextImageKHR` | Window resized — swapchain is stale | Catch the error, set `framebufferResized = true`, return early, then recreate swapchain before the next frame |
+| Wrong pixel output (visual garbage) | Missing memory barrier between compute write and vertex read | Insert `VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT → VK_PIPELINE_STAGE_VERTEX_SHADER_BIT` barrier with `VK_ACCESS_SHADER_WRITE_BIT → VK_ACCESS_SHADER_READ_BIT` |
+| `VK_ERROR_DEVICE_LOST` | Accessing deleted resource, out-of-bounds shader write, or invalid draw | Enable validation layers in Debug build, look for `VK_LAYER_KHRONOS_validation` output preceding the crash |
+| Flickering / frame tearing | Presenting faster than the monitor refresh with IMMEDIATE present mode | Switch to `VK_PRESENT_MODE_FIFO_KHR` (vsync) or `MAILBOX_KHR` (triple-buffering) |
+| Descriptor set bound after pipeline destroyed | Old descriptor references resource from unloaded scenario | Destroy descriptor sets (or their pool) before destroying the resources they reference |

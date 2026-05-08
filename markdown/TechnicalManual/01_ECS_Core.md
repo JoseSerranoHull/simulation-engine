@@ -519,3 +519,181 @@ The complete separation between CPU stages (physics thread) and GPU stages (main
 ---
 
 *Next: [Chapter 2 — Threading & Concurrency](02_Threading_and_Concurrency.md)*
+
+---
+
+## 1.10 Build Your Own ECS in Six Steps
+
+This section shows the minimal code to build an ECS from scratch — no engine headers, no Vulkan.
+Each step maps to an actual file in this engine.
+
+### Step 1 — EntityID and the Free Stack
+
+An entity is nothing more than a `uint32_t`. The manager hands them out from a pool:
+
+```cpp
+using EntityID = uint32_t;
+static constexpr EntityID INVALID_ENTITY = UINT32_MAX;
+
+class EntityPool {
+    std::stack<EntityID> m_free;
+    EntityID m_next = 0;
+    uint32_t m_max;
+public:
+    explicit EntityPool(uint32_t max) : m_max(max) {
+        for (uint32_t i = 0; i < max; ++i) m_free.push(max - 1 - i);
+    }
+    EntityID Create() {
+        if (m_free.empty()) throw std::runtime_error("Entity limit reached");
+        EntityID id = m_free.top(); m_free.pop(); return id;
+    }
+    void Destroy(EntityID id) { m_free.push(id); }
+};
+```
+
+**In the engine:** `include/ecs/EntityManager.h` — `m_freeEntities` stack, `CreateEntity()`,
+`DestroyEntity()`.
+
+### Step 2 — IComponentArray: A Type-Erased Storage Interface
+
+You need one array per component type, but you cannot know all component types at compile time.
+The solution is a polymorphic interface:
+
+```cpp
+struct IComponentArray {
+    virtual ~IComponentArray() = default;
+    virtual void RemoveEntity(EntityID id) = 0;
+    virtual bool HasEntity(EntityID id) const = 0;
+};
+```
+
+**In the engine:** `include/ecs/IComponentArray.h`
+
+### Step 3 — ComponentArray<T>: Packed Dense Storage
+
+The implementation stores components in a contiguous array for cache efficiency, with two
+index arrays to bridge sparse EntityIDs to dense array slots:
+
+```cpp
+template <typename T>
+class ComponentArray : public IComponentArray {
+    std::vector<T>        m_data;    // dense: [comp0, comp1, comp2, ...]
+    std::vector<uint32_t> m_index;   // dense: [entityID0, entityID1, ...]
+    std::vector<uint32_t> m_reverse; // sparse: [entityID → packed index]
+    uint32_t m_size = 0;
+
+public:
+    explicit ComponentArray(uint32_t maxEntities)
+        : m_reverse(maxEntities, UINT32_MAX) {}
+
+    void Add(EntityID id, const T& comp) {
+        m_data.push_back(comp);
+        m_index.push_back(id);
+        m_reverse[id] = m_size++;
+    }
+
+    void Remove(EntityID id) override {
+        uint32_t idx = m_reverse[id];
+        EntityID last = m_index[m_size - 1];
+        // Swap-and-pop: move last element to the removed slot
+        m_data[idx]    = m_data[m_size - 1];
+        m_index[idx]   = last;
+        m_reverse[last] = idx;
+        m_reverse[id]  = UINT32_MAX;
+        m_data.pop_back(); m_index.pop_back();
+        --m_size;
+    }
+
+    T* Get(EntityID id) {
+        uint32_t idx = m_reverse[id];
+        return (idx != UINT32_MAX) ? &m_data[idx] : nullptr;
+    }
+
+    T* Data() { return m_data.data(); }
+    const uint32_t* Index() const { return m_index.data(); }
+    uint32_t GetCount() const { return m_size; }
+};
+```
+
+**In the engine:** `include/ecs/ComponentArray.h`
+
+### Step 4 — EntityManager: The Registry
+
+The manager holds one `IComponentArray*` per component type, indexed by a type ID:
+
+```cpp
+class EntityManager {
+    std::vector<IComponentArray*> m_arrays;
+    std::vector<uint32_t>         m_compIndex; // [typeID * maxE + entityID] → packed index
+
+    template <typename T>
+    ComponentArray<T>& GetArray() {
+        return *static_cast<ComponentArray<T>*>(m_arrays[TypeID<T>()]);
+    }
+public:
+    template <typename T>
+    void RegisterComponent() {
+        m_arrays.resize(std::max(m_arrays.size(), TypeID<T>() + 1));
+        m_arrays[TypeID<T>()] = new ComponentArray<T>(m_maxEntities);
+    }
+    template <typename T>
+    void AddComponent(EntityID id, const T& comp) { GetArray<T>().Add(id, comp); }
+    template <typename T>
+    T* GetComponent(EntityID id) { return GetArray<T>().Get(id); }
+};
+```
+
+**In the engine:** `include/ecs/EntityManager.h`
+
+### Step 5 — IECSystem: Stage-Ordered Logic
+
+Systems declare their execution stage at construction. The manager runs them in stage order:
+
+```cpp
+enum class ESystemStage { Physics, GameLogic, Render, Count };
+
+struct ICpuSystem {
+    ESystemStage stage;
+    virtual void OnUpdate(float dt) = 0;
+    virtual ~ICpuSystem() = default;
+};
+```
+
+**In the engine:** `include/ecs/IECSystem.h` — `ICpuSystem`, `IGpuSystem`, `ESystemStage`
+
+### Step 6 — System Registration and Dispatch
+
+```cpp
+class EntityManager {
+    // ... (previous fields) ...
+    std::vector<ICpuSystem*> m_systems[static_cast<int>(ESystemStage::Count)];
+
+public:
+    void RegisterSystem(ICpuSystem* sys) {
+        m_systems[static_cast<int>(sys->stage)].push_back(sys);
+    }
+    void UpdateCpuStages(float dt) {
+        for (auto& stageList : m_systems)
+            for (auto* sys : stageList)
+                sys->OnUpdate(dt);
+    }
+};
+```
+
+**In the engine:** `EntityManager::UpdateCpuStages()` and `UpdateGpuStages()`.
+
+The GPU variant additionally passes a `VkCommandBuffer cb` to `IGpuSystem::OnUpdate(dt, cb)`.
+
+---
+
+## 1.11 Common ECS Mistakes and How to Diagnose Them
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| Forgot `RegisterComponent<T>()` before `AddComponent<T>()` | Assert/crash inside `EntityManager` | Call `RegisterComponent` in `EngineOrchestrator` constructor before any scenario loads |
+| Used `GetTIComponent` when component may be absent | Fatal assert fires on null dereference | Use `TryGetTIComponent` — returns `nullptr` instead of asserting |
+| System registered in wrong `ESystemStage` | Transform lags one frame behind physics | Physics must run after `Stage::Transform`; the Transform rebuild must precede physics reads |
+| Iterating `ComponentArray` while adding/removing | Iterator invalidation — silent corruption or crash | Collect entity IDs in a temporary `vector<EntityID>` first, then add/remove outside the loop |
+| Modifying ECS from a GPU system on the physics thread | Thread safety violation — random crashes | `IGpuSystem::OnUpdate` runs on the main thread; never schedule it during physics tick |
+| Calling `DestroyEntity` inside `OnUpdate` | Swap-and-pop shifts later entities mid-iteration | Queue destroy requests in a `vector<EntityID>` and flush them at the end of the tick |
+| Two systems in the same stage share mutable data | Order-dependent bugs when system order changes | Either separate them into different stages or use an explicit shared data buffer |

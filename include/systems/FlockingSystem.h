@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <memory>
 #include <cstdint>
+#include <atomic>
 /* parasoft-end-suppress ALL */
 
 namespace GE::Systems {
@@ -35,8 +36,8 @@ public:
     uint64_t m_neighbourChecksLastFrame { 0 };
     float    m_lastUpdateMs             { 0.0f };
 
-    // Freeze toggle: when true, zero all velocities and skip steering
-    bool m_frozen { false };
+    // Freeze toggle: written by main thread (ImGui), read by physics thread (OnUpdate).
+    std::atomic<bool> m_frozen { false };
 
     // Spawn configuration — set by FlatBuffersScenario after scene load.
     // Used by Restart() to scatter agents back to the original spawn sphere.

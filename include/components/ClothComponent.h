@@ -58,6 +58,12 @@ struct ClothComponent {
     // Rendering: host-visible persistent-mapped combined vertex+index buffer.
     // Layout: [0, indexOffset) = Vertex data; [indexOffset, total) = uint32_t indices.
     // Populated at load time; vertex region updated each frame from particle positions.
+    //
+    // LIFECYCLE WARNING: These raw Vulkan handles have no destructor.
+    // Cleanup (vkUnmapMemory + vkDestroyBuffer + vkFreeMemory) MUST be called before
+    // the owning entity is destroyed. FlatBuffersScenario::OnUnload() handles this for
+    // normal scene transitions. Do NOT destroy cloth entities mid-scenario without
+    // explicitly releasing these resources first — doing so will leak GPU memory.
     VkBuffer       vertexBuffer   { VK_NULL_HANDLE }; // combined vertex+index buffer
     VkDeviceMemory vertexMemory   { VK_NULL_HANDLE }; // backing memory
     void*          mappedVertices { nullptr };         // persistent map (full buffer)

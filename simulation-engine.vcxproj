@@ -218,6 +218,7 @@
     <None Include="flatbuffers\Scene.fbs" />
     <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md" />
     <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md" />
+    <None Include="markdown\Final Lab Book - Simulation and Concurrency (700105).md" />
     <None Include="markdown\C++ Programming and Design - Real-time Graphics - Final Lab README.md" />
     <None Include="markdown\Lab-3.md" />
     <None Include="markdown\Lab-4.md" />
@@ -273,6 +274,25 @@
     <None Include="shaders\transparent.frag" />
     <None Include="shaders\water.frag" />
     <None Include="shaders\water.vert" />
+    <None Include="shaders\collider_wire.frag" />
+    <None Include="shaders\collider_wire.vert" />
+    <None Include="shaders\flatcolor.frag" />
+    <None Include="shaders\flatcolor.vert" />
+    <None Include="markdown\Test Cases.md" />
+    <None Include="markdown\TechnicalManual\README.md" />
+    <None Include="markdown\TechnicalManual\00_Getting_Started.md" />
+    <None Include="markdown\TechnicalManual\01_ECS_Core.md" />
+    <None Include="markdown\TechnicalManual\02_Threading_and_Concurrency.md" />
+    <None Include="markdown\TechnicalManual\03_Vulkan_and_Rendering.md" />
+    <None Include="markdown\TechnicalManual\04_Scene_Management.md" />
+    <None Include="markdown\TechnicalManual\05_Physics_System.md" />
+    <None Include="markdown\TechnicalManual\06_Cloth_and_Flocking.md" />
+    <None Include="markdown\TechnicalManual\07_UDP_Networking.md" />
+    <None Include="markdown\TechnicalManual\08_Scripting_and_Services.md" />
+    <None Include="markdown\TechnicalManual\09_Animation_Spawning.md" />
+    <None Include="markdown\TechnicalManual\10_Asset_Pipeline.md" />
+    <None Include="markdown\TechnicalManual\11_Particle_System.md" />
+    <None Include="markdown\TechnicalManual\12_ImGui_Input_Debug.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\assets\AssetManager.h" />
@@ -371,6 +391,8 @@
     <ClInclude Include="include\systems\ScriptSystem.h" />
     <ClInclude Include="include\game-scripts\DemoPlayerScript.h" />
     <ClInclude Include="include\game-scripts\DemoTriggerScript.h" />
+    <ClInclude Include="include\game-scripts\ClothSphereSpawnerScript.h" />
+    <ClInclude Include="include\physics\MaterialInteractionRegistry.h" />
     <ClInclude Include="include\networking\Packets.h" />
     <ClInclude Include="include\networking\NetworkService.h" />
     <ClInclude Include="include\core\NetworkBridge.h" />

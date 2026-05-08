@@ -594,6 +594,24 @@ sequenceDiagram
 
 ---
 
+---
+
+## 9.17 Animation & Spawner Debugging
+
+| Symptom | Most Likely Cause | Fix |
+|---------|------------------|-----|
+| Spawned entity appears at world origin for one frame | `InstantiatePrefab` does not pre-compute `worldMatrix` before first render | Verify the spawner pre-computes `tr->m_worldMatrix` immediately after setting `m_localPosition`, before the ECS snapshot is taken |
+| Spawner entities have wrong color (white instead of owner color) | `ownerPeerId` in `SpawnerComponent` not set, or does not match local peer ID | Check that `ownerPeerId` matches the scene's local peer assignment; the owner-color lookup uses `peerId - 1` as array index |
+| Animation jumps instead of interpolating | `elapsed` timer set to wrong initial value after `BroadcastAnimationStates` | Ensure `handleAnimationSync` sets `elapsed` AND `reversed` from the packet, not just one |
+| Waypoint animation overshoots (goes past the last waypoint) | `STOP` mode not handled; missing clamp after `t` reaches 1.0 | Check `AnimationSystem::OnUpdate` — `t` must be clamped to [0, 1] in STOP mode |
+| REVERSE mode goes back to start instead of reversing in place | Waypoint list reversed instead of progress reversed | The `reversed` flag should invert `t` from 1→0, not swap the waypoint array |
+| Networked spawner fires twice | Spawn broadcast sent by both owner AND receiving peer | Guard: `if (spawner.ownerPeerId != localPeerID) return;` before calling `BroadcastSpawnObject` |
+| Spawner pool exhausted (no more entities spawn) | Despawn not implemented — pooled entities never return | Implement a "lifetime" field on spawned entities; return them to the pool when life expires |
+| Fast-moving animated platform misses physics contact | Kinematic velocity not computed for collision | Ensure `AnimationSystem` stores `prevWorldPos` and computes `kinematicVelocity = (world - prev) / dt` each tick |
+| Spawned entity falls through floor on first frame | Physics system has not run yet on the new entity | This is expected on the first tick after spawn; the entity's first physics pass will correct the position |
+
+---
+
 *This concludes the Technical Manual.*
 
 *Return to: [README — Index](README.md)*

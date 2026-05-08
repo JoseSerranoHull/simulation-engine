@@ -226,11 +226,11 @@ void EngineOrchestrator::run() {
         statsManager->update(timeManager->getDelta());
         drawFrame();
 
-        // Cap graphics frame rate to m_graphicsHz (0 = uncapped)
-        if (m_graphicsHz > 0.0f) {
+        // Cap graphics frame rate to graphicsHz (0 = uncapped)
+        if (graphicsHz > 0.0f) {
             const auto frameBudget =
                 std::chrono::duration_cast<Clock::duration>(
-                    std::chrono::duration<float>(1.0f / m_graphicsHz));
+                    std::chrono::duration<float>(1.0f / graphicsHz));
             const auto elapsed = Clock::now() - frameStart;
             if (elapsed < frameBudget) {
                 std::this_thread::sleep_for(frameBudget - elapsed);
@@ -736,11 +736,11 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
 
         // Guard against spiral-of-death on hitches (clamp to 8 missed ticks).
         // At high Hz (e.g. 2000) this prevents accumulator from growing unbounded.
-        const float clampedDt  = std::min(realDt, 8.0f / std::max(m_physicsHz, 1.0f));
+        const float clampedDt  = std::min(realDt, 8.0f / std::max(physicsHz, 1.0f));
         accumulator += clampedDt;
 
         // Read Hz once per outer loop iteration so ImGui changes take effect next cycle
-        const float fixedDt = 1.0f / std::max(m_physicsHz, 1.0f);
+        const float fixedDt = 1.0f / std::max(physicsHz, 1.0f);
 
         while (accumulator >= fixedDt) {
             auto* const em = entityManager.get();

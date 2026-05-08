@@ -356,8 +356,9 @@ Every state-applying handler checks this mask first:
 
 ```cpp
 void NetworkBridge::handleStateUpdate(uint8_t senderId, ...) {
+    // Explicit range check before subtraction (senderId=0 would wrap uint8_t)
+    if (senderId < 1U || senderId > MAX_PEERS) return;
     const uint8_t peerIdx = senderId - 1U;
-    if (peerIdx >= MAX_PEERS) return;
 
     // Drop packets from peers not registered for the current scene
     if (!((m_acceptedPeerMask.load() >> peerIdx) & 1U)) return;
@@ -804,3 +805,21 @@ SetThreadAffinityMask(networkingThread.native_handle(), 0x06);           // Core
 ---
 
 *Next: [Chapter 8 — Gameplay Scripting & Services](08_Scripting_and_Services.md)*
+
+---
+
+## 7.13 Networking Debugging Checklist
+
+| Symptom | Most Likely Cause | Diagnostic Step | Fix |
+|---------|------------------|----------------|-----|
+| Peer never receives any packets | Windows Firewall blocking UDP | Test with `netstat -an` — is your port listed as LISTEN? | Add an inbound UDP rule in Windows Firewall for ports 54000–54003 |
+| `WSAEADDRINUSE` on connect | Port already in use from a previous session | Check `winerror` from `bind()` return code | Call `NetworkService::Shutdown()` + `Init()` to release and re-bind; the auto-connect path also implements port fallback |
+| Stale entity positions after reconnect | Old `m_remoteStates` not cleared | Log which states are in the map before and after reconnect | Verify `ClearRemoteStates()` is called in `NetworkBridge::disconnectNetwork()` |
+| Crash on disconnect (null pointer in handleStateUpdate) | `GetTIComponent` asserts when entity does not exist | Check stack trace — is it in `handleStateUpdate`? | `handleStateUpdate` must use `TryGetTIComponent` (returns nullptr) not `GetTIComponent` (fatal assert) |
+| Remote entity jumps instead of blending | Blend duration too short or `blendTimer` not reset on new packet | Log `blendTimer` when receiving `StateUpdate` | Ensure `blendTimer = BLEND_DURATION` is set each time a `StateUpdate` is applied |
+| Dead reckoning overshoots on high latency | `authVelocity` too large (fast-moving entity) | Log `predictedPos - authPos` after 200 ms | Increase `BLEND_DURATION` from 120 ms to 200 ms on high-latency networks |
+| All peers get wrong physics Hz | `physicsHz` slider not synced over network | By design — physics Hz is local only | If consistency is required, broadcast a custom config packet with Hz value |
+| Scene mismatch (peer on different scene receives state) | `m_acceptedPeerMask` includes peers from a different scene | Log `m_acceptedPeerMask` after discovery | Verify `SetCurrentScene(path)` is called in `OnLoad` and `OnUnload`; discovery filters by scene path |
+| Spawned objects appear at world origin on remote | `SpawnObject` packet sent before entity is positioned | Log `entity.position` at the moment of broadcast | Apply position before broadcasting spawn packet |
+| Animation timer drifts out of sync | `BroadcastAnimationStates()` not called after connect | Log calls to `BroadcastAnimationStates` | Ensure `m_pendingPostConnectSync = true` is set during discovery and flushed in the next bridge tick |
+| Same-machine testing: second instance fails to bind | Port collision on localhost | Intentional design — two instances of same scene share a port | Test same-scene multiplayer on two separate machines; or modify ports to be instance-unique |

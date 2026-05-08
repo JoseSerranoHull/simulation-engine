@@ -464,3 +464,122 @@ The `m_localMatrix[3]` patch is critical. If only `m_localPosition` were updated
 ---
 
 *Next: [Chapter 6 — Cloth Simulation & Flocking Boids](06_Cloth_and_Flocking.md)*
+
+---
+
+## 5.11 Physics Debugging Checklist
+
+When physics behaviour does not match expectations, use this table to diagnose the problem:
+
+| Symptom | Most Likely Cause | Diagnostic Step | Fix |
+|---------|------------------|----------------|-----|
+| Objects slowly sink through floor | `SyncWorldToLocal` not called after impulse, or `m_localMatrix[3]` not patched | Log `worldPosition.y` after each tick — does it drift down gradually? | Verify `SyncWorldToLocal` runs at the END of `ResolveCollisions`, and that `m_localMatrix[3]` is patched |
+| Objects explode outward on first contact | Penetration depth calculated incorrectly (negative value used as positive) | Log penetration depth at first collision | Ensure `depth = radius - distance` is positive only when overlapping |
+| Restitution > 1 (objects gain energy on bounce) | `restitution` field > 1.0 or MaterialInteractionRegistry returns > 1 | Log restitution value used in impulse | Clamp to [0, 1] |
+| Jitter at rest on flat surface | Micro-velocity not killed | Log velocity magnitude each tick | Kill velocity when `|v| < 0.05f` after integration |
+| Physics runs slow at high Hz | Accumulator capped too low (spiral-of-death guard) | Log how many ticks execute per graphics frame | Raise `maxTicksPerFrame` from 4 to 8 |
+| Tunneling (fast objects pass through geometry) | Physics Hz too low, or object moving more than its radius per tick | Log `|velocity| * dt` vs `collider radius` | Raise physics Hz; for very fast objects, implement swept sphere test |
+| Spinning objects never come to rest | `angularDamping` is 0 | Check `RigidBody::angularDamping` | Set a small damping value (0.05–0.2) |
+| Stack of objects collapses | Too few solver iterations | Observe with 3 boxes stacked at 120 Hz | Raise `m_solverIterations` from 3 to 6; also reduce physics Hz if accumulator is backed up |
+| Collisions only detected on one side | Plane normal reversed or `isStatic` flag missing | Log `penetration = dot(posA - planeOrigin, planeNormal) - radius` | Flip the normal in the scene JSON; ensure `isStatic = true` for planes |
+| Angular velocity never changes | Inertia tensor is identity (not set up) | Log `invInertiaTensorWorld` | Compute the correct analytical `I_body` for the shape (sphere: `2/5 * mass * r²`) |
+
+---
+
+## 5.12 Angular Dynamics: Full Derivation
+
+This section explains WHY the angular integration works the way it does — useful for anyone
+reimplementing physics from scratch.
+
+### The Inertia Tensor
+
+For linear motion: `F = ma`, so `a = F / m`. The inverse mass `1/m` is how much one unit of
+force accelerates the object.
+
+For rotational motion: the equivalent is the **inertia tensor** `I`. Instead of a scalar,
+it is a 3×3 matrix that describes how the object's mass is distributed relative to its rotation
+axis:
+
+```
+τ = I · α    →    α = I⁻¹ · τ
+(torque = I × angular_accel)
+```
+
+For a uniform sphere of radius r and mass m:
+
+```
+        ⎡ 2/5·m·r²    0         0      ⎤
+I_body = ⎢    0      2/5·m·r²   0      ⎥
+        ⎣    0         0      2/5·m·r² ⎦
+```
+
+The diagonal entries are the same because a sphere has equal resistance to rotation around
+all axes. For a box (half-extents hx, hy, hz):
+
+```
+        ⎡ 1/3·m·(hy²+hz²)         0               0       ⎤
+I_body = ⎢      0          1/3·m·(hx²+hz²)         0       ⎥
+        ⎣      0                   0       1/3·m·(hx²+hy²) ⎦
+```
+
+The engine stores the **inverse** of this tensor (`invInertiaTensor`) to avoid a matrix
+inversion every tick.
+
+### World-Space Inertia
+
+The body-space tensor is defined in the object's local frame. When the object rotates, its
+world-space resistance to rotation changes. The world-space inverse inertia tensor must be
+recomputed every tick:
+
+```
+I_world^{-1} = R · I_body^{-1} · R^T
+```
+
+where `R` is the current rotation matrix. In code:
+
+```cpp
+// In PhysicsSystem::Integrate(), per RigidBody:
+rb.invInertiaTensorWorld =
+    glm::mat3(rb.orientation)
+    * rb.invInertiaTensor
+    * glm::transpose(glm::mat3(rb.orientation));
+```
+
+### The Skew-Symmetric Matrix for ω × r
+
+The angular velocity vector `ω` and a point offset `r` combine as a cross product `ω × r`
+to give the velocity contribution from rotation. The cross product can be written as a matrix
+multiplication using the **skew-symmetric matrix** of ω:
+
+```
+         ⎡  0   -ωz   ωy ⎤
+Skew(ω) = ⎢  ωz   0   -ωx ⎥
+         ⎣ -ωy   ωx    0  ⎦
+
+ω × r = Skew(ω) · r
+```
+
+This is useful for computing the angular contribution to velocity at a contact point:
+`v_contact = linearVelocity + Skew(ω) · r_contact`.
+
+### Gram-Schmidt Re-Orthogonalisation
+
+After thousands of integration steps, floating-point rounding makes the rotation matrix `R`
+slightly non-orthogonal (its columns drift from being exactly perpendicular with unit length).
+An un-orthogonal rotation matrix produces distorted shapes and incorrect inertia computations.
+
+Gram-Schmidt fixes this by re-deriving the third column from the first two:
+
+```cpp
+// After updating rb.orientation in PhysicsSystem:
+glm::vec3 col0 = glm::normalize(glm::vec3(rb.orientation[0]));
+glm::vec3 col1 = glm::normalize(
+    glm::vec3(rb.orientation[1]) - glm::dot(glm::vec3(rb.orientation[1]), col0) * col0);
+glm::vec3 col2 = glm::cross(col0, col1);  // guaranteed orthogonal
+rb.orientation[0] = glm::vec4(col0, 0.0f);
+rb.orientation[1] = glm::vec4(col1, 0.0f);
+rb.orientation[2] = glm::vec4(col2, 0.0f);
+```
+
+This should be applied every N ticks (e.g., every 100 ticks) rather than every tick, as it is
+relatively expensive for a minor correction.

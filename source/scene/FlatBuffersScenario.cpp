@@ -549,13 +549,13 @@ void FlatBuffersScenario::OnGUI() {
     if (ImGui::BeginMenu("Simulation")) {
         auto* exp = ServiceLocator::GetExperience();
         if (exp != nullptr) {
-            ImGui::SliderFloat("Physics Hz",  &exp->m_physicsHz,  1.0f,   2000.0f, "%.0f Hz");
-            ImGui::SliderFloat("Graphics Hz", &exp->m_graphicsHz, 0.0f,    300.0f, "%.0f Hz");
+            ImGui::SliderFloat("Physics Hz",  &exp->physicsHz,  1.0f,   2000.0f, "%.0f Hz");
+            ImGui::SliderFloat("Graphics Hz", &exp->graphicsHz, 0.0f,    300.0f, "%.0f Hz");
             ImGui::TextDisabled("Graphics Hz = 0 means uncapped");
 
             ImGui::Separator();
             ImGui::Text("Actual graphics: %.1f Hz", static_cast<double>(ImGui::GetIO().Framerate));
-            ImGui::Text("Actual physics:  %.0f Hz", static_cast<double>(exp->m_physicsHz));
+            ImGui::Text("Actual physics:  %.0f Hz", static_cast<double>(exp->physicsHz));
         }
 
         if (m_physicsSystem != nullptr) {
@@ -579,7 +579,7 @@ void FlatBuffersScenario::OnGUI() {
             ImGui::SameLine();
             auto* exp = ServiceLocator::GetExperience();
             if (exp != nullptr && ImGui::Button("Step")) {
-                exp->stepSimulation(1.0f / std::max(exp->m_physicsHz, 1.0f));
+                exp->stepSimulation(1.0f / std::max(exp->physicsHz, 1.0f));
             }
         }
 
@@ -964,7 +964,12 @@ void FlatBuffersScenario::OnGUI() {
                 m_flockingSystem->Restart(ServiceLocator::GetEntityManager());
             }
             ImGui::SameLine();
-            ImGui::Checkbox("Freeze", &m_flockingSystem->m_frozen);
+            {
+                bool frozen = m_flockingSystem->m_frozen.load();
+                if (ImGui::Checkbox("Freeze", &frozen)) {
+                    m_flockingSystem->m_frozen.store(frozen);
+                }
+            }
             ImGui::Separator();
 
             // Spatial mode selector

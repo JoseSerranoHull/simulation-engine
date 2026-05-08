@@ -95,6 +95,7 @@ namespace GE::Systems {
      * force accumulator with inverseMass).
      */
     void PhysicsSystem::Integrate(float dt) {
+        if (dt <= 0.0f) { return; }
         m_lastDt = dt;
         auto* em = ServiceLocator::GetEntityManager();
         auto& rbArray = em->GetCompArr<GE::Components::RigidBody>();

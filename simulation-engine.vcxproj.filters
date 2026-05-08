@@ -42,6 +42,9 @@
     <Filter Include="Source Files\scene">
       <UniqueIdentifier>{a1b2c3d4-0001-0001-0003-000000000003}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\scene\fb">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-000d-00000000000d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\graphics">
       <UniqueIdentifier>{a1b2c3d4-0001-0001-0004-000000000004}</UniqueIdentifier>
     </Filter>
@@ -66,6 +69,9 @@
     <Filter Include="Source Files\scripts">
       <UniqueIdentifier>{a1b2c3d4-0001-0001-000b-00000000000b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\networking">
+      <UniqueIdentifier>{a1b2c3d4-0001-0001-000c-00000000000c}</UniqueIdentifier>
+    </Filter>
     <!-- Header subfolder filters -->
     <Filter Include="Header Files\core">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-0001-000000000011}</UniqueIdentifier>
@@ -81,6 +87,9 @@
     </Filter>
     <Filter Include="Header Files\scene">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-0005-000000000015}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\scene\fb">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-000f-00000000001f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\graphics">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-0006-000000000016}</UniqueIdentifier>
@@ -106,21 +115,28 @@
     <Filter Include="Header Files\scripts">
       <UniqueIdentifier>{b2c3d4e5-0002-0001-000d-00000000001d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\networking">
+      <UniqueIdentifier>{b2c3d4e5-0002-0001-000e-00000000001e}</UniqueIdentifier>
+    </Filter>
     <!-- User-authored game scripts live here -->
     <Filter Include="Game Script Components">
       <UniqueIdentifier>{c3d4e5f6-0003-0001-0001-000000000031}</UniqueIdentifier>
     </Filter>
+    <!-- Markdown sub-filters -->
     <Filter Include="Markdown Files">
       <UniqueIdentifier>{e6be89e5-d93b-44f9-9ae0-6c88a943a5a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Markdown Files\Lab Books">
+      <UniqueIdentifier>{md000001-0000-0000-0000-000000000001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Markdown Files\Technical Manual">
+      <UniqueIdentifier>{md000002-0000-0000-0000-000000000002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Markdown Files\Documentation">
+      <UniqueIdentifier>{md000003-0000-0000-0000-000000000003}</UniqueIdentifier>
+    </Filter>
     <Filter Include="FlatBuffers Files">
       <UniqueIdentifier>{2cfc2d12-e698-4386-8e6b-4fea1ac25ee8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\networking">
-      <UniqueIdentifier>{a1b2c3d4-0001-0001-000c-00000000000c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\networking">
-      <UniqueIdentifier>{b2c3d4e5-0002-0001-000e-00000000001e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -161,6 +177,9 @@
     <ClCompile Include="source\core\stb_impl.cpp">
       <Filter>Source Files\core</Filter>
     </ClCompile>
+    <ClCompile Include="source\core\NetworkBridge.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
     <!-- ecs -->
     <ClCompile Include="source\ecs\Entity.cpp">
       <Filter>Source Files\ecs</Filter>
@@ -186,6 +205,16 @@
     </ClCompile>
     <ClCompile Include="source\scene\SnowGlobeScenario.cpp">
       <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\FlatBuffersLoader.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scene\FlatBuffersScenario.cpp">
+      <Filter>Source Files\scene</Filter>
+    </ClCompile>
+    <!-- scene/fb -->
+    <ClCompile Include="source\scene\fb\FBSceneAdapter.cpp">
+      <Filter>Source Files\scene\fb</Filter>
     </ClCompile>
     <!-- graphics -->
     <ClCompile Include="source\graphics\VulkanDevice.cpp">
@@ -235,6 +264,9 @@
     <ClCompile Include="source\assets\GeometryUtils.cpp">
       <Filter>Source Files\assets</Filter>
     </ClCompile>
+    <ClCompile Include="source\assets\WireGeometryUtils.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
     <ClCompile Include="source\assets\Mesh.cpp">
       <Filter>Source Files\assets</Filter>
     </ClCompile>
@@ -249,6 +281,27 @@
       <Filter>Source Files\systems</Filter>
     </ClCompile>
     <ClCompile Include="source\systems\EngineServiceRegistry.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\SpringSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\ClothSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\FlockingSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\AnimationSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\SpawnerSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\ScriptSystem.cpp">
       <Filter>Source Files\systems</Filter>
     </ClCompile>
     <!-- lighting -->
@@ -268,44 +321,30 @@
     <ClCompile Include="source\services\InputService.cpp">
       <Filter>Source Files\services</Filter>
     </ClCompile>
+    <ClCompile Include="source\services\Inspector.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
     <!-- memory -->
     <ClCompile Include="source\memory\SimpleAllocator.cpp">
       <Filter>Source Files\memory</Filter>
     </ClCompile>
-    <!-- entry point -->
-    <ClCompile Include="source\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\services\Inspector.cpp">
-      <Filter>Source Files\services</Filter>
-    </ClCompile>
-    <ClCompile Include="source\assets\WireGeometryUtils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\systems\ColliderVisualizerSystem.cpp">
-      <Filter>Source Files\systems</Filter>
-    </ClCompile>
-    <ClCompile Include="source\systems\SpringSystem.cpp">
-      <Filter>Source Files\systems</Filter>
-    </ClCompile>
-    <ClCompile Include="source\systems\ClothSystem.cpp">
-      <Filter>Source Files\systems</Filter>
-    </ClCompile>
-    <ClCompile Include="source\systems\FlockingSystem.cpp">
-      <Filter>Source Files\systems</Filter>
-    </ClCompile>
-    <!-- scripting infrastructure -->
-    <ClCompile Include="source\systems\ScriptSystem.cpp">
-      <Filter>Source Files\systems</Filter>
-    </ClCompile>
+    <!-- scripts -->
     <ClCompile Include="source\scripts\GameScriptComponent.cpp">
       <Filter>Source Files\scripts</Filter>
     </ClCompile>
+    <ClCompile Include="source\scripts\PlayerController.cpp">
+      <Filter>Source Files\scripts</Filter>
+    </ClCompile>
+    <ClCompile Include="source\scripts\ScriptFactory.cpp">
+      <Filter>Source Files\scripts</Filter>
+    </ClCompile>
+    <!-- networking -->
     <ClCompile Include="source\networking\NetworkService.cpp">
       <Filter>Source Files\networking</Filter>
     </ClCompile>
-    <ClCompile Include="source\core\NetworkBridge.cpp">
-      <Filter>Source Files\core</Filter>
+    <!-- entry point -->
+    <ClCompile Include="source\main.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -317,6 +356,12 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\checkerboard.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\collider_wire.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\collider_wire.vert">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\dust.comp">
@@ -335,6 +380,12 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\fire.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\flatcolor.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\flatcolor.vert">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\glass.frag">
@@ -427,23 +478,7 @@
     <None Include="shaders\water.vert">
       <Filter>Shader Files</Filter>
     </None>
-    <!-- Markdown / config / misc -->
-    <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Licenses.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationLab2.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="README.md" />
-    <None Include="CLAUDE.md">
-      <Filter>Markdown Files</Filter>
-    </None>
+    <!-- Config / FlatBuffers -->
     <None Include="config\snow_globe.ini">
       <Filter>Config Files\Legacy Lab</Filter>
     </None>
@@ -468,42 +503,6 @@
     <None Include="config\simulation_lab5_angular_velocity.ini">
       <Filter>Config Files\Legacy Lab</Filter>
     </None>
-    <None Include="markdown\C++ Programming and Design - Real-time Graphics - Final Lab README.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationLab3.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationLab4.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationWorkshops.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Lab-3.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Lab-4.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Lab-5.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationLab5.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Lab-6.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\Lab-7.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationLab6.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="markdown\SimulationLab7.md">
-      <Filter>Markdown Files</Filter>
-    </None>
     <None Include="config\simulation_lab6_q1_torque.ini">
       <Filter>Config Files\Legacy Lab</Filter>
     </None>
@@ -516,12 +515,6 @@
     <None Include="config\simulation_lab6_q6_cuboid.ini">
       <Filter>Config Files\Legacy Lab</Filter>
     </None>
-    <None Include="markdown\Simulation and Concurrency - Final Lab.md">
-      <Filter>Markdown Files</Filter>
-    </None>
-    <None Include="flatbuffers\Scene.fbs">
-      <Filter>FlatBuffers Files</Filter>
-    </None>
     <None Include="config\simulation_lab7_q1q2_spring.ini">
       <Filter>Config Files\Legacy Lab</Filter>
     </None>
@@ -533,6 +526,116 @@
     </None>
     <None Include="config\simulation_scripts_demo.ini">
       <Filter>Config Files\Legacy Lab</Filter>
+    </None>
+    <None Include="flatbuffers\Scene.fbs">
+      <Filter>FlatBuffers Files</Filter>
+    </None>
+    <!-- Markdown: project-level -->
+    <None Include="README.md" />
+    <None Include="CLAUDE.md">
+      <Filter>Markdown Files</Filter>
+    </None>
+    <!-- Markdown: Lab Books -->
+    <None Include="markdown\Final Lab Book - C++ Programming and Design (700120).md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Final Lab Book - Real-Time Graphics (700106).md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Final Lab Book - Simulation and Concurrency (700105).md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Simulation and Concurrency - Final Lab.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\SimulationLab2.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\SimulationLab3.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\SimulationLab4.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\SimulationLab5.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\SimulationLab6.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\SimulationLab7.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Lab-3.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Lab-4.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Lab-5.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Lab-6.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <None Include="markdown\Lab-7.md">
+      <Filter>Markdown Files\Lab Books</Filter>
+    </None>
+    <!-- Markdown: Technical Manual -->
+    <None Include="markdown\TechnicalManual\README.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\00_Getting_Started.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\01_ECS_Core.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\02_Threading_and_Concurrency.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\03_Vulkan_and_Rendering.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\04_Scene_Management.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\05_Physics_System.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\06_Cloth_and_Flocking.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\07_UDP_Networking.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\08_Scripting_and_Services.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\09_Animation_Spawning.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\10_Asset_Pipeline.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\11_Particle_System.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <None Include="markdown\TechnicalManual\12_ImGui_Input_Debug.md">
+      <Filter>Markdown Files\Technical Manual</Filter>
+    </None>
+    <!-- Markdown: Documentation -->
+    <None Include="markdown\SimulationWorkshops.md">
+      <Filter>Markdown Files\Documentation</Filter>
+    </None>
+    <None Include="markdown\Test Cases.md">
+      <Filter>Markdown Files\Documentation</Filter>
+    </None>
+    <None Include="markdown\Licenses.md">
+      <Filter>Markdown Files\Documentation</Filter>
+    </None>
+    <None Include="markdown\C++ Programming and Design - Real-time Graphics - Final Lab README.md">
+      <Filter>Markdown Files\Documentation</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -549,7 +652,13 @@
     <ClInclude Include="include\core\ServiceLocator.h">
       <Filter>Header Files\core</Filter>
     </ClInclude>
+    <ClInclude Include="include\core\SimulationState.h">
+      <Filter>Header Files\core</Filter>
+    </ClInclude>
     <ClInclude Include="include\core\EngineOrchestrator.h">
+      <Filter>Header Files\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\NetworkBridge.h">
       <Filter>Header Files\core</Filter>
     </ClInclude>
     <!-- ecs headers -->
@@ -571,7 +680,7 @@
     <ClInclude Include="include\ecs\IECSystem.h">
       <Filter>Header Files\ecs</Filter>
     </ClInclude>
-    <!-- components headers -->
+    <!-- component headers -->
     <ClInclude Include="include\components\Transform.h">
       <Filter>Header Files\components</Filter>
     </ClInclude>
@@ -582,6 +691,9 @@
       <Filter>Header Files\components</Filter>
     </ClInclude>
     <ClInclude Include="include\components\PhysicsComponents.h">
+      <Filter>Header Files\components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\components\AnimationComponents.h">
       <Filter>Header Files\components</Filter>
     </ClInclude>
     <ClInclude Include="include\components\ClothComponent.h">
@@ -596,7 +708,10 @@
     <ClInclude Include="include\components\SkyboxComponent.h">
       <Filter>Header Files\components</Filter>
     </ClInclude>
-    <!-- systems headers -->
+    <ClInclude Include="include\components\ScriptComponent.h">
+      <Filter>Header Files\components</Filter>
+    </ClInclude>
+    <!-- system headers -->
     <ClInclude Include="include\systems\TransformSystem.h">
       <Filter>Header Files\systems</Filter>
     </ClInclude>
@@ -607,6 +722,27 @@
       <Filter>Header Files\systems</Filter>
     </ClInclude>
     <ClInclude Include="include\systems\EngineServiceRegistry.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\ColliderVisualizerSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\SpringSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\ClothSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\FlockingSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\AnimationSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\SpawnerSystem.h">
+      <Filter>Header Files\systems</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\ScriptSystem.h">
       <Filter>Header Files\systems</Filter>
     </ClInclude>
     <!-- scene headers -->
@@ -627,6 +763,22 @@
     </ClInclude>
     <ClInclude Include="include\scene\SnowGlobeScenario.h">
       <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\ISceneAdapter.h">
+      <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\FlatBuffersLoader.h">
+      <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\FlatBuffersScenario.h">
+      <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <!-- scene/fb headers -->
+    <ClInclude Include="include\scene\fb\FBSceneAdapter.h">
+      <Filter>Header Files\scene\fb</Filter>
+    </ClInclude>
+    <ClInclude Include="include\scene\fb\FBSceneContext.h">
+      <Filter>Header Files\scene\fb</Filter>
     </ClInclude>
     <!-- graphics headers -->
     <ClInclude Include="include\graphics\VulkanContext.h">
@@ -677,14 +829,14 @@
     <ClInclude Include="include\graphics\Cubemap.h">
       <Filter>Header Files\graphics</Filter>
     </ClInclude>
-    <!-- particles headers -->
+    <!-- particle headers -->
     <ClInclude Include="include\particles\GpuParticleBackend.h">
       <Filter>Header Files\particles</Filter>
     </ClInclude>
     <ClInclude Include="include\particles\Particle.h">
       <Filter>Header Files\particles</Filter>
     </ClInclude>
-    <!-- assets headers -->
+    <!-- asset headers -->
     <ClInclude Include="include\assets\AssetManager.h">
       <Filter>Header Files\assets</Filter>
     </ClInclude>
@@ -737,6 +889,9 @@
     <ClInclude Include="include\physics\Collider.h">
       <Filter>Header Files\physics</Filter>
     </ClInclude>
+    <ClInclude Include="include\physics\MaterialInteractionRegistry.h">
+      <Filter>Header Files\physics</Filter>
+    </ClInclude>
     <!-- lighting headers -->
     <ClInclude Include="include\lighting\LightSource.h">
       <Filter>Header Files\lighting</Filter>
@@ -744,7 +899,7 @@
     <ClInclude Include="include\lighting\PointLightSource.h">
       <Filter>Header Files\lighting</Filter>
     </ClInclude>
-    <!-- services headers -->
+    <!-- service headers -->
     <ClInclude Include="include\services\TimeService.h">
       <Filter>Header Files\services</Filter>
     </ClInclude>
@@ -763,31 +918,15 @@
     <ClInclude Include="include\services\Camera.h">
       <Filter>Header Files\services</Filter>
     </ClInclude>
+    <ClInclude Include="include\services\Inspector.h">
+      <Filter>Header Files\services</Filter>
+    </ClInclude>
     <!-- memory headers -->
     <ClInclude Include="include\memory\SimpleAllocator.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
     <ClInclude Include="include\memory\MemoryUtilities.h">
       <Filter>Header Files\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="include\services\Inspector.h">
-      <Filter>Header Files\services</Filter>
-    </ClInclude>
-    <ClInclude Include="include\systems\ColliderVisualizerSystem.h">
-      <Filter>Header Files\systems</Filter>
-    </ClInclude>
-    <ClInclude Include="include\systems\SpringSystem.h">
-      <Filter>Header Files\systems</Filter>
-    </ClInclude>
-    <ClInclude Include="include\systems\ClothSystem.h">
-      <Filter>Header Files\systems</Filter>
-    </ClInclude>
-    <ClInclude Include="include\systems\FlockingSystem.h">
-      <Filter>Header Files\systems</Filter>
-    </ClInclude>
-    <!-- scripting system headers -->
-    <ClInclude Include="include\systems\ScriptSystem.h">
-      <Filter>Header Files\systems</Filter>
     </ClInclude>
     <!-- script infrastructure headers -->
     <ClInclude Include="include\scripts\CollisionInfo.h">
@@ -796,25 +935,28 @@
     <ClInclude Include="include\scripts\GameScriptComponent.h">
       <Filter>Header Files\scripts</Filter>
     </ClInclude>
-    <!-- script component -->
-    <ClInclude Include="include\components\ScriptComponent.h">
-      <Filter>Header Files\components</Filter>
+    <ClInclude Include="include\scripts\PlayerController.h">
+      <Filter>Header Files\scripts</Filter>
     </ClInclude>
-    <!-- user-authored game scripts (Game Script Components filter) -->
-    <ClInclude Include="include\game-scripts\DemoPlayerScript.h">
-      <Filter>Game Script Components</Filter>
+    <ClInclude Include="include\scripts\ScriptFactory.h">
+      <Filter>Header Files\scripts</Filter>
     </ClInclude>
-    <ClInclude Include="include\game-scripts\DemoTriggerScript.h">
-      <Filter>Game Script Components</Filter>
-    </ClInclude>
+    <!-- networking headers -->
     <ClInclude Include="include\networking\Packets.h">
       <Filter>Header Files\networking</Filter>
     </ClInclude>
     <ClInclude Include="include\networking\NetworkService.h">
       <Filter>Header Files\networking</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\NetworkBridge.h">
-      <Filter>Header Files\core</Filter>
+    <!-- user-authored game scripts -->
+    <ClInclude Include="include\game-scripts\DemoPlayerScript.h">
+      <Filter>Game Script Components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\game-scripts\DemoTriggerScript.h">
+      <Filter>Game Script Components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\game-scripts\ClothSphereSpawnerScript.h">
+      <Filter>Game Script Components</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

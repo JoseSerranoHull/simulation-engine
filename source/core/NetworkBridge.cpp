@@ -139,9 +139,9 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
     Networking::Packets::StateUpdate pkt{};
     std::memcpy(&pkt, data, sizeof(pkt));
 
-    // Drop out-of-order / duplicate packets
+    // Drop packets with invalid sender IDs before any arithmetic
+    if (senderId < 1U || senderId > Networking::NetworkService::MAX_PEERS) { return; }
     const uint8_t peerIdx = senderId - 1U;
-    if (peerIdx >= Networking::NetworkService::MAX_PEERS) { return; }
 
     // Drop packets from peers not registered for the current scene
     if (!((m_acceptedPeerMask.load(std::memory_order_relaxed) >> peerIdx) & 1U)) { return; }
@@ -284,8 +284,9 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
 
     // Drop packets from peers not registered for the current scene
     {
-        const uint8_t peerIdx = pkt.header.senderId - 1U;
-        if (peerIdx >= Networking::NetworkService::MAX_PEERS) { return; }
+        const uint8_t sid = pkt.header.senderId;
+        if (sid < 1U || sid > Networking::NetworkService::MAX_PEERS) { return; }
+        const uint8_t peerIdx = sid - 1U;
         if (!((m_acceptedPeerMask.load(std::memory_order_relaxed) >> peerIdx) & 1U)) { return; }
     }
 
@@ -389,6 +390,10 @@ void NetworkBridge::BroadcastAnimationStates()
     if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
     if (m_entityManager == nullptr) { return; }
 
+    // Only send to peers that are registered for the current scene (same mask used by receive path)
+    const uint8_t mask = m_acceptedPeerMask.load(std::memory_order_relaxed);
+    if (mask == 0U) { return; }
+
     auto& animArr = m_entityManager->GetCompArr<GE::Components::AnimatedObjectComponent>();
     for (uint32_t i = 0U; i < animArr.GetCount(); ++i) {
         const auto& ac = animArr.Data()[i];
@@ -399,7 +404,11 @@ void NetworkBridge::BroadcastAnimationStates()
         pkt.entityId        = animArr.Index()[i];
         pkt.elapsed         = ac.elapsed;
         pkt.reversed        = ac.reversed ? 1U : 0U;
-        m_service->Broadcast(&pkt, sizeof(pkt));
+        for (uint8_t p = 0U; p < Networking::NetworkService::MAX_PEERS; ++p) {
+            if ((mask >> p) & 1U) {
+                m_service->Send(p + 1U, &pkt, sizeof(pkt));
+            }
+        }
     }
 }
 
@@ -415,8 +424,9 @@ void NetworkBridge::handleAnimationSync(const uint8_t* data, std::size_t size)
 
     // Drop packets from peers not registered for the current scene
     {
-        const uint8_t peerIdx = pkt.header.senderId - 1U;
-        if (peerIdx >= Networking::NetworkService::MAX_PEERS) { return; }
+        const uint8_t sid = pkt.header.senderId;
+        if (sid < 1U || sid > Networking::NetworkService::MAX_PEERS) { return; }
+        const uint8_t peerIdx = sid - 1U;
         if (!((m_acceptedPeerMask.load(std::memory_order_relaxed) >> peerIdx) & 1U)) { return; }
     }
 

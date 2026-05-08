@@ -594,3 +594,138 @@ No `RigidBody` is needed — the trigger zone is stationary and has no physics m
 ---
 
 *Next: [Chapter 9 — Animation & Spawning](09_Animation_Spawning.md)*
+
+---
+
+## 8.8 Complete Worked Example: HealthPickupScript
+
+This section builds a complete, realistic script from scratch — a rotating health pickup that
+awards points on trigger contact and removes itself.
+
+### The Goal
+
+- Rotates in place to attract attention.
+- When a player walks through it (`OnTriggerEnter`), logs the event and destroys itself.
+- Does NOT use `FixedUpdate` (no physics-precision calculations needed).
+
+### Step 1 — Define the Script Class
+
+Create `include/systems/HealthPickupScript.h`:
+
+```cpp
+#pragma once
+#include "scene/GameScriptComponent.h"
+#include "core/Logger.h"
+#include "core/ServiceLocator.h"
+#include "components/Transform.h"
+
+class HealthPickupScript : public GameScriptComponent {
+public:
+    float m_rotationSpeed { 90.0f };  // degrees per second
+
+    // Called once, the first frame the entity exists
+    void Start() override {
+        auto* em = ServiceLocator::GetEntityManager();
+        auto* tr = em->TryGetTIComponent<GE::Components::Transform>(m_entityID);
+        if (tr) m_startY = tr->m_localPosition.y;
+        GE::Logger::Log(GE::Logger::Level::INFO, "HealthPickup spawned");
+    }
+
+    // Called every rendered frame (variable dt)
+    void Update(float dt) override {
+        auto* em = ServiceLocator::GetEntityManager();
+        auto* tr = em->TryGetTIComponent<GE::Components::Transform>(m_entityID);
+        if (!tr) return;
+
+        // Rotate around Y axis
+        tr->m_localRotation.y += m_rotationSpeed * dt;
+        if (tr->m_localRotation.y > 360.0f) tr->m_localRotation.y -= 360.0f;
+
+        // Bob up and down
+        auto* time = ServiceLocator::GetTimeService();
+        tr->m_localPosition.y = m_startY + std::sin(time->totalTime() * 2.0f) * 0.3f;
+    }
+
+    // FixedUpdate NOT used: rotation/bobbing doesn't need physics precision
+    // (if we needed to apply forces or check collisions, we'd use FixedUpdate)
+
+    // Called when another collider ENTERS the trigger zone (isTrigger=true required)
+    void OnTriggerEnter(GE::ECS::EntityID other) override {
+        GE::Logger::Log(GE::Logger::Level::INFO,
+            "Health pickup collected by entity " + std::to_string(other));
+
+        // Self-destruct
+        auto* em = ServiceLocator::GetEntityManager();
+        em->DestroyEntity(m_entityID);
+        // Note: Do NOT access m_entityID after this call — the entity is gone
+    }
+
+private:
+    float m_startY { 0.0f };
+};
+```
+
+### Step 2 — Attach the Script to an Entity
+
+In `FBSceneAdapter.cpp`, find the `script_type` dispatch and add:
+
+```cpp
+else if (scriptType == "HealthPickup") {
+    auto script = std::make_shared<HealthPickupScript>();
+    script->SetEntityID(entityID);
+    em->AddComponent(entityID, GE::Components::ScriptComponent{ std::move(script) });
+}
+```
+
+Then in your scene JSON:
+```json
+{
+  "name": "HealthPickup",
+  "position": { "x": 3, "y": 1, "z": 0 },
+  "shape": { "type": "Sphere", "radius": 0.5 },
+  "behaviour": {
+    "type": "SimulatedObject",
+    "is_trigger": true,
+    "script_type": "HealthPickup"
+  }
+}
+```
+
+### Step 3 — When to Use Each Callback
+
+| Callback | Runs In | Use For |
+|----------|---------|---------|
+| `Awake()` | First tick after registration | One-time initialization (cache component pointers) |
+| `Start()` | One tick after Awake | Deferred initialization (safe to read other entities) |
+| `Update(dt)` | Every render frame | Visual updates (rotation, bobbing, UI feedback) |
+| `FixedUpdate(dt)` | Every physics tick | Force application, precise collision reactions |
+| `LateUpdate(dt)` | After all systems run | Camera follow, post-physics corrections |
+| `OnCollisionEnter(other)` | Physics tick | Triggered by solid (non-trigger) collision |
+| `OnTriggerEnter(other)` | Physics tick | Triggered by sensor overlap (isTrigger=true) |
+| `OnCollisionExit(other)` | Physics tick | Detect when objects separate |
+
+### Step 4 — Calling ServiceLocator Services
+
+```cpp
+// Time:
+float t = ServiceLocator::GetTimeService()->totalTime();
+float dt = ServiceLocator::GetTimeService()->deltaTime();
+
+// Input:
+auto* input = ServiceLocator::GetInputService();
+if (input->IsKeyDown(GLFW_KEY_E)) { /* interact */ }
+
+// ECS:
+auto* em = ServiceLocator::GetEntityManager();
+auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_entityID);
+
+// Logging:
+GE::Logger::Log(GE::Logger::Level::WARN, "Script: unusual state detected");
+
+// Climate (wind, temperature):
+auto* climate = ServiceLocator::GetClimateService();
+glm::vec3 wind = climate->getWindVector();
+```
+
+> **Never store raw pointers from ServiceLocator between frames.** The underlying object may
+> be replaced during a scene transition. Re-fetch from ServiceLocator each frame if needed.

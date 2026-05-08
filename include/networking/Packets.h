@@ -44,6 +44,7 @@ namespace GE::Networking::Packets {
         glm::vec3 linearVelocity  { 0.0f };
         glm::vec3 angularVelocity { 0.0f };
     };
+    static_assert(sizeof(StateUpdate) == 60, "StateUpdate wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // SceneChange — instructs a peer to load a new scene path
@@ -52,6 +53,7 @@ namespace GE::Networking::Packets {
         Header header           {};
         char   scenePath[128]   {};
     };
+    static_assert(sizeof(SceneChange) == 132, "SceneChange wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // SpawnObject — request to all peers to instantiate a physics object
@@ -67,6 +69,7 @@ namespace GE::Networking::Packets {
         glm::vec3  linearVelocity  { 0.0f };
         float      mass            { 1.0f };
     };
+    static_assert(sizeof(SpawnObject) == 52, "SpawnObject wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // AnimationSync — syncs animated object timer state to remote peers
@@ -78,6 +81,7 @@ namespace GE::Networking::Packets {
         uint8_t  reversed { 0 };   // 0 = forward, 1 = reversed
         uint8_t  _pad[3]  {};
     };
+    static_assert(sizeof(AnimationSync) == 16, "AnimationSync wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // Heartbeat — keep-alive, no payload beyond the header
@@ -85,6 +89,7 @@ namespace GE::Networking::Packets {
     struct Heartbeat {
         Header header {};
     };
+    static_assert(sizeof(Heartbeat) == 4, "Heartbeat wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // DiscoveryHello — broadcast probe sent by a new peer during auto-connect
@@ -93,6 +98,7 @@ namespace GE::Networking::Packets {
         Header header { PacketType::DiscoveryHello };
         char   scenePath[128] {};  ///< scene this peer is currently in; empty = any
     };
+    static_assert(sizeof(DiscoveryHello) == 132, "DiscoveryHello wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // DiscoveryResponse — unicast reply from an already-connected peer
@@ -103,6 +109,7 @@ namespace GE::Networking::Packets {
         uint8_t _pad[3]{};
         char    scenePath[128] {};  ///< scene this peer is currently in
     };
+    static_assert(sizeof(DiscoveryResponse) == 136, "DiscoveryResponse wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // PeerAnnounce — broadcast after auto-connect so existing peers can add us
@@ -112,6 +119,7 @@ namespace GE::Networking::Packets {
         uint8_t peerID { 0 };   ///< slot this peer just claimed (1–4)
         uint8_t _pad[3]{};
     };
+    static_assert(sizeof(PeerAnnounce) == 8, "PeerAnnounce wire size changed — update all peers");
 
     #pragma pack(pop)
 

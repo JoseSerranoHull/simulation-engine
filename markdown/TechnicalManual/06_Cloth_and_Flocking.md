@@ -774,3 +774,118 @@ void FlockingSystem::Restart(GE::ECS::EntityManager* em) {
 ---
 
 *Next: [Chapter 7 — UDP Networking](07_UDP_Networking.md)*
+
+---
+
+## 6.12 Extending the Cloth System
+
+### Adding a New Collider Shape
+
+The cloth collision functions are free functions that take a `ClothComponent&` reference.
+To add, for example, a cone collider:
+
+1. **Declare** `void CollideWithCone(ClothComponent& cloth, const glm::vec3& tipPos,
+   const glm::vec3& axis, float height, float radius)` in `ClothSystem.h`.
+
+2. **Implement** by finding the closest point on the cone's axis (similar to `closestPointOnSegment`
+   used by the capsule), computing the cone radius at that height, and pushing the particle
+   away radially if inside:
+   ```cpp
+   float t = glm::clamp(glm::dot(p - tip, axis), 0.0f, height);
+   float coneR = (t / height) * radius;  // radius grows linearly from tip
+   glm::vec3 axisPoint = tip + t * axis;
+   glm::vec3 diff = p - axisPoint;
+   if (glm::length(diff) < coneR) {
+       particle.position = axisPoint + glm::normalize(diff) * coneR;
+   }
+   ```
+
+3. **Register** a new `ConeCollider` component type and query it in `ClothSystem::OnUpdate()`
+   using `em->GetCompArr<ConeCollider>()`.
+
+### Adding a "Cooling" Source (Negative Heat)
+
+The burn system uses a `vector<BurnSource>` with a `radius` and a `position`. To add ice:
+
+1. Add a `CoolSource` struct alongside `BurnSource` in `ClothComponent.h`:
+   ```cpp
+   struct CoolSource { glm::vec3 position; float radius; float coolRate; };
+   std::vector<CoolSource> coolSources;
+   ```
+
+2. In the heat diffusion loop in `ClothSystem::OnUpdate()`, after heat is accumulated:
+   ```cpp
+   for (const auto& cool : cloth.coolSources) {
+       for (auto& p : cloth.particles) {
+           float dist = glm::distance(p.position, cool.position);
+           if (dist < cool.radius) {
+               p.heat = glm::max(p.heat - cool.coolRate * dt, 0.0f);
+           }
+       }
+   }
+   ```
+
+### Custom Spring Topology
+
+The default grid generates structural (row/col neighbors), shear (diagonal neighbors), and
+flexion (skip-one) springs. For a different mesh (e.g., a circular net), replace the
+grid-generation loop with your own topology. Only the spring `a`/`b` indices, `restLen`, and
+`kSpring` matter — the rest of the system does not care about the topology.
+
+```cpp
+// Example: ring of springs around a circle
+for (uint32_t i = 0; i < N; ++i) {
+    ClothSpring s;
+    s.a       = i;
+    s.b       = (i + 1) % N;
+    s.restLen = glm::distance(particles[s.a].position, particles[s.b].position);
+    s.kSpring = cloth.springK;
+    s.active  = true;
+    cloth.springs.push_back(s);
+}
+```
+
+---
+
+## 6.13 Cloth & Flocking Tuning Guide
+
+### Cloth Parameters
+
+| Parameter | Safe Range | Effect at High Values | Effect at Low Values |
+|-----------|-----------|----------------------|---------------------|
+| `springK` (structural) | 50–200 | Stiff cloth, potential instability | Loose, saggy cloth |
+| `shearK` | 25–100 | Resists diagonal shear | Shears easily (wrinkles) |
+| `flexionK` | 10–50 | Stiff folds | Floppy folds |
+| Jakobsen iterations | 1–8 | Stiffer but more CPU time | Looser, faster |
+| `tearThreshold` | 1.2–3.0 | 1.2 = tears almost immediately; 3.0 = nearly untearable | — |
+| `tearRoughness` | 0–0.5 | 0.5 = ragged, organic tear edge | 0 = perfectly straight tear |
+| `stressTransferRate` | 0–1.0 | 1.0 = crack propagates instantly | 0 = no crack propagation |
+| `heatConductivity` | 0.005–0.5 | 0.5 = fire spreads instantly | 0.005 = slow ember spread |
+| `burnRate` | 0.01–0.5 | — | Slow burn (decorative) |
+| `gustAmplitude` | 0–0.5 | Large gusts | Steady wind |
+| `gustFrequency` | 0.1–2.0 | Fast oscillation (choppy) | Slow waves |
+| `dragCoeff` | 0.1–4.0 | Heavy aerodynamic resistance | Barely reacts to wind |
+
+> **Stability Rule:** If the cloth explodes or vibrates wildly, the first fixes are: (1) lower
+> `springK`, (2) increase Jakobsen iterations, (3) increase physics Hz. Verlet is stable for
+> any stiffness if the timestep is small enough relative to the spring constant.
+
+### Flocking Parameters
+
+| Parameter | Typical Value | Effect |
+|-----------|--------------|--------|
+| `separationRadius` | 1.5–3.0 | Larger = agents spread out more |
+| `wSeparation` | 1.5–3.0 | Higher = agents flee neighbors aggressively |
+| `alignmentRadius` | 3.0–6.0 | Larger = more global alignment |
+| `wAlignment` | 0.5–1.5 | Higher = tight velocity matching |
+| `cohesionRadius` | 4.0–8.0 | Larger = tighter flock center of mass |
+| `wCohesion` | 0.5–1.0 | Higher = compact flock |
+| `wAvoidance` | 2.0–5.0 | Higher = strong obstacle repulsion |
+| `maxSpeed` | 3.0–8.0 | Fast boids look more energetic |
+| `maxForce` | 0.5–2.0 | Higher = snappier steering, lower = smooth sweeping arcs |
+
+> **Tuning Tips:**
+> - Start with separation weight > alignment > cohesion for natural-looking flocks.
+> - If agents clump into a single mass: lower cohesion weight or raise separation radius.
+> - If agents scatter and never reform: lower separation weight or raise cohesion.
+> - Spatial mode performance: BruteForce for < 50 agents, UniformGrid for 50–300, Octree for 300+.

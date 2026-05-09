@@ -891,6 +891,7 @@ namespace GE::Systems {
                 auto* const cRB    = em->TryGetTIComponent<GE::Components::RigidBody>(cID);
 
                 if (!cTrans || sID == cID) continue;
+                if (cCol.isContainer) { continue; }  // Container capsules handled exclusively by Pass O
 
                 const float halfH      = cCol.height * 0.5f;
                 const glm::vec3 capBot = cTrans->m_worldPosition - glm::vec3(0.0f, halfH, 0.0f);
@@ -1504,6 +1505,82 @@ namespace GE::Systems {
                 if (hitSurface) {
                     m_currentContacts.insert({ std::min(sID, cyID), std::max(sID, cyID) });
                 }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass O: Sphere-inside-Capsule-Container — spheres bounce off the
+        // INTERIOR of a CapsuleCollider flagged as isContainer=true.
+        // Unified check using "closest point on axis segment" naturally covers
+        // both the curved cylindrical wall and both hemisphere end caps.
+        // The capsule may be rotating; its orientation is read from m_worldMatrix.
+        // -----------------------------------------------------------------
+        for (uint32_t cIdx3 = 0; cIdx3 < capsuleArray.GetCount(); ++cIdx3) {
+            const auto& capCol = capsuleArray.Data()[cIdx3];
+            if (!capCol.isContainer) { continue; }
+
+            const auto  capID  = capsuleArray.Index()[cIdx3];
+            auto* const capTr  = em->TryGetTIComponent<GE::Components::Transform>(capID);
+            if (!capTr) { continue; }
+
+            const glm::vec3& capPos  = capTr->m_worldPosition;
+            const float      capR    = capCol.radius;
+            const float      halfBod = capCol.height * 0.5f;
+
+            // Extract rotation from world matrix columns (local X/Y/Z axes in world space).
+            // Normalize to handle any floating-point drift from accumulated rotations.
+            const glm::mat3 R {
+                glm::normalize(glm::vec3(capTr->m_worldMatrix[0])),
+                glm::normalize(glm::vec3(capTr->m_worldMatrix[1])),
+                glm::normalize(glm::vec3(capTr->m_worldMatrix[2]))
+            };
+            const glm::mat3 Rinv = glm::transpose(R);  // orthogonal: inverse == transpose
+
+            for (uint32_t sIdx2 = 0; sIdx2 < sphereArray.GetCount(); ++sIdx2) {
+                const auto  sID2   = sphereArray.Index()[sIdx2];
+                const auto& sCol2  = sphereArray.Data()[sIdx2];
+                auto* const sTr2   = em->TryGetTIComponent<GE::Components::Transform>(sID2);
+                auto* const sRB2   = em->TryGetTIComponent<GE::Components::RigidBody>(sID2);
+
+                if (!sTr2 || !sRB2 || sRB2->isStatic || sCol2.isTrigger) { continue; }
+
+                // Transform sphere center to capsule local space (capsule axis = local Y)
+                const glm::vec3 pLocal  = Rinv * (sTr2->m_worldPosition - capPos);
+
+                // Closest point on the capsule body segment [-halfBod, +halfBod] along Y
+                const float     yC     = glm::clamp(pLocal.y, -halfBod, halfBod);
+                const glm::vec3 dLocal = pLocal - glm::vec3{ 0.0f, yC, 0.0f };
+                const float     dist   = glm::length(dLocal);
+
+                const float pen = dist + sCol2.radius - capR;
+                if (pen <= 0.0f || dist < 1e-6f) { continue; }
+
+                // Outward local normal (from axis-point toward capsule wall)
+                const glm::vec3 nLocal = dLocal / dist;
+
+                // Positional correction: push sphere back inside the capsule
+                sTr2->m_worldPosition = R * (pLocal - nLocal * pen) + capPos;
+                SyncWorldToLocal(*sTr2, em);
+
+                // Velocity reflection in capsule local space
+                const glm::vec3 velLocal = Rinv * sRB2->velocity;
+                const float     vRad     = glm::dot(velLocal, nLocal);
+                if (vRad > 0.0f) {  // moving outward (toward the wall)
+                    float e = sRB2->restitution;
+                    if (m_restitutionOverride >= 0.0f) {
+                        e = m_restitutionOverride;
+                    } else if (m_registry) {
+                        const auto* mS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID2);
+                        const auto* mC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(capID);
+                        if (mS && mC) {
+                            GE::Physics::MaterialInteractionRecord rec;
+                            if (m_registry->Lookup(mS->name, mC->name, rec)) { e = rec.restitution; }
+                        }
+                    }
+                    sRB2->velocity = R * (velLocal - (1.0f + e) * vRad * nLocal);
+                }
+
+                m_currentContacts.insert({ std::min(sID2, capID), std::max(sID2, capID) });
             }
         }
     }

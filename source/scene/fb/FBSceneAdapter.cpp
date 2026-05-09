@@ -465,7 +465,7 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         const float height = (c != nullptr) ? c->height() : 1.0f;
         meshData = GeometryUtils::generateCapsule(radius, height, 32, 16);
         for (auto& v : meshData.vertices) { v.color = color; }
-        ctx.em->AddComponent(id, GE::Components::CapsuleCollider{ radius, height });
+        ctx.em->AddComponent(id, GE::Components::CapsuleCollider{ radius, height, false, isContainer });
         break;
     }
     case Simulation::Shape::Cuboid: {

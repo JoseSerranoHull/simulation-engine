@@ -90,6 +90,10 @@ namespace GE::Components {
         // Populated at runtime by SpawnerSystem; cleared on Reset.
         // Used by DebugOverlay to show them as virtual children without m_parentEntityID.
         std::vector<uint32_t>                spawnedEntityIds;
+
+        // Size-variant prefabs for spawners generated from radius_range (no prefab_ref).
+        // SpawnerSystem picks a random entry each spawn; empty = use prefabTemplate only.
+        std::vector<const GE::Scene::FB::PrefabTemplate*> prefabVariants;
     };
 
 } // namespace GE::Components

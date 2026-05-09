@@ -5,6 +5,7 @@
 #include "components/Tag.h"
 #include "components/Components.h"
 #include "components/PhysicsComponents.h"
+#include "components/AnimationComponents.h"
 #include "components/ScriptComponent.h"
 #include "scripts/ScriptFactory.h"
 #include "assets/Mesh.h"
@@ -103,6 +104,12 @@ GE::ECS::EntityID EntityFactory::InstantiatePrefab(
     rb.invInertiaTensor     = tmpl.invInertia;
     rb.invInertiaTensorWorld = tmpl.invInertia;
     em->AddComponent(id, rb);
+
+    // 5b. PhysicsMaterialTag — enables per-material-pair restitution lookups via MaterialInteractionRegistry
+    if (!tmpl.physicsMaterialName.empty()) {
+        em->AddComponent(id, GE::Components::PhysicsMaterialTag{
+            tmpl.physicsMaterialName, tmpl.density });
+    }
 
     // 6. MeshRenderer — select owner-colored or material-appearance mesh (no GPU upload)
     {

@@ -35,8 +35,9 @@
 #include "scripts/ScriptFactory.h"
 
 // Pipeline indices within m_pipelines (see Scenario::createMaterialPipelines())
-static constexpr std::size_t PHONG_PIPELINE_INDEX     = 0U;   // phong.vert + phong.frag
-static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX = 8U;   // flat vertex-color, no descriptor set
+static constexpr std::size_t PHONG_PIPELINE_INDEX      = 0U;   // phong.vert + phong.frag
+static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX  = 8U;   // flat vertex-color, no descriptor set
+static constexpr std::size_t CONTAINER_PIPELINE_INDEX  = 9U;   // flat vertex-color, front-face culling (hollow containers)
 
 namespace GE::Scene::FB {
 
@@ -115,6 +116,8 @@ bool FBSceneAdapter::load(const std::string& path) {
 void FBSceneAdapter::adaptToECS(FBSceneContext& ctx) {
     if (m_scene == nullptr) { return; }
 
+    ctx.gravityEnabled = m_scene->gravity_on();
+
     // Order matters: materials before objects/prefabs; prefabs before spawners
     if (m_scene->cameras()      != nullptr) { adaptCameras(ctx);      }
     if (m_scene->materials()    != nullptr) { adaptMaterials(ctx);    }
@@ -190,10 +193,11 @@ void FBSceneAdapter::adaptMaterial(const Simulation::Material* mat, FBSceneConte
     rec.density = mat->density();
     ctx.physicsMaterials.push_back(rec);
 
-    // Assign a palette color by insertion order so every material gets a distinct vivid color.
+    // Record the base palette index by insertion order.
+    // resolveColor() combines this with a per-material instance counter so objects sharing
+    // the same material name each receive a distinct palette color.
     const std::size_t idx = ctx.physicsMaterials.size() - 1u;
-    ctx.materialColorMap[rec.name] =
-        FBSceneContext::materialPalette[idx % FBSceneContext::materialPalette.size()];
+    ctx.materialPaletteBaseIndex[rec.name] = idx;
 }
 
 // ===========================================================================
@@ -328,7 +332,7 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
                         const float r  = c ? c->radius() : 0.5f;
                         const float ht = c ? c->height()  : 1.0f;
                         meshData = GeometryUtils::generateCylinder(32, r, r, ht, glm::vec3(1.0f), true, true);
-                        ctx.em->AddComponent(id, GE::Components::CylinderCollider{ r, ht });
+                        ctx.em->AddComponent(id, GE::Components::CylinderCollider{ r, ht, false, isContainer });
                         shapeBuilt = true;
                         break;
                     }
@@ -399,7 +403,7 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
 // ===========================================================================
 
 void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID id,
-                                const glm::vec3& color, bool /*isContainer*/,
+                                const glm::vec3& color, bool isContainer,
                                 FBSceneContext& ctx) const
 {
     if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
@@ -407,13 +411,15 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         return;
     }
 
-    GE::Graphics::GraphicsPipeline* const flatColorPipeline =
-        (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
+    // Containers use front-face culling (pipeline 9) so the interior is visible from outside.
+    // Regular geometry uses the standard flat-color pipeline (index 8, no culling).
+    const std::size_t pipelineIdx = (isContainer && ctx.pipelines->size() > CONTAINER_PIPELINE_INDEX)
+        ? CONTAINER_PIPELINE_INDEX : FLATCOLOR_PIPELINE_INDEX;
+    GE::Graphics::GraphicsPipeline* const pipeline = (*ctx.pipelines)[pipelineIdx].get();
 
-    // Build a no-texture material that uses the flat-color pipeline (no Set 1).
-    // Shadow casting disabled: the shadow pipeline expects Set 1 (material descriptor),
-    // which this material does not have. Flat-color objects don't sample a shadow map anyway.
-    auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatColorPipeline);
+    // Build a no-texture material. Shadow casting disabled: the shadow pipeline expects Set 1
+    // (material descriptor) which these materials do not have.
+    auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, pipeline);
     flatMat->SetCastsShadows(false);
 
     using namespace GE::Assets;
@@ -450,7 +456,7 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         const float radius = (c != nullptr) ? c->radius() : 0.5f;
         const float height = (c != nullptr) ? c->height() : 1.0f;
         meshData = GeometryUtils::generateCylinder(32, radius, radius, height, color, true, true);
-        ctx.em->AddComponent(id, GE::Components::CylinderCollider{ radius, height });
+        ctx.em->AddComponent(id, GE::Components::CylinderCollider{ radius, height, false, isContainer });
         break;
     }
     case Simulation::Shape::Capsule: {
@@ -467,7 +473,7 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         const glm::vec3 sz = (c != nullptr && c->size() != nullptr)
             ? toVec3(*c->size()) : glm::vec3{ 1.0f };
         meshData = GeometryUtils::generateBox(sz.x, sz.y, sz.z, color);
-        ctx.em->AddComponent(id, GE::Components::BoxCollider{ sz.x, sz.y, sz.z });
+        ctx.em->AddComponent(id, GE::Components::BoxCollider{ sz.x, sz.y, sz.z, false, isContainer });
         break;
     }
     default:
@@ -1017,28 +1023,41 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
 glm::vec3 FBSceneAdapter::resolveColor(const Simulation::Object* obj,
                                        const FBSceneContext& ctx) const
 {
-    // Owner-color mode: SimulatedObjects use their assigned team color (player 1-4).
-    // This preserves multiplayer red/green/blue/yellow coding for our own scenes.
-    if (ctx.useOwnerColors &&
-        obj->behaviour_type() == Simulation::Behaviour::SimulatedObject) {
-        const auto* sim = obj->behaviour_as_SimulatedObject();
-        if (sim != nullptr) {
-            const auto ownerIdx = static_cast<std::size_t>(
-                static_cast<int8_t>(sim->owner()));
-            if (ownerIdx < FBSceneContext::ownerColors.size()) {
-                return FBSceneContext::ownerColors[ownerIdx];
-            }
-        }
+    // Container objects always render as dark charcoal regardless of display mode.
+    // They are hollow structural frames — their color should not compete with the objects inside.
+    if (obj->collision_type() == Simulation::CollisionType::CONTAINER) {
+        return { 0.15f, 0.15f, 0.20f };
     }
 
-    // Material color fallback: StaticObjects / AnimatedObjects always reach here,
-    // as do all objects when useOwnerColors=false (Material Colors mode).
+    if (ctx.useOwnerColors) {
+        // Owner Colors mode: only SimulatedObjects get a team color.
+        // StaticObjects and AnimatedObjects stay grey (defaultColor).
+        if (obj->behaviour_type() == Simulation::Behaviour::SimulatedObject) {
+            const auto* sim = obj->behaviour_as_SimulatedObject();
+            if (sim != nullptr) {
+                const auto ownerIdx = static_cast<std::size_t>(
+                    static_cast<int8_t>(sim->owner()));
+                if (ownerIdx < FBSceneContext::ownerColors.size()) {
+                    return FBSceneContext::ownerColors[ownerIdx];
+                }
+            }
+        }
+        return FBSceneContext::defaultColor;
+    }
+
+    // Material Colors mode: each object uses palette[base + instanceCount].
+    // instanceCount increments per material so objects sharing a material name each get a
+    // distinct color — e.g. 5 Newton's Cradle balls all using "BallMat" cycle through 5 colors.
     if (obj->material() != nullptr) {
         const std::string matName = obj->material()->str();
         if (!matName.empty()) {
-            const auto it = ctx.materialColorMap.find(matName);
-            if (it != ctx.materialColorMap.end()) {
-                return it->second;
+            const auto baseIt = ctx.materialPaletteBaseIndex.find(matName);
+            if (baseIt != ctx.materialPaletteBaseIndex.end()) {
+                uint32_t& count = ctx.materialInstanceCounters[matName];
+                const std::size_t idx =
+                    (baseIt->second + count) % FBSceneContext::materialPalette.size();
+                ++count;
+                return FBSceneContext::materialPalette[idx];
             }
         }
     }
@@ -1291,11 +1310,12 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
 
     for (flatbuffers::uoffset_t i = 0; i < count; ++i) {
         const Simulation::BaseSpawner* base = nullptr;
+        const Simulation::SphereSpawner* sSpawnerRaw = nullptr;  // kept for radius_range synthesis
 
         switch ((*spawnTypesVec)[i]) {
         case Simulation::SpawnerType::SphereSpawner: {
-            const auto* s = spawnersVec->GetAs<Simulation::SphereSpawner>(i);
-            if (s) base = s->base();
+            sSpawnerRaw = spawnersVec->GetAs<Simulation::SphereSpawner>(i);
+            if (sSpawnerRaw) base = sSpawnerRaw->base();
             break;
         }
         case Simulation::SpawnerType::CylinderSpawner: {
@@ -1323,7 +1343,106 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
         rec.startTime = base->start_time();
         rec.prefabRef = (base->prefab_ref() != nullptr) ? base->prefab_ref()->str() : "";
 
-        // Warn early if prefab_ref is missing or not in registry
+        // --- Synthetic prefab generation for SphereSpawner when no prefab_ref is present ---
+        // Teacher schema has no prefab_ref concept; synthesise 5 size variants from radius_range.
+        if (sSpawnerRaw != nullptr && rec.prefabRef.empty() &&
+            sSpawnerRaw->radius_range() != nullptr &&
+            ctx.pipelines != nullptr && ctx.pipelines->size() > FLATCOLOR_PIPELINE_INDEX)
+        {
+            const float rMin    = sSpawnerRaw->radius_range()->min();
+            const float rMax    = sSpawnerRaw->radius_range()->max();
+            const bool  hasRange = (rMax > rMin + 1e-4f);
+
+            // Resolve material name and density
+            std::string matName;
+            float       density = 1.0f;
+            if (base->material() != nullptr && !base->material()->str().empty()) {
+                matName = base->material()->str();
+                for (const auto& pm : ctx.physicsMaterials) {
+                    if (pm.name == matName) { density = pm.density; break; }
+                }
+            }
+            // Fallback: use first non-zero-density physics material
+            if (matName.empty()) {
+                for (const auto& pm : ctx.physicsMaterials) {
+                    if (pm.density > 0.0f) { matName = pm.name; density = pm.density; break; }
+                }
+            }
+
+            GE::Graphics::GraphicsPipeline* const flatPipe =
+                (*ctx.pipelines)[FLATCOLOR_PIPELINE_INDEX].get();
+
+            const std::string spawnerName = rec.name;
+            constexpr int N = 5;
+
+            auto uploadSynthMesh = [&](GE::Assets::OBJLoader::MeshData data,
+                                       std::shared_ptr<GE::Assets::Material> mat) -> GE::Assets::Mesh* {
+                auto meshPtr = ctx.am->processMeshData(
+                    data, mat,
+                    ctx.uploadCtx->cmd,
+                    ctx.uploadCtx->stagingBuffers,
+                    ctx.uploadCtx->stagingMemories);
+                if (!meshPtr) { return nullptr; }
+                GE::Assets::Mesh* raw = meshPtr.get();
+                auto mdl = std::make_unique<GE::Assets::Model>();
+                mdl->addMesh(std::move(meshPtr));
+                ctx.ownedModels->push_back(std::move(mdl));
+                return raw;
+            };
+
+            const float PI = glm::pi<float>();
+
+            for (int vi = 0; vi < N; ++vi) {
+                const float t = (N == 1) ? 0.5f : static_cast<float>(vi) / static_cast<float>(N - 1);
+                const float r = hasRange ? (rMin + t * (rMax - rMin)) : rMin;
+
+                PrefabTemplate tmpl;
+                tmpl.name               = spawnerName + "_synth_" + std::to_string(vi);
+                tmpl.shapeKind          = PrefabShapeKind::Sphere;
+                tmpl.radius             = r;
+                tmpl.density            = density;
+                tmpl.restitution        = 0.6f;
+                tmpl.physicsMaterialName = matName;
+
+                const float mass = density * (4.0f / 3.0f) * PI * r * r * r;
+                tmpl.mass = (mass > 0.0f) ? mass : 1.0f;
+                if (tmpl.mass > 0.0f) {
+                    tmpl.invInertia = glm::mat3(5.0f / (2.0f * tmpl.mass * r * r));
+                }
+
+                auto flatMat = std::make_shared<GE::Assets::Material>(VK_NULL_HANDLE, flatPipe);
+                flatMat->SetCastsShadows(false);
+
+                bool ok = true;
+                for (std::size_t oi = 0; oi < 4; ++oi) {
+                    GE::Assets::OBJLoader::MeshData md =
+                        GE::Assets::GeometryUtils::generateSphere(20, r, -r,
+                            FBSceneContext::ownerColors[oi]);
+                    GE::Assets::Mesh* m = uploadSynthMesh(md, flatMat);
+                    if (!m) { ok = false; break; }
+                    tmpl.ownerMeshes[oi] = m;
+                }
+                if (!ok) {
+                    GE_LOG_WARN("FBSceneAdapter::adaptSpawners: mesh upload failed for synth variant " + std::to_string(vi));
+                    continue;
+                }
+
+                const std::string key = tmpl.name;
+                ctx.prefabRegistry[key] = std::move(tmpl);
+                rec.prefabVariantRefs.push_back(key);
+            }
+
+            if (!rec.prefabVariantRefs.empty()) {
+                rec.prefabRef    = rec.prefabVariantRefs[rec.prefabVariantRefs.size() / 2];
+                rec.isSequential = true;
+                rec.ownerPeerId  = 1;
+                GE_LOG_INFO("FBSceneAdapter::adaptSpawners: synthesised " +
+                    std::to_string(rec.prefabVariantRefs.size()) +
+                    " prefab variants for spawner '" + rec.name + "'.");
+            }
+        }
+
+        // Warn if prefab_ref is still missing (no synthesis succeeded)
         if (rec.prefabRef.empty()) {
             GE_LOG_WARN("FBSceneAdapter::adaptSpawners: spawner '" + rec.name + "' has no prefab_ref — will be inert.");
         } else if (ctx.prefabRegistry.find(rec.prefabRef) == ctx.prefabRegistry.end()) {

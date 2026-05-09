@@ -73,6 +73,10 @@ namespace GE::Scene::FB {
 
         // Optional script type name (empty = no script attached on spawn)
         std::string scriptType;
+
+        // Physics material name for spawned entities (enables MaterialInteractionRegistry lookups).
+        // Empty = no PhysicsMaterialTag added.
+        std::string physicsMaterialName;
     };
 
     /**
@@ -106,6 +110,10 @@ namespace GE::Scene::FB {
 
         /// True when SpawnerOwnerType::SEQUENTIAL — SpawnerSystem cycles color across peers.
         bool isSequential { false };
+
+        // For spawners synthesised from radius_range (no prefab_ref): keys into prefabRegistry.
+        // SpawnerSystem picks a random entry each spawn. Empty = single prefabTemplate.
+        std::vector<std::string> prefabVariantRefs;
     };
 
     /**
@@ -148,10 +156,18 @@ namespace GE::Scene::FB {
         std::vector<SpawnerRecord>                      spawners;
         std::unordered_map<std::string, PrefabTemplate> prefabRegistry;
 
-        // Material-name → palette color. Populated by adaptMaterials() using a fixed vivid palette.
-        // Used by resolveColor() as a fallback when owner colors don't apply (static objects,
-        // animated objects, and all objects in Material Colors mode).
-        std::unordered_map<std::string, glm::vec3> materialColorMap;
+        // Whether the scene enables gravity (mirrors Scene::gravity_on). Applied to PhysicsSystem after load.
+        bool gravityEnabled { true };
+
+        // Material-name → base palette index. Populated by adaptMaterials() in registration order.
+        // resolveColor() adds a per-material instance counter so shared-material objects each
+        // get a distinct palette color (e.g. Newton's Cradle balls all using "BallMat").
+        std::unordered_map<std::string, std::size_t> materialPaletteBaseIndex;
+
+        // Per-material instance counter: incremented each time resolveColor() assigns a color
+        // to an object with that material in Material Colors mode. Mutable so resolveColor()
+        // (a const method) can update it.
+        mutable std::unordered_map<std::string, uint32_t> materialInstanceCounters;
 
         // 16-entry vivid palette assigned in material-registration order.
         // Index 0 = first material in the scene's materials[] array, etc.

@@ -1,0 +1,225 @@
+{
+  "name": "Sphere Spawners",
+  "cameras": [
+    {
+      "name": "MainCamera",
+      "transform": {
+        "position": {
+          "x": 10.0,
+          "y": 6.0,
+          "z": 10.0
+        },
+        "orientation": {
+          "yaw": 45.0,
+          "pitch": -20.0,
+          "roll": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "camera_type_type": "PerspectiveCamera",
+      "camera_type": {
+        "fov": 60.0,
+        "near": 0.1,
+        "far": 150.0
+      }
+    },
+    {
+      "name": "TopView",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 20.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "yaw": 0.0,
+          "pitch": -90.0,
+          "roll": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "camera_type_type": "OrthographicCamera",
+      "camera_type": {
+        "size": 6.0,
+        "near": 0.1,
+        "far": 30.0
+      }
+    },
+    {
+      "name": "FrontView",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 20.0
+        },
+        "orientation": {
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "camera_type_type": "OrthographicCamera",
+      "camera_type": {
+        "size": 6.0,
+        "near": 0.1,
+        "far": 30.0
+      }
+    },
+    {
+      "name": "SideView",
+      "transform": {
+        "position": {
+          "x": 20.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "yaw": -90.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "camera_type_type": "OrthographicCamera",
+      "camera_type": {
+        "size": 6.0,
+        "near": 0.1,
+        "far": 30.0
+      }
+    }
+  ],
+  "objects": [
+    {
+      "name": "Container",
+      "transform": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "yaw": 0.0,
+          "pitch": 0.0,
+          "roll": 0.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "material": "ContainerMat",
+      "shape_type": "Cuboid",
+      "shape": {
+        "size": {
+          "x": 8.0,
+          "y": 8.0,
+          "z": 8.0
+        }
+      },
+      "behaviour_type": "StaticObject",
+      "behaviour": {
+      },
+      "collision_type": "CONTAINER"
+    }
+  ],
+  "spawners_type": [
+    "SphereSpawner"
+  ],
+  "spawners": [
+    {
+      "base": {
+        "name": "SphereSpawner",
+        "spawn_type_type": "RepeatingSpawn",
+        "spawn_type": {
+          "interval": 0.4,
+          "max_count": 500
+        },
+        "location_type": "RandomBox",
+        "location": {
+          "min": {
+            "x": -3.5,
+            "y": 0.2,
+            "z": -3.5
+          },
+          "max": {
+            "x": 3.5,
+            "y": 3.5,
+            "z": 3.5
+          }
+        },
+        "linear_velocity": {
+          "min": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "max": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        },
+        "angular_velocity": {
+          "min": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "max": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        }
+      },
+      "radius_range": {
+        "min": 0.2,
+        "max": 0.6
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "ContainerMat"
+    },
+    {
+      "name": "BoxMat",
+      "density": 1.0
+    }
+  ],
+  "interactions": [
+    {
+      "material_a": "BoxMat",
+      "material_b": "ContainerMat",
+      "restitution": 0.4,
+      "static_friction": 0.4,
+      "dynamic_friction": 0.3
+    },
+    {
+      "material_a": "BoxMat",
+      "material_b": "BoxMat",
+      "restitution": 0.2,
+      "static_friction": 0.5,
+      "dynamic_friction": 0.4
+    }
+  ]
+}

@@ -89,7 +89,22 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         static_cast<uint32_t>(sizeof(glm::mat4)),
         VK_SHADER_STAGE_VERTEX_BIT,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        false));                                      // includeMaterialSet = false
+        false));                                      // includeMaterialSet = false  [pipeline 8]
+
+    // Pipeline 9: Container flat-color — front-face culling so the interior is visible from outside.
+    // Reuses flatcolor_vert/frag shader modules [12] and [13] — no new SPV files needed.
+    m_pipelines.push_back(std::make_unique<GraphicsPipeline>(
+        offscreenPass,
+        VK_NULL_HANDLE,
+        m_shaderModules[12].get(),
+        m_shaderModules[13].get(),
+        true, false, true, msaa,
+        static_cast<uint32_t>(sizeof(glm::mat4)),
+        VK_SHADER_STAGE_VERTEX_BIT,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        false,               // includeMaterialSet = false
+        VK_COMPARE_OP_LESS,
+        true));              // frontFaceCull = true  [pipeline 9]
 
     // 3. Load and adapt the FlatBuffers binary
     GE::Scene::FB::FBSceneAdapter adapter;
@@ -153,9 +168,10 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     m_scriptSystem = scs;
     em->RegisterSystem(scs);
 
-    // 10d. Register PhysicsSystem and wire up the interaction registry
+    // 10d. Register PhysicsSystem, wire up the interaction registry, and apply scene gravity flag
     auto* ps = new GE::Systems::PhysicsSystem();
     ps->SetRegistry(&m_interactionRegistry);
+    ps->m_gravityEnabled = adaptCtx.gravityEnabled;
     m_physicsSystem = ps;
     em->RegisterSystem(ps);
 
@@ -202,6 +218,14 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         if (!rec.prefabRef.empty()) {
             const auto it = m_prefabRegistry.find(rec.prefabRef);
             sc.prefabTemplate = (it != m_prefabRegistry.end()) ? &it->second : nullptr;
+        }
+
+        // Wire size-variant prefabs (for spawners synthesised from radius_range)
+        for (const auto& varRef : rec.prefabVariantRefs) {
+            const auto it = m_prefabRegistry.find(varRef);
+            if (it != m_prefabRegistry.end()) {
+                sc.prefabVariants.push_back(&it->second);
+            }
         }
 
         em->AddComponent(spawnerId, sc);
@@ -1067,9 +1091,13 @@ void FlatBuffersScenario::OnGUI() {
 
                             // --- Col 2: prefab name ---
                             ImGui::TableSetColumnIndex(2);
-                            const char* prefabName = (sc.prefabTemplate != nullptr)
-                                ? sc.prefabTemplate->name.c_str() : "(none)";
-                            ImGui::TextUnformatted(prefabName);
+                            if (sc.prefabTemplate != nullptr) {
+                                ImGui::TextUnformatted(sc.prefabTemplate->name.c_str());
+                            } else if (!sc.prefabVariants.empty()) {
+                                ImGui::Text("%zu variants", sc.prefabVariants.size());
+                            } else {
+                                ImGui::TextUnformatted("(none)");
+                            }
 
                             // --- Col 3: type ---
                             ImGui::TableSetColumnIndex(3);
@@ -1106,7 +1134,7 @@ void FlatBuffersScenario::OnGUI() {
                             ImGui::TableSetColumnIndex(6);
 
                             // Fire
-                            const bool canFire = !done && (sc.prefabTemplate != nullptr);
+                            const bool canFire = !done && (sc.prefabTemplate != nullptr || !sc.prefabVariants.empty());
                             if (!canFire) ImGui::BeginDisabled();
                             if (ImGui::SmallButton("Fire"))  { m_spawnerSystem->ForceSpawnOne(sc); }
                             if (!canFire) ImGui::EndDisabled();

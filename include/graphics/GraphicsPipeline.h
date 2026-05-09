@@ -58,7 +58,8 @@ public:
         const VkShaderStageFlags pushConstantStages = VK_SHADER_STAGE_VERTEX_BIT,
         const VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         const bool includeMaterialSet = true,
-        const VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS
+        const VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS,
+        const bool frontFaceCull = false    // uses VK_CULL_MODE_FRONT_BIT (for hollow containers)
     ) :  materialLayout(inMaterialLayout)
     {
         // 1. Shader Stages Initialization
@@ -97,7 +98,9 @@ public:
         VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = DEFAULT_LINE_WIDTH;
-        rasterizer.cullMode = enableCulling ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE;
+        rasterizer.cullMode = frontFaceCull   ? VK_CULL_MODE_FRONT_BIT
+                            : enableCulling   ? VK_CULL_MODE_BACK_BIT
+                                              : VK_CULL_MODE_NONE;
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
         // 5. Multisampling Alignment

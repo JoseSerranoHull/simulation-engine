@@ -1307,5 +1307,204 @@ namespace GE::Systems {
                 }
             }
         }
+
+        // -----------------------------------------------------------------
+        // Pass M: Sphere-inside-Container-Box — spheres bounce off the
+        // INTERIOR walls of a BoxCollider flagged as isContainer=true.
+        // Used by Newton's Cradle and similar enclosed-volume scenes.
+        // -----------------------------------------------------------------
+        {
+            static const glm::vec3 kAxisDir[3] = { {1.0f,0.0f,0.0f}, {0.0f,1.0f,0.0f}, {0.0f,0.0f,1.0f} };
+
+            for (uint32_t bIdx = 0; bIdx < boxArray.GetCount(); ++bIdx) {
+                const auto& bCol = boxArray.Data()[bIdx];
+                if (!bCol.isContainer) continue;
+
+                const auto  bID    = boxArray.Index()[bIdx];
+                auto* const bTrans = em->TryGetTIComponent<GE::Components::Transform>(bID);
+                if (!bTrans) continue;
+
+                const glm::vec3 halfExt{ bCol.sizeX * 0.5f, bCol.sizeY * 0.5f, bCol.sizeZ * 0.5f };
+                const glm::vec3& boxCenter = bTrans->m_worldPosition;
+
+                for (uint32_t sIdx = 0; sIdx < sphereArray.GetCount(); ++sIdx) {
+                    const auto  sID    = sphereArray.Index()[sIdx];
+                    auto&       sCol   = sphereArray.Data()[sIdx];
+                    auto* const sTrans = em->TryGetTIComponent<GE::Components::Transform>(sID);
+                    auto* const sRB    = em->TryGetTIComponent<GE::Components::RigidBody>(sID);
+
+                    if (!sTrans || !sRB || sRB->isStatic) continue;
+
+                    const glm::vec3 local = sTrans->m_worldPosition - boxCenter;
+                    const float lc[3] = { local.x, local.y, local.z };
+                    const float he[3] = { halfExt.x, halfExt.y, halfExt.z };
+
+                    bool hitWall = false;
+                    for (int a = 0; a < 3; ++a) {
+                        float& velComp = (a == 0) ? sRB->velocity.x
+                                       : (a == 1) ? sRB->velocity.y : sRB->velocity.z;
+
+                        // +axis wall (sphere approaches from inside)
+                        const float dPos = he[a] - lc[a];
+                        if (dPos < sCol.radius && !sCol.isTrigger) {
+                            const float pen = sCol.radius - dPos;
+                            sTrans->m_worldPosition -= kAxisDir[a] * pen;
+                            SyncWorldToLocal(*sTrans, em);
+                            if (velComp > 0.0f) {
+                                float e = sRB->restitution;
+                                if (m_restitutionOverride >= 0.0f) { e = m_restitutionOverride; }
+                                else if (m_registry) {
+                                    const auto* mS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                                    const auto* mB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                                    if (mS && mB) {
+                                        GE::Physics::MaterialInteractionRecord rec;
+                                        if (m_registry->Lookup(mS->name, mB->name, rec)) { e = rec.restitution; }
+                                    }
+                                }
+                                velComp -= (1.0f + e) * velComp;
+                            }
+                            hitWall = true;
+                        }
+
+                        // -axis wall
+                        const float dNeg = he[a] + lc[a];
+                        if (dNeg < sCol.radius && !sCol.isTrigger) {
+                            const float pen = sCol.radius - dNeg;
+                            sTrans->m_worldPosition += kAxisDir[a] * pen;
+                            SyncWorldToLocal(*sTrans, em);
+                            if (velComp < 0.0f) {
+                                float e = sRB->restitution;
+                                if (m_restitutionOverride >= 0.0f) { e = m_restitutionOverride; }
+                                else if (m_registry) {
+                                    const auto* mS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                                    const auto* mB = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(bID);
+                                    if (mS && mB) {
+                                        GE::Physics::MaterialInteractionRecord rec;
+                                        if (m_registry->Lookup(mS->name, mB->name, rec)) { e = rec.restitution; }
+                                    }
+                                }
+                                velComp -= (1.0f + e) * velComp;
+                            }
+                            hitWall = true;
+                        }
+                    }
+
+                    if (hitWall) {
+                        m_currentContacts.insert({ std::min(sID, bID), std::max(sID, bID) });
+                    }
+                }
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Pass N: Sphere-inside-Cylinder-Container — spheres bounce off the
+        // INTERIOR of a CylinderCollider flagged as isContainer=true.
+        // Three surfaces: curved wall, top cap, bottom cap.
+        // Axis is always world Y. Animated objects (no RigidBody) are skipped.
+        // -----------------------------------------------------------------
+        for (uint32_t cIdx2 = 0; cIdx2 < cylArray.GetCount(); ++cIdx2) {
+            const auto& cyCol = cylArray.Data()[cIdx2];
+            if (!cyCol.isContainer) continue;
+
+            const auto  cyID    = cylArray.Index()[cIdx2];
+            auto* const cyTrans = em->TryGetTIComponent<GE::Components::Transform>(cyID);
+            if (!cyTrans) continue;
+
+            const float halfH = cyCol.height * 0.5f;
+            const float cylR  = cyCol.radius;
+            const glm::vec3& cc = cyTrans->m_worldPosition;
+
+            for (uint32_t sIdx = 0; sIdx < sphereArray.GetCount(); ++sIdx) {
+                const auto  sID    = sphereArray.Index()[sIdx];
+                auto&       sCol   = sphereArray.Data()[sIdx];
+                auto* const sTrans = em->TryGetTIComponent<GE::Components::Transform>(sID);
+                auto* const sRB    = em->TryGetTIComponent<GE::Components::RigidBody>(sID);
+
+                if (!sTrans || !sRB || sRB->isStatic) continue;  // skip animated / static
+
+                const float dx = sTrans->m_worldPosition.x - cc.x;
+                const float dz = sTrans->m_worldPosition.z - cc.z;
+                const float d  = std::sqrt(dx * dx + dz * dz);
+
+                bool hitSurface = false;
+
+                // --- Curved wall ---
+                if (!sCol.isTrigger && d + sCol.radius > cylR && d > 1e-6f) {
+                    const float pen = (d + sCol.radius) - cylR;
+                    const glm::vec3 radialN{ dx / d, 0.0f, dz / d };
+                    sTrans->m_worldPosition -= radialN * pen;
+                    SyncWorldToLocal(*sTrans, em);
+                    const float vRad = glm::dot(sRB->velocity, radialN);
+                    if (vRad > 0.0f) {
+                        float e = sRB->restitution;
+                        if (m_restitutionOverride >= 0.0f) { e = m_restitutionOverride; }
+                        else if (m_registry) {
+                            const auto* mS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                            const auto* mC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cyID);
+                            if (mS && mC) {
+                                GE::Physics::MaterialInteractionRecord rec;
+                                if (m_registry->Lookup(mS->name, mC->name, rec)) { e = rec.restitution; }
+                            }
+                        }
+                        sRB->velocity -= (1.0f + e) * vRad * radialN;
+                    }
+                    hitSurface = true;
+                }
+
+                // --- Bottom cap ---
+                if (!sCol.isTrigger) {
+                    const float distToBot = sTrans->m_worldPosition.y - (cc.y - halfH);
+                    if (distToBot < sCol.radius) {
+                        const float pen = sCol.radius - distToBot;
+                        sTrans->m_worldPosition.y += pen;
+                        SyncWorldToLocal(*sTrans, em);
+                        if (sRB->velocity.y < 0.0f) {
+                            float e = sRB->restitution;
+                            if (m_restitutionOverride >= 0.0f) { e = m_restitutionOverride; }
+                            else if (m_registry) {
+                                const auto* mS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                                const auto* mC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cyID);
+                                if (mS && mC) {
+                                    GE::Physics::MaterialInteractionRecord rec;
+                                    if (m_registry->Lookup(mS->name, mC->name, rec)) { e = rec.restitution; }
+                                }
+                            }
+                            sRB->velocity.y = -sRB->velocity.y * e;
+                            if (std::abs(sRB->velocity.y) < 0.05f) sRB->velocity.y = 0.0f;
+                        }
+                        hitSurface = true;
+                    }
+                }
+
+                // --- Top cap ---
+                if (!sCol.isTrigger) {
+                    const float distToTop = (cc.y + halfH) - sTrans->m_worldPosition.y;
+                    if (distToTop < sCol.radius) {
+                        const float pen = sCol.radius - distToTop;
+                        sTrans->m_worldPosition.y -= pen;
+                        SyncWorldToLocal(*sTrans, em);
+                        if (sRB->velocity.y > 0.0f) {
+                            float e = sRB->restitution;
+                            if (m_restitutionOverride >= 0.0f) { e = m_restitutionOverride; }
+                            else if (m_registry) {
+                                const auto* mS = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(sID);
+                                const auto* mC = em->TryGetTIComponent<GE::Components::PhysicsMaterialTag>(cyID);
+                                if (mS && mC) {
+                                    GE::Physics::MaterialInteractionRecord rec;
+                                    if (m_registry->Lookup(mS->name, mC->name, rec)) { e = rec.restitution; }
+                                }
+                            }
+                            sRB->velocity.y = -sRB->velocity.y * e;
+                            if (std::abs(sRB->velocity.y) < 0.05f) sRB->velocity.y = 0.0f;
+                        }
+                        hitSurface = true;
+                    }
+                }
+
+                if (hitSurface) {
+                    m_currentContacts.insert({ std::min(sID, cyID), std::max(sID, cyID) });
+                }
+            }
+        }
     }
 }

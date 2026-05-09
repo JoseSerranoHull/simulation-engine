@@ -72,7 +72,7 @@ namespace GE::Systems {
 
     void SpawnerSystem::ForceSpawnOne(GE::Components::SpawnerComponent& sc) {
         if (sc.spawnedCount >= sc.maxCount) { return; }
-        if (sc.prefabTemplate == nullptr)    { return; }
+        if (sc.prefabTemplate == nullptr && sc.prefabVariants.empty()) { return; }
 
         auto* em = ServiceLocator::GetEntityManager();
         if (!em) { return; }
@@ -85,8 +85,17 @@ namespace GE::Systems {
             ? static_cast<uint8_t>(sc.spawnedCount % 4)
             : (sc.ownerPeerId > 0U ? sc.ownerPeerId - 1U : 0U);
 
+        // Pick random size variant if available, else fall back to canonical prefabTemplate
+        const GE::Scene::FB::PrefabTemplate* tmpl = sc.prefabTemplate;
+        if (!sc.prefabVariants.empty()) {
+            std::uniform_int_distribution<std::size_t> vd(0, sc.prefabVariants.size() - 1);
+            const auto* candidate = sc.prefabVariants[vd(m_rng)];
+            if (candidate != nullptr) { tmpl = candidate; }
+        }
+        if (tmpl == nullptr) { return; }
+
         const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
-            *sc.prefabTemplate, pos, glm::vec3{0.0f}, linVel, angVel,
+            *tmpl, pos, glm::vec3{0.0f}, linVel, angVel,
             sc.ownerPeerId, colorIdx, em);
 
         if (id != UINT32_MAX) {
@@ -115,10 +124,10 @@ namespace GE::Systems {
             // Only advance the timer when not paused
             if (!sc.paused) { sc.elapsed += dt; }
 
-            if (sc.paused)                                   { continue; }
-            if (sc.elapsed < sc.startTime)                   { continue; }
-            if (sc.spawnedCount >= sc.maxCount)              { continue; }
-            if (sc.prefabTemplate == nullptr)                { continue; }
+            if (sc.paused)                                                           { continue; }
+            if (sc.elapsed < sc.startTime)                                           { continue; }
+            if (sc.spawnedCount >= sc.maxCount)                                      { continue; }
+            if (sc.prefabTemplate == nullptr && sc.prefabVariants.empty())           { continue; }
 
             // Ownership gate: when networked, only the owning peer fires
             if (netActive && sc.ownerPeerId != 0U && sc.ownerPeerId != localPeerId) { continue; }
@@ -134,8 +143,17 @@ namespace GE::Systems {
                     ? static_cast<uint8_t>(sc.spawnedCount % 4)
                     : (sc.ownerPeerId > 0U ? sc.ownerPeerId - 1U : 0U);
 
+                // Pick random size variant if available, else fall back to canonical prefabTemplate
+                const GE::Scene::FB::PrefabTemplate* tmpl = sc.prefabTemplate;
+                if (!sc.prefabVariants.empty()) {
+                    std::uniform_int_distribution<std::size_t> vd(0, sc.prefabVariants.size() - 1);
+                    const auto* candidate = sc.prefabVariants[vd(m_rng)];
+                    if (candidate != nullptr) { tmpl = candidate; }
+                }
+                if (tmpl == nullptr) { return; }
+
                 const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
-                    *sc.prefabTemplate, pos, glm::vec3{0.0f}, linVel, angVel,
+                    *tmpl, pos, glm::vec3{0.0f}, linVel, angVel,
                     sc.ownerPeerId, colorIdx, em);
 
                 if (id == UINT32_MAX) { return; }

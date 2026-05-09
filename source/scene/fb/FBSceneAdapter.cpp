@@ -189,6 +189,11 @@ void FBSceneAdapter::adaptMaterial(const Simulation::Material* mat, FBSceneConte
     rec.name    = (mat->name() != nullptr) ? mat->name()->str() : "material";
     rec.density = mat->density();
     ctx.physicsMaterials.push_back(rec);
+
+    // Assign a palette color by insertion order so every material gets a distinct vivid color.
+    const std::size_t idx = ctx.physicsMaterials.size() - 1u;
+    ctx.materialColorMap[rec.name] =
+        FBSceneContext::materialPalette[idx % FBSceneContext::materialPalette.size()];
 }
 
 // ===========================================================================
@@ -1012,18 +1017,28 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
 glm::vec3 FBSceneAdapter::resolveColor(const Simulation::Object* obj,
                                        const FBSceneContext& ctx) const
 {
-    if (!ctx.useOwnerColors) {
-        return FBSceneContext::defaultColor;
-    }
-
-    // Only SimulatedObject has an owner field
-    if (obj->behaviour_type() == Simulation::Behaviour::SimulatedObject) {
+    // Owner-color mode: SimulatedObjects use their assigned team color (player 1-4).
+    // This preserves multiplayer red/green/blue/yellow coding for our own scenes.
+    if (ctx.useOwnerColors &&
+        obj->behaviour_type() == Simulation::Behaviour::SimulatedObject) {
         const auto* sim = obj->behaviour_as_SimulatedObject();
         if (sim != nullptr) {
             const auto ownerIdx = static_cast<std::size_t>(
                 static_cast<int8_t>(sim->owner()));
             if (ownerIdx < FBSceneContext::ownerColors.size()) {
                 return FBSceneContext::ownerColors[ownerIdx];
+            }
+        }
+    }
+
+    // Material color fallback: StaticObjects / AnimatedObjects always reach here,
+    // as do all objects when useOwnerColors=false (Material Colors mode).
+    if (obj->material() != nullptr) {
+        const std::string matName = obj->material()->str();
+        if (!matName.empty()) {
+            const auto it = ctx.materialColorMap.find(matName);
+            if (it != ctx.materialColorMap.end()) {
+                return it->second;
             }
         }
     }

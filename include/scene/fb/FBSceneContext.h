@@ -148,6 +148,32 @@ namespace GE::Scene::FB {
         std::vector<SpawnerRecord>                      spawners;
         std::unordered_map<std::string, PrefabTemplate> prefabRegistry;
 
+        // Material-name → palette color. Populated by adaptMaterials() using a fixed vivid palette.
+        // Used by resolveColor() as a fallback when owner colors don't apply (static objects,
+        // animated objects, and all objects in Material Colors mode).
+        std::unordered_map<std::string, glm::vec3> materialColorMap;
+
+        // 16-entry vivid palette assigned in material-registration order.
+        // Index 0 = first material in the scene's materials[] array, etc.
+        static constexpr std::array<glm::vec3, 16> materialPalette = {{
+            { 1.00f, 0.41f, 0.71f },  //  0: hot pink
+            { 0.90f, 0.15f, 0.15f },  //  1: red
+            { 0.12f, 0.80f, 0.20f },  //  2: green
+            { 0.15f, 0.35f, 0.95f },  //  3: blue
+            { 0.95f, 0.86f, 0.05f },  //  4: yellow
+            { 0.70f, 0.10f, 0.90f },  //  5: violet
+            { 0.05f, 0.84f, 0.84f },  //  6: cyan
+            { 0.95f, 0.50f, 0.05f },  //  7: orange
+            { 0.50f, 0.80f, 0.10f },  //  8: lime
+            { 0.60f, 0.15f, 0.35f },  //  9: maroon
+            { 0.10f, 0.55f, 0.55f },  // 10: teal
+            { 0.90f, 0.65f, 0.30f },  // 11: peach
+            { 0.25f, 0.60f, 0.85f },  // 12: sky blue
+            { 0.85f, 0.30f, 0.10f },  // 13: burnt orange
+            { 0.55f, 0.85f, 0.55f },  // 14: mint
+            { 0.85f, 0.85f, 0.55f },  // 15: cream
+        }};
+
         // Flock spawn configuration — populated by adaptBehaviour() when FlockAgent is present.
         // FlatBuffersScenario reads these after Adapt() to initialise FlockingSystem::Restart().
         glm::vec3 flockSpawnOrigin { 0.0f };

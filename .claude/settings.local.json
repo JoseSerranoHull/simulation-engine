@@ -172,7 +172,9 @@
       "Bash(Sort-Object)",
       "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" phong.vert -o phong.vert.spv)",
       "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" phong.frag -o phong.frag.spv)",
-      "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" flatcolor.frag -o flatcolor.frag.spv)"
+      "Bash(\"C:\\\\VulkanSDK\\\\1.4.321.1\\\\Bin\\\\glslc.exe\" flatcolor.frag -o flatcolor.frag.spv)",
+      "PowerShell(& \"C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe\" --json --strict-json -o \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\bin_examples\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\flatbuffers\\\\Scene.fbs\" -- \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\bin_examples\\\\bouncingBalls.bin\")",
+      "PowerShell(& \"C:\\\\Users\\\\javie\\\\flatbuffers\\\\Release\\\\flatc.exe\" --json --strict-json --raw-binary -o \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\bin_examples\" \"C:\\\\Users\\\\javie\\\\Desktop\\\\Scene.fbs\" -- \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\config\\\\flatbufferConfig\\\\bin_examples\\\\bouncingBalls.bin\")"
     ]
   }
 }

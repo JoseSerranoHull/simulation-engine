@@ -77,6 +77,7 @@ public:
 
     void setModelMatrix(const glm::mat4& matrix);
     void setName(const std::string& n) { name = n; }
+    void setIndexCount(uint32_t count) noexcept { indexCount = count; }
 
     /**
      * @brief Records draw commands for this specific mesh.

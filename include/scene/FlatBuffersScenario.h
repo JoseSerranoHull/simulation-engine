@@ -11,6 +11,8 @@
 #include "physics/MaterialInteractionRegistry.h"
 
 namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class ScriptSystem; class ColliderVisualizerSystem; }
+namespace GE::Components { struct ClothComponent; }
+namespace GE::ECS { class EntityManager; }
 
 namespace GE {
 
@@ -91,11 +93,45 @@ namespace GE {
 
         char m_autoConnectHostIP[64] {};  ///< Leave empty to broadcast (host); fill with host's IP to unicast (joiner)
 
+        // --- Cloth geometry resize state ---
+        // One entry per cloth entity (in component array order at load time).
+        // Benign race: rebuildPending/target* written by render thread (OnGUI),
+        // read+cleared by physics thread (OnUpdate) — same pattern as cc.windEnabled.
+        static constexpr int MAX_CLOTH_DIM = 80;
+
+        struct ClothRebuildState {
+            int   targetRows    { 30 };
+            int   targetCols    { 30 };
+            int   density       { 1    };   // density multiplier (1 = original; min 1)
+            float origCellSize  { 0.2f };   // load-time cellSize (for density / reset)
+            float targetCellSize{ 0.2f };   // cellSize to apply at next rebuild
+            bool  rebuildPending { false };
+            bool  useDefaults    { false };
+
+            // Snapshot of scene-file load-time values (for "Reset to Defaults")
+            int   origRows { 30 }, origCols { 30 };
+            float origSpringK { 100.0f }, origShearK { 50.0f }, origFlexionK { 25.0f };
+            float origDamping { 0.1f };
+            float origTearThreshold { 3.0f }, origTearRoughness { 0.04f };
+            float origStressTransferRate { 0.4f };
+            float origBurnRate { 1.5f }, origCurlAmount { 0.05f };
+            float origHeatConductivity { 0.4f }, origShrinkScale { 0.35f };
+            float origDragCoeff { 1.2f }, origGustAmplitude { 0.3f }, origGustFrequency { 0.8f };
+            int   origConstraintIters { 2 };
+            bool  origWindEnabled { false };
+            float origWindX { 0.0f }, origWindZ { 0.0f };
+        };
+        std::vector<ClothRebuildState> m_clothStates;
+
         // --- Helpers ---
         void buildCamerasFromContext(const GE::Scene::FB::FBSceneContext& ctx);
         void applyActiveCamera() const;
         void scanSceneDirectory();
         void disconnectNetwork();
+        void applyClothRebuild(GE::Components::ClothComponent& cc,
+                               uint32_t eid,
+                               GE::ECS::EntityManager* em,
+                               int newRows, int newCols) const;
     };
 
 } // namespace GE

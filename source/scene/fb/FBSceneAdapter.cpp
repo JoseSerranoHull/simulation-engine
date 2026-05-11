@@ -39,6 +39,14 @@ static constexpr std::size_t PHONG_PIPELINE_INDEX      = 0U;   // phong.vert + p
 static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX  = 8U;   // flat vertex-color, no descriptor set
 static constexpr std::size_t CONTAINER_PIPELINE_INDEX  = 9U;   // flat vertex-color, front-face culling (hollow containers)
 
+// Cloth GPU buffer pre-allocation constants.
+// The combined vertex+index buffer is allocated for MAX_CLOTH_DIM² at load time so that
+// runtime grid resizes (FlatBuffersScenario::applyClothRebuild) never need reallocation.
+// cc.indexOffset is fixed at maxVertBytes; only cc.vertexCount/indexCount change on resize.
+static constexpr uint32_t MAX_CLOTH_DIM   = 80U;
+static constexpr uint32_t MAX_CLOTH_VERTS = MAX_CLOTH_DIM * MAX_CLOTH_DIM;                         // 6 400
+static constexpr uint32_t MAX_CLOTH_IDX   = (MAX_CLOTH_DIM - 1U) * (MAX_CLOTH_DIM - 1U) * 6U;    // 37 446
+
 namespace GE::Scene::FB {
 
 // ===========================================================================
@@ -768,10 +776,13 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         cc.indexCount  = static_cast<uint32_t>(indices.size());
 
         // Allocate combined host-visible buffer: [vertices][indices]
-        const VkDeviceSize vertexBytes = static_cast<VkDeviceSize>(vCount) * sizeof(GE::Assets::Vertex);
-        const VkDeviceSize indexBytes  = static_cast<VkDeviceSize>(cc.indexCount) * sizeof(uint32_t);
-        cc.indexOffset = vertexBytes;
-        const VkDeviceSize totalBytes  = vertexBytes + indexBytes;
+        // Buffer is pre-allocated for MAX_CLOTH_DIM² so applyClothRebuild() can resize
+        // the grid at runtime without any Vulkan resource recreation.
+        // cc.indexOffset is fixed here and never changes; vertexCount/indexCount vary.
+        const VkDeviceSize maxVertBytes  = static_cast<VkDeviceSize>(MAX_CLOTH_VERTS) * sizeof(GE::Assets::Vertex);
+        const VkDeviceSize maxIndexBytes = static_cast<VkDeviceSize>(MAX_CLOTH_IDX)   * sizeof(uint32_t);
+        cc.indexOffset = maxVertBytes;
+        const VkDeviceSize totalBytes    = maxVertBytes + maxIndexBytes;
 
         GE::Graphics::VulkanContext* vkCtx = ServiceLocator::GetContext();
         if (vkCtx == nullptr || vkCtx->device == VK_NULL_HANDLE) {
@@ -789,10 +800,14 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             break;
         }
 
-        // Write initial vertices + indices into mapped buffer
-        std::memcpy(cc.mappedVertices, verts.data(), vertexBytes);
-        std::memcpy(static_cast<uint8_t*>(cc.mappedVertices) + vertexBytes,
-                    indices.data(), indexBytes);
+        // Write initial vertices + indices into the (larger) mapped buffer.
+        // Only the actual grid data is written; the rest of the pre-allocated space is unused
+        // until applyClothRebuild() overwrites it with a larger grid.
+        const VkDeviceSize actualVertBytes  = static_cast<VkDeviceSize>(vCount) * sizeof(GE::Assets::Vertex);
+        const VkDeviceSize actualIndexBytes = static_cast<VkDeviceSize>(cc.indexCount) * sizeof(uint32_t);
+        std::memcpy(cc.mappedVertices, verts.data(), actualVertBytes);
+        std::memcpy(static_cast<uint8_t*>(cc.mappedVertices) + cc.indexOffset,
+                    indices.data(), actualIndexBytes);
 
         // Create a Mesh wrapping the cloth buffer — non-owning reference, cloth owns cleanup.
         // Use textured Phong when texture_path is set and in material-color mode; flat-color otherwise.

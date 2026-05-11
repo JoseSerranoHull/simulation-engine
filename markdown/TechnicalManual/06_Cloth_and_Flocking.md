@@ -361,6 +361,8 @@ Cloth vertices change every frame. The engine uses `VK_MEMORY_PROPERTY_HOST_VISI
 
 **Layout:** `[0, indexOffset)` = `Vertex` data; `[indexOffset, total)` = `uint32_t` indices.
 
+**Pre-allocation for runtime resize:** The buffer is allocated at load time for `MAX_CLOTH_DIM × MAX_CLOTH_DIM` (80 × 80 = 6,400 vertices) rather than the initial grid size. `cc.indexOffset` is fixed at `MAX_CLOTH_VERTS × sizeof(Vertex)` permanently. Only `cc.vertexCount` and `cc.indexCount` change when the grid is resized — no Vulkan resource recreation is ever needed at runtime (~507 KB per cloth).
+
 **Critical — vertex space:** Vertices are stored in **local space** (relative to the cloth entity's origin), not world space. The Renderer applies the cloth entity's `m_worldMatrix` as the model push-constant; if vertices stored world positions, the entity translation would be double-counted and the cloth would render offset above its physics particles.
 
 ```cpp
@@ -569,6 +571,62 @@ vec3 albedo = texture(texSampler, fragTexCoord).rgb * fragVertexColor;
 ```
 
 Cold particles write white `(1,1,1)` so the multiply is a no-op. Heating particles write the heat gradient colours, tinting the fabric texture organically — the boucle weave shows through even while burning.
+
+---
+
+## 6.5f Runtime Geometry Resize & Density
+
+The cloth grid can be resized interactively at runtime without reloading the scene. All controls are in **Cloth → Geometry** in the ImGui menu.
+
+### How Rebuild Works
+
+`FlatBuffersScenario::applyClothRebuild()` is the core function. It runs on the physics thread at the start of the next `OnUpdate()` tick after any rebuild is requested (deferred via `ClothRebuildState::rebuildPending`). No Vulkan resource recreation is needed — the GPU buffer was pre-allocated for the maximum grid size at load time.
+
+Steps performed by `applyClothRebuild()`:
+1. Re-initialise particle grid (new `rows × cols`, pinned top row, world-space positions)
+2. Rebuild spring list (structural / shear / flexion — exact replica of `FBSceneAdapter` spring-building)
+3. Reset `burnSources` (one default inactive source at cloth centre)
+4. Update `cc.vertexCount`, `cc.indexCount` (buffer region reused; `cc.indexOffset` unchanged)
+5. Write initial vertex data (local space) into the persistently-mapped buffer
+6. Call `mesh->setIndexCount(cc.indexCount)` to sync the `Mesh` object's cached count so the Renderer draws the correct number of indices
+
+After rebuild the per-frame loops in `OnUpdate()` (vertex refresh + index rebuild) run immediately, producing correct normals and burned-hole tracking for the new geometry.
+
+### Size Controls (physical size changes)
+
+`[− Rows]` / `[+ Rows]` and `[− Cols]` / `[+ Cols]` step the active grid by ±1 in one axis. The cloth's `cellSize` is preserved, so physical dimensions scale with the count. Range: 2–80. Triggers an immediate rebuild.
+
+### Density Controls (physical size preserved)
+
+Density is an integer multiplier applied to the **original load-time row/col count** with a proportional reduction in `cellSize`:
+
+```
+effectiveRows    = origRows    × density       (capped at 80)
+effectiveCols    = origCols    × density       (capped at 80)
+effectiveCellSize = origCellSize / density
+```
+
+Physical cloth width = `(effectiveRows − 1) × effectiveCellSize` = `(origRows − 1) × origCellSize` → **unchanged**.
+
+Maximum density is auto-computed as `MAX_CLOTH_DIM / max(origRows, origCols)` to prevent exceeding the buffer. The `−` button is greyed out at density 1 (cannot go below original resolution).
+
+### Reset to Defaults
+
+Restores all physics parameters (spring constants, damping, burn settings, wind, constraint iterations) **and** the original rows/cols/cellSize from the scene file snapshot captured at load time. Also resets `density` to 1.
+
+### ClothRebuildState (in `FlatBuffersScenario.h`)
+
+```cpp
+struct ClothRebuildState {
+    int   targetRows, targetCols;     // target for next rebuild
+    int   density;                    // density multiplier (1 = original)
+    float origCellSize, targetCellSize; // load-time and rebuild-time cell size
+    bool  rebuildPending, useDefaults;
+    // + origRows/Cols + all orig* physics param snapshots
+};
+```
+
+One `ClothRebuildState` entry is stored per cloth entity in `FlatBuffersScenario::m_clothStates`, populated from the loaded `ClothComponent` in `OnLoad()` and cleared in `OnUnload()`.
 
 ---
 

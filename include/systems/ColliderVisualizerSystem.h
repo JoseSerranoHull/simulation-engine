@@ -128,11 +128,11 @@ private:
 
     // --- Cloth debug buffer (host-coherent, persistently mapped, rebuilt each frame) ---
     // Combined buffer for spring lines, particle crosses, and surface normal vectors.
-    // Sized for a 50×50 cloth with all visualisations active — ~50 K line vertices.
+    // Sized for an 80×80 cloth with all visualisation types active (~190 K line vertices).
     VkBuffer         m_clothDebugBuf     { VK_NULL_HANDLE };
     VkDeviceMemory   m_clothDebugMem     { VK_NULL_HANDLE };
     mutable void*    m_clothDebugMapped  { nullptr };
-    uint32_t         m_clothDebugMaxVerts{ 50000U };
+    uint32_t         m_clothDebugMaxVerts{ 200000U };
 };
 
 } // namespace GE::Systems

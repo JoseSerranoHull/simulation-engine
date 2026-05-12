@@ -879,6 +879,20 @@ void FlatBuffersScenario::OnGUI() {
                 ImGui::SameLine(0.0f, 8.0f);
                 ImGui::TextColored(col, "%s", bridge->GetAutoConnectStatus().c_str());
 
+                // Firewall hint when discovery found nothing (common lab issue)
+                if (state == ACS::Done &&
+                    bridge->GetAutoConnectStatus().find("No peers found") != std::string::npos) {
+                    ImGui::SameLine(0.0f, 4.0f);
+                    ImGui::TextDisabled("(?)");
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(
+                            "No peers found -- possible causes:\n"
+                            "  1. No other peers are running yet (host connects first)\n"
+                            "  2. Windows Firewall blocking UDP port 54000\n"
+                            "     Fix: run setup_firewall.bat as Administrator on both machines");
+                    }
+                }
+
                 if (autoConnected && svc != nullptr) {
                     ImGui::Indent(8.0f);
                     ImGui::Text("My IP: %s   Port: %d   Peer ID: %d",

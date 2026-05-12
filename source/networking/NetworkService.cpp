@@ -245,4 +245,18 @@ std::string NetworkService::GetLocalIPString() const {
     return buf;
 }
 
+std::vector<NetworkService::ActivePeer> NetworkService::GetActivePeers() const
+{
+    std::vector<ActivePeer> result;
+    result.reserve(MAX_PEERS);
+    for (uint8_t i = 0U; i < MAX_PEERS; ++i) {
+        if (m_peers[i].active) {
+            result.push_back({ static_cast<uint8_t>(i + 1U),
+                               m_peers[i].addr,
+                               m_peers[i].port });
+        }
+    }
+    return result;
+}
+
 } // namespace GE::Networking

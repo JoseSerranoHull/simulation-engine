@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include <array>
+#include <vector>
 /* parasoft-end-suppress ALL */
 
 #include "networking/Packets.h"
@@ -89,6 +90,20 @@ namespace GE::Networking {
         bool    IsConnected()    const { return m_initialised; }
         uint8_t GetLocalPeerId() const { return m_localPeerId; }
         void    SetLocalPeerId(uint8_t id) { m_localPeerId = id; }
+
+        /** @brief Returns true if peerId (1–4) is currently registered and active. */
+        bool HasPeer(uint8_t peerId) const {
+            if (peerId < 1U || peerId > MAX_PEERS) { return false; }
+            return m_peers[static_cast<std::size_t>(peerId - 1U)].active;
+        }
+
+        /** @brief Snapshot of active peers — used by NetworkBridge to relay peer lists. */
+        struct ActivePeer {
+            uint8_t  peerId { 0 };
+            uint32_t addr   { 0 };  ///< NBO
+            uint16_t port   { 0 };  ///< NBO
+        };
+        std::vector<ActivePeer> GetActivePeers() const;
 
     private:
         // We store the socket as uintptr_t to avoid exposing <winsock2.h> in this header.

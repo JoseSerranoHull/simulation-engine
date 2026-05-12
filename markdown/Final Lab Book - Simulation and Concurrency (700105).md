@@ -66,7 +66,7 @@ The ECS uses `EntityManager` to manage entity IDs and packed `ComponentArray<T>`
 <!-- TODO: With 2+ peers connected on the same scene, open the ImGui Network menu. Screenshot the Connected Peers list showing peer IDs, IP addresses, port numbers, and the current scene path in the auto-connect status line. Save as markdown-resources/FinalLab700105/s1_network_panel.png -->
 ![ImGui Network panel: Connected Peers list with peer IDs, IP:port entries, and the scene-matched auto-connect status confirming scene-aware discovery](markdown-resources/FinalLab700105/s1_network_panel.png)
 
-Up to four peers connect over LAN via auto-discovery: a new peer broadcasts `DiscoveryHello` packets carrying `scenePath[128]`; recipients on the same scene reply with `DiscoveryResponse` and broadcast `PeerAnnounce`. Peers on different scenes are silently filtered by an atomic `m_acceptedPeerMask` bitmask, preventing cross-scene packet pollution without explicit disconnect logic. Port-slot fallback handles same-machine multi-instance testing.
+Up to four peers connect over LAN via auto-discovery: a new peer broadcasts or unicasts `DiscoveryHello` packets carrying `scenePath[128]`; the first recipient on the same scene replies with `DiscoveryResponse` and also relays one additional `DiscoveryResponse` per peer it already knows (with `peerAddr` carrying each peer's real IP), giving the joiner the complete peer topology in a single round trip. All peers send a raw subnet `PeerAnnounce` broadcast on connection; each recipient unicasts its own `PeerAnnounce` back if the sender was previously unknown, ensuring full mutual registration even when the host's firewall blocks inbound unicast. Peers on different scenes are silently filtered by an atomic `m_acceptedPeerMask` bitmask, preventing cross-scene packet pollution without explicit disconnect logic.
 
 | Packet | ID | Key payload | Purpose |
 |---|---|---|---|
@@ -76,7 +76,7 @@ Up to four peers connect over LAN via auto-discovery: a new peer broadcasts `Dis
 | `SpawnObject` | 3 | entityId, type, pos, owner | Spawn replication |
 | `AnimationSync` | 4 | entityId, timer, waypointIdx | Animation state synchronisation |
 | `DiscoveryHello` | 5 | `scenePath[128]` | LAN discovery probe |
-| `DiscoveryResponse` | 6 | peerId, port, scenePath | Discovery reply |
+| `DiscoveryResponse` | 6 | peerId, peerAddr, scenePath | Discovery reply + host relay |
 | `PeerAnnounce` | 7 | peerId | Post-connect broadcast |
 
 Each entity carries an `OwnerComponent` (ONE–FOUR, colour-coded Red/Green/Blue/Yellow). The owning peer alone runs physics and resolves collisions for its entities, preventing impulses from being duplicated across the network. Static and animated objects are owned locally by all peers and do not broadcast `StateUpdate`.

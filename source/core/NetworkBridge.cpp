@@ -500,6 +500,33 @@ void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPor
     m_service->SendRaw(senderAddr, senderPort, &resp, sizeof(resp));
 
     GE_LOG_INFO("NetworkBridge: sent DiscoveryResponse (peer " + std::to_string(myId) + ")");
+
+    // Relay DiscoveryResponse for every other registered peer so the joiner learns the
+    // full peer topology from a single DiscoveryHello. peerAddr carries each peer's real
+    // IP (necessary because the relay packet is sent from THIS socket, not the peer's socket).
+    {
+        const std::string sceneCopy = [this]() {
+            std::lock_guard<std::mutex> lk(m_scenePathMutex);
+            return m_currentScenePath;
+        }();
+
+        for (const auto& peer : m_service->GetActivePeers()) {
+            if (peer.peerId == myId) { continue; }  // already sent our own above
+
+            Networking::Packets::DiscoveryResponse relay{};
+            relay.header.type     = Networking::Packets::PacketType::DiscoveryResponse;
+            relay.header.senderId = peer.peerId;
+            relay.peerID          = peer.peerId;
+            relay.peerAddr        = peer.addr;   // real NBO IP of the relayed peer
+            const std::size_t len = std::min(sceneCopy.size(), sizeof(relay.scenePath) - 1U);
+            std::memcpy(relay.scenePath, sceneCopy.c_str(), len);
+            relay.scenePath[len] = '\0';
+
+            m_service->SendRaw(senderAddr, senderPort, &relay, sizeof(relay));
+            GE_LOG_INFO("NetworkBridge: relayed DiscoveryResponse for peer "
+                        + std::to_string(peer.peerId));
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -514,13 +541,32 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
 
     char ipBuf[INET_ADDRSTRLEN]{};
     inet_ntop(AF_INET, &senderAddr, ipBuf, sizeof(ipBuf));
-
     const uint16_t peerPort = static_cast<uint16_t>(54000U + peerID - 1U);
-    m_service->AddPeer(peerID, ipBuf, peerPort);
-    RegisterScenePeer(peerID);  // arrived via scene-matched discovery chain
 
-    GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID) +
-                " announced itself from " + ipBuf);
+    // Check BEFORE adding so we can detect genuinely new peers.
+    const bool wasNew = !m_service->HasPeer(peerID);
+
+    m_service->AddPeer(peerID, ipBuf, peerPort);
+    RegisterScenePeer(peerID);
+
+    GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID)
+                + " announced itself from " + ipBuf);
+
+    // If this is a new peer, unicast our own PeerAnnounce back so they add us too.
+    // This closes the loop for assume-host joiners that skipped discovery and only
+    // know about Peer 1 (the assumed host) — after the bidirectional exchange they
+    // have each other's full peer entries.
+    // wasNew prevents infinite ping-pong: the second exchange finds wasNew=false → stops.
+    if (wasNew) {
+        const uint8_t myId = m_service->GetLocalPeerId();
+        Networking::Packets::PeerAnnounce reply{};
+        reply.header.type     = Networking::Packets::PacketType::PeerAnnounce;
+        reply.header.senderId = myId;
+        reply.peerID          = myId;
+        m_service->Send(peerID, &reply, sizeof(reply));
+        GE_LOG_INFO("NetworkBridge: sent PeerAnnounce reply to new peer "
+                    + std::to_string(peerID));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -540,9 +586,8 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
     m_autoConnectStatus = "Discovering...";
 
     m_discoveryThread = std::jthread([this, hostIP](std::stop_token stopToken) {
-        static constexpr uint16_t BASE_PORT      = 54000U;
-        static constexpr uint16_t DISCOVERY_PORT = 54998U;
-        static constexpr int      WAIT_MS        = 1500;
+        static constexpr uint16_t BASE_PORT = 54000U;
+        static constexpr int      WAIT_MS   = 1500;
 
         // Shut down any existing game socket BEFORE probing.
         // This prevents our own socket from answering the broadcast and falsely
@@ -587,9 +632,9 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         sockaddr_in local{};
         local.sin_family      = AF_INET;
         local.sin_addr.s_addr = INADDR_ANY;
-        local.sin_port        = htons(DISCOVERY_PORT);
+        local.sin_port        = 0;  // OS assigns a free ephemeral port — no same-machine conflicts
         if (bind(tempSock, reinterpret_cast<sockaddr*>(&local), sizeof(local)) == SOCKET_ERROR) {
-            m_autoConnectStatus = "Failed: port 54998 already in use";
+            m_autoConnectStatus = "Failed: could not bind discovery socket";
             m_autoConnectState.store(AutoConnectState::Failed);
             closesocket(tempSock);
             WSACleanup();
@@ -676,13 +721,34 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
                 continue;
             }
 
-            discovered[resp.peerID] = from.sin_addr.s_addr;
+            // Prefer relayed IP if the host provided one; otherwise use the packet sender's IP.
+            discovered[resp.peerID] = (resp.peerAddr != 0U) ? resp.peerAddr : from.sin_addr.s_addr;
         }
 
         closesocket(tempSock);
         WSACleanup();
 
         if (stopToken.stop_requested()) { return; }
+
+        // ── "Assume Host" fallback ────────────────────────────────────────────
+        // When the user provided a hostIP but received no DiscoveryResponse
+        // (common when the host's Windows Firewall blocks inbound unicast on
+        // port 54000 while still allowing cross-machine broadcast), inject the
+        // host as Peer 1 so we take slot 2 rather than slot 1 (which would
+        // create a peer-ID conflict). The raw-broadcast PeerAnnounce below then
+        // notifies the host of our existence via broadcast (which the IT firewall
+        // fix permits), completing the connection from the host's side.
+        bool assumedHost = false;
+        if (!hostIP.empty() && discovered.empty()) {
+            uint32_t assumedAddr = 0U;
+            if (inet_pton(AF_INET, hostIP.c_str(), &assumedAddr) == 1) {
+                discovered[1] = assumedAddr;
+                assumedHost   = true;
+                GE_LOG_INFO("NetworkBridge: no DiscoveryResponse from " + hostIP
+                            + " — assuming Peer 1 at that address"
+                            + " (host firewall may be blocking unicast response)");
+            }
+        }
 
         // --- Determine lowest free slot ---
         uint8_t slot = 0U;
@@ -729,15 +795,34 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
             connectedStr += "P" + std::to_string(peerID) + "(" + ipBuf + ")";
         }
 
-        // --- Announce ourselves to all discovered peers so they can add us back ---
-        // This fixes one-way discovery: when we found existing peers but they didn't
-        // know about us (because we weren't running when they connected).
-        if (!discovered.empty()) {
+        // --- Announce ourselves: unicast to discovered peers + raw subnet broadcast ---
+        // Unicast via Broadcast() covers peers found normally via DiscoveryResponse.
+        // The raw 255.255.255.255 broadcast covers the firewall-blocked case: the host
+        // couldn't respond to our DiscoveryHello (unicast blocked inbound) but CAN
+        // receive cross-machine broadcast (enabled by Warren's IT firewall fix).
+        // This allows the host to learn our peer ID and port without us needing
+        // a direct unicast response.
+        {
             Networking::Packets::PeerAnnounce announce{};
             announce.header.type     = Networking::Packets::PacketType::PeerAnnounce;
             announce.header.senderId = slot;
             announce.peerID          = slot;
-            m_service->Broadcast(&announce, sizeof(announce));
+
+            // Unicast to any peers discovered normally via DiscoveryResponse
+            if (!discovered.empty() && !assumedHost) {
+                m_service->Broadcast(&announce, sizeof(announce));
+            }
+
+            // Raw subnet broadcast to all game ports so hosts with inbound-unicast-
+            // blocked firewalls still receive our PeerAnnounce via broadcast.
+            // INADDR_BROADCAST (0xFFFFFFFF) is byte-order-neutral.
+            // SendRaw expects port already in network byte order.
+            for (int p = 0; p < 4; ++p) {
+                m_service->SendRaw(
+                    INADDR_BROADCAST,
+                    htons(static_cast<uint16_t>(BASE_PORT + p)),
+                    &announce, sizeof(announce));
+            }
         }
 
         // --- Finalise ---
@@ -745,7 +830,10 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
                               " | Port " + std::to_string(gamePort) +
                               (connectedStr.empty()
                                   ? " | No peers found yet"
-                                  : " | Connected to: " + connectedStr);
+                                  : (assumedHost
+                                      ? " | Assumed host at " + hostIP
+                                        + " (no response -- firewall?)"
+                                      : " | Connected to: " + connectedStr));
 
         m_pendingPostConnectSync.store(true);
         m_autoConnectState.store(AutoConnectState::Done);

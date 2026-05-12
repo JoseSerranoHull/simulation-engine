@@ -122,12 +122,15 @@ struct DiscoveryHello {
     char   scenePath[128] {};  // The scene the new peer is currently on
 };
 
-// DiscoveryResponse: reply from an already-connected peer.
+// DiscoveryResponse: sent by an existing peer AND relayed on behalf of every
+// other peer it knows (host relay). peerAddr carries the relayed peer's actual
+// IP so a new joiner can correctly register all peers from a single request.
 struct DiscoveryResponse {
-    Header  header { PacketType::DiscoveryResponse };
-    uint8_t peerID { 0 };      // 1–4: which slot this peer currently occupies
-    uint8_t _pad[3]{};
-    char    scenePath[128] {}; // The scene this peer is on (for scene filtering)
+    Header   header   { PacketType::DiscoveryResponse };
+    uint8_t  peerID   { 0 };       // 1–4: slot this peer occupies
+    uint8_t  _pad[3]  {};
+    uint32_t peerAddr { 0 };       // NBO IPv4 of relayed peer; 0 = use sender's IP
+    char     scenePath[128] {};    // The scene this peer is on (for scene filtering)
 };
 
 // PeerAnnounce: broadcast after auto-connect so existing peers can add us.
@@ -565,24 +568,32 @@ Step 1 — Joiner sends DiscoveryHello (with its current scene path)
                                     ──► 192.168.1.10:54002
                                     ──► 192.168.1.10:54003
 
-Step 2 — Existing peer responds (scene-filtered!)
+Step 2 — Existing peer responds (scene-filtered!) + relays full peer list
     Peer 1 receives DiscoveryHello:
       · Checks: does incoming scenePath == my scenePath?
       · If NO  → silently ignore (different scene session, no connection)
-      · If YES → send DiscoveryResponse { peerID=1, scenePath="…01_multiplayer…" }
-                 to the sender's temp socket (port 54998)
+      · If YES → send DiscoveryResponse { peerID=1, peerAddr=0, scenePath=… }
+                 to the sender's ephemeral port (from recvfrom — OS-assigned)
+      · Also sends one DiscoveryResponse per registered peer:
+               → { peerID=2, peerAddr=Peer2's_IP, scenePath=… }
+               → { peerID=3, peerAddr=Peer3's_IP, scenePath=… }
+                 Joiner learns the full topology in a single round trip.
 
 Step 3 — Joiner picks lowest free slot
     Joiner collects responses for 1.5 s:
-      · discovered = { 1: "192.168.1.10" }
-      · Tries slot 1 (taken) → tries slot 2 → binds port 54001 successfully
-      · Sets localPeerId = 2
+      · discovered = { 1: "192.168.1.10", 2: "192.168.1.20" }  ← uses peerAddr for relayed IPs
+      · Tries lowest free slot (e.g. 3) → binds port 54002 successfully
+      · Sets localPeerId = 3
 
-Step 4 — Joiner announces itself
-    Peer 2 ──► PeerAnnounce { peerID=2 } ──► broadcast to all game ports
-    Peer 1 receives it → handlePeerAnnounce() → AddPeer(2, "192.168.x.x", 54001)
-                       → RegisterScenePeer(2)  ← now Peer 1 accepts Peer 2's state
-    Both sides now trust each other: m_acceptedPeerMask has the right bit set.
+Step 4 — Joiner announces itself (bidirectional acknowledgement)
+    Peer 3 ──► PeerAnnounce { peerID=3 } ──► raw broadcast to 255.255.255.255:54000–54003
+    Peer 1 receives it (wasNew=true) → AddPeer(3) → RegisterScenePeer(3)
+                                     → unicasts PeerAnnounce{1} back to Peer 3
+    Peer 2 receives it (wasNew=true) → AddPeer(3) → RegisterScenePeer(3)
+                                     → unicasts PeerAnnounce{2} back to Peer 3
+    Peer 3 receives PeerAnnounce{1},{2} → AddPeer(1,2) → RegisterScenePeer(1,2)
+                                        → unicasts PeerAnnounce{3} back (both already knew 3 → loop ends)
+    All peers: m_acceptedPeerMask has every connected peer's bit set.
 ```
 
 ### Scene Filtering During Discovery
@@ -633,7 +644,7 @@ while (slot <= 4U) {
 }
 ```
 
-On separate physical machines this is never needed — each machine has its own port namespace.
+On separate physical machines this is never needed — each machine has its own port namespace. For same-machine multi-client testing, `BeginAutoConnect` binds the discovery temp socket to port `0` so the OS assigns a unique ephemeral port per instance; two clients on the same machine can run auto-connect simultaneously without conflict.
 
 ### Auto-Connect Code Skeleton
 
@@ -652,10 +663,12 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP) {
         std::string localScene;
         { std::lock_guard lock(m_scenePathMutex); localScene = m_currentScenePath; }
 
-        // 4. Open temporary socket on port 54998 (receives DiscoveryResponses)
+        // 4. Open temporary socket on an OS-assigned ephemeral port (port 0).
+        //    Each instance gets a unique port — no conflicts when two clients
+        //    run auto-connect on the same machine simultaneously.
         SOCKET tempSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         setsockopt(tempSock, SOL_SOCKET, SO_BROADCAST, ...);
-        bind(tempSock, INADDR_ANY:54998, ...);
+        bind(tempSock, INADDR_ANY:0, ...);   // port 0 → OS picks a free port
 
         // 5. Build hello packet with scene path
         Packets::DiscoveryHello hello{};
@@ -673,18 +686,75 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP) {
             sendto(tempSock, &hello, sizeof(hello), ...);
         }
 
-        // 7. Collect DiscoveryResponses for 1.5 s, filter by scene
+        // 7. Collect DiscoveryResponses for 1.5 s, filter by scene.
+        //    Use resp.peerAddr (if non-zero) for relayed peers' actual IPs;
+        //    fall back to from.sin_addr.s_addr for the host's own response.
         std::map<uint8_t, uint32_t> discovered;
-        // ... receive loop, check scenePath matches localScene ...
+        // ... discovered[resp.peerID] = peerAddr ? peerAddr : from.addr ...
 
         closesocket(tempSock);
 
+        // 7.5 Assume-host fallback (firewall-blocked case):
+        //    If hostIP was given but no response arrived, inject host as Peer 1.
+        //    Port fallback in step 8 then finds the next free slot automatically.
+
         // 8. Pick lowest free slot, bind game socket, register discovered peers
-        // 9. Broadcast PeerAnnounce so existing peers can add us back
+        // 9. Announce ourselves: unicast to discovered peers (Broadcast()) +
+        //    raw subnet broadcast to 255.255.255.255:54000–54003 (covers hosts
+        //    whose firewall blocks unicast but allows LAN broadcast).
+        //    Bidirectional ack in handlePeerAnnounce() closes any remaining gaps.
         m_autoConnectState.store(AutoConnectState::Done);
     });
 }
 ```
+
+### Assume-Host Fallback
+
+When a joiner provides a `hostIP` but receives no `DiscoveryResponse` — common when the host's Windows Firewall blocks inbound unicast on port 54000 — the engine injects the host as Peer 1 rather than treating it as unknown:
+
+```cpp
+if (!hostIP.empty() && discovered.empty()) {
+    inet_pton(AF_INET, hostIP.c_str(), &assumedAddr);
+    discovered[1] = assumedAddr;  // assume host is Peer 1
+    assumedHost   = true;
+}
+```
+
+The joiner picks the lowest free slot from `discovered` (Peer 2 if no one else responded, or higher via port fallback if earlier slots are already in use on the same machine), binds its game socket, and sends a **raw subnet broadcast** `PeerAnnounce` to `255.255.255.255:54000–54003`. The host — which can receive broadcast packets even when its inbound unicast is blocked — registers the joiner through `handlePeerAnnounce`. The status line shows `Assumed host at X.X.X.X (no response -- firewall?)` to guide the user.
+
+### Bidirectional PeerAnnounce Acknowledgement
+
+When any peer receives a `PeerAnnounce` from a peer it does **not yet know about** (`HasPeer()` returns false), it immediately unicasts its own `PeerAnnounce` back. This two-step exchange ensures peers that connected via the assume-host path — and therefore only have the host in their peer list — still discover each other without any additional user action:
+
+```
+Peer 3 broadcasts PeerAnnounce{3}
+→ Peer 2 (wasNew=true): AddPeer(3), unicast PeerAnnounce{2} → Peer 3
+→ Peer 3 (wasNew=true): AddPeer(2), unicast PeerAnnounce{3} → Peer 2
+→ Peer 2 receives PeerAnnounce{3} again (wasNew=false): no reply — terminates
+```
+
+At most **two `PeerAnnounce` exchanges** occur per peer pair, after which both sides hold full mutual knowledge.
+
+### Multi-Peer Topology (3–4 Peers)
+
+All joiners (Peers 2, 3, 4) type only the **host's IP** (Peer 1). No additional IPs are needed. With the firewall script applied, the host relay delivers the full peer table in one round trip:
+
+```
+Peer C → DiscoveryHello → Peer 1 (host, Peer 2 already connected)
+Peer 1 replies:
+  DiscoveryResponse { peerID=1, peerAddr=0 }            ← own slot
+  DiscoveryResponse { peerID=2, peerAddr=10.140.9.74 }  ← relay for Peer 2
+Peer C: discovered = {1: host, 2: Peer2} → takes slot 3 ✓
+```
+
+Without the firewall script (assume-host path), the port fallback plus bidirectional PeerAnnounce ack handle 3–4 peers as long as each joiner connects **more than ~2 seconds apart** (the length of the discovery window). If multiple joiners click simultaneously before any PeerAnnounce has been received, they may pick the same slot; in that case the port-fallback loop will detect the `WSAEADDRINUSE` error on `Init()` and advance to the next slot automatically.
+
+### Windows Firewall — Lab Setup
+
+Run `setup_firewall.bat` (project root) as **Administrator** once on every lab machine. This adds inbound UDP rules for ports 54000–54003 (auto-connect), 54998 (legacy temp socket, kept for safety), and 7000–7003 (manual connect).
+
+- **Without firewall rules**: assume-host path — one-directional sync (joiners see the host; host `tracked = 0`). Machine B's screen shows full multiplayer; Machine A's does not.
+- **With firewall rules**: full bidirectional sync — both screens show `tracked ≥ N-1`.
 
 ---
 
@@ -783,12 +853,15 @@ SetThreadAffinityMask(networkingThread.native_handle(), 0x06);           // Core
 
 3. Second machine clicks Auto Connect (types host's IP)
    → BeginAutoConnect("192.168.1.10")
-   → unicasts DiscoveryHello to 192.168.1.10:54000–54003
-   → host responds with DiscoveryResponse { peerID=1 }
-   → joiner takes slot 2, binds port 54001
-   → broadcasts PeerAnnounce { peerID=2 }
-   → host's handlePeerAnnounce() adds Peer 2, calls RegisterScenePeer(2)
-   → Both: m_acceptedPeerMask has peer's bit set → state packets accepted
+   → unicasts DiscoveryHello to 192.168.1.10:54000–54003 from an ephemeral port
+   → host responds with DiscoveryResponse { peerID=1, peerAddr=0 }
+   → host also relays DiscoveryResponse for every other registered peer (3-4 peer support)
+   → if host can't respond (firewall): assume-host fallback injects host as Peer 1
+   → joiner takes lowest free slot, binds game port (e.g. 54001 for Peer 2)
+   → broadcasts raw subnet PeerAnnounce to 255.255.255.255:54000–54003
+   → host's handlePeerAnnounce() adds joiner, calls RegisterScenePeer(N)
+   → host unicasts PeerAnnounce{1} back (bidirectional ack) → joiner adds host
+   → All parties: m_acceptedPeerMask has every peer's bit set → state packets accepted
 
 4. Physics loop (each tick)
    → BroadcastOwnedStates() — sends owned entity state to all peers
@@ -822,4 +895,4 @@ SetThreadAffinityMask(networkingThread.native_handle(), 0x06);           // Core
 | Scene mismatch (peer on different scene receives state) | `m_acceptedPeerMask` includes peers from a different scene | Log `m_acceptedPeerMask` after discovery | Verify `SetCurrentScene(path)` is called in `OnLoad` and `OnUnload`; discovery filters by scene path |
 | Spawned objects appear at world origin on remote | `SpawnObject` packet sent before entity is positioned | Log `entity.position` at the moment of broadcast | Apply position before broadcasting spawn packet |
 | Animation timer drifts out of sync | `BroadcastAnimationStates()` not called after connect | Log calls to `BroadcastAnimationStates` | Ensure `m_pendingPostConnectSync = true` is set during discovery and flushed in the next bridge tick |
-| Same-machine testing: second instance fails to bind | Port collision on localhost | Intentional design — two instances of same scene share a port | Test same-scene multiplayer on two separate machines; or modify ports to be instance-unique |
+| Same-machine: second auto-connect instance takes the same peer slot as the first | Host's firewall blocked DiscoveryResponse so both instances ran assume-host and picked slot 2 | Check if port 54000 is reachable from the host machine; run `setup_firewall.bat` | With firewall rules open, the host relays its peer list and the second instance picks the correct slot; temp socket port-0 binding means both can run simultaneously without 54998 conflict |

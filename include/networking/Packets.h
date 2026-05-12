@@ -104,12 +104,13 @@ namespace GE::Networking::Packets {
     // DiscoveryResponse — unicast reply from an already-connected peer
     // -------------------------------------------------------------------------
     struct DiscoveryResponse {
-        Header  header { PacketType::DiscoveryResponse };
-        uint8_t peerID { 0 };   ///< 1–4: which slot this peer currently occupies
-        uint8_t _pad[3]{};
-        char    scenePath[128] {};  ///< scene this peer is currently in
+        Header   header  { PacketType::DiscoveryResponse };
+        uint8_t  peerID  { 0 };       ///< 1–4: slot this peer occupies
+        uint8_t  _pad[3] {};
+        uint32_t peerAddr { 0 };      ///< NBO IPv4 of the relayed peer; 0 = use packet sender's IP
+        char     scenePath[128] {};   ///< scene this peer is currently in
     };
-    static_assert(sizeof(DiscoveryResponse) == 136, "DiscoveryResponse wire size changed — update all peers");
+    static_assert(sizeof(DiscoveryResponse) == 140, "DiscoveryResponse wire size changed — update all peers");
 
     // -------------------------------------------------------------------------
     // PeerAnnounce — broadcast after auto-connect so existing peers can add us

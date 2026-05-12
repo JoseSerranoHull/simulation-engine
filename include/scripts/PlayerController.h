@@ -43,6 +43,10 @@ protected:
     float m_moveSpeed   { 5.0f  };
     float m_jumpImpulse { 6.0f  };
     float m_hDamping    { 0.85f };
+
+private:
+    bool  m_prevJumpInput { false };
+    float m_jumpCooldown  { 0.0f  };
 };
 
 } // namespace GE::Scripts

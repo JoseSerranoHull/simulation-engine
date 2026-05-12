@@ -52,6 +52,10 @@ public:
     glm::vec3 startPosition{ 0.0f };        ///< Read-only: recorded at Start(), shown in inspector
     int       collisionCount{ 0 };          ///< Running count of Enter events this session
 
+private:
+    bool  m_spaceWasDown { false };
+    float m_jumpCooldown { 0.0f  };
+
     const char* GetScriptName() const override { return "DemoPlayerScript"; }
 
     // -----------------------------------------------------------------------
@@ -109,11 +113,17 @@ public:
         if (in->IsKeyDown(GLFW_KEY_DOWN) || in->IsKeyDown(GLFW_KEY_S))
             t->m_localPosition.z += moveSpeed * dt;
 
-        // Jump — apply upward velocity via RigidBody if present
-        if (in->IsKeyDown(GLFW_KEY_SPACE)) {
+        // Jump — edge-triggered + cooldown guard
+        const bool spaceNow = in->IsKeyDown(GLFW_KEY_SPACE);
+        const bool jumpEdge = spaceNow && !m_spaceWasDown;
+        m_spaceWasDown      = spaceNow;
+        m_jumpCooldown      = glm::max(0.0f, m_jumpCooldown - dt);
+
+        if (jumpEdge && m_jumpCooldown <= 0.0f) {
             auto* rb = GetEntityManager()->TryGetTIComponent<GE::Components::RigidBody>(GetEntityID());
-            if (rb && glm::abs(rb->velocity.y) < 0.1f) {   // simple grounded check
+            if (rb && glm::abs(rb->velocity.y) < 0.1f) {
                 rb->velocity.y = jumpImpulse;
+                m_jumpCooldown = 0.4f;
             }
         }
 

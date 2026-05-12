@@ -42,9 +42,15 @@ void PlayerController::Update(float dt) {
         rb->velocity.z *= m_hDamping;
     }
 
-    // Step 4: Jump impulse (virtual — RacerPlayerController returns false).
-    if (ReadJumpInput() && glm::abs(rb->velocity.y) < 0.5f) {
+    // Step 4: Jump impulse — edge-triggered (fires once per press) + cooldown guard.
+    const bool jumpNow  = ReadJumpInput();
+    const bool jumpEdge = jumpNow && !m_prevJumpInput;
+    m_prevJumpInput     = jumpNow;
+    m_jumpCooldown      = glm::max(0.0f, m_jumpCooldown - dt);
+
+    if (jumpEdge && m_jumpCooldown <= 0.0f && glm::abs(rb->velocity.y) < 0.5f) {
         rb->velocity.y = m_jumpImpulse;
+        m_jumpCooldown = 0.4f;
     }
 
     // Step 5: Extension point for subclass per-frame actions (shoot, boost, etc.).

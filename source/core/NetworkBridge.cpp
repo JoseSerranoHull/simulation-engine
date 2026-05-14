@@ -15,14 +15,59 @@
 
 /* parasoft-begin-suppress ALL */
 #include <cstring>
+#include <ctime>
 #include <algorithm>
 #include <chrono>
 #include <map>
 #include <random>
+#include <sstream>
 #include <glm/gtc/quaternion.hpp>
 /* parasoft-end-suppress ALL */
 
 namespace GE {
+
+// ---------------------------------------------------------------------------
+// Diagnostic helpers
+// ---------------------------------------------------------------------------
+
+namespace {
+    std::string wallClockStr() {
+        const std::time_t t = std::chrono::system_clock::to_time_t(
+            std::chrono::system_clock::now());
+        struct tm tm_info {};
+        localtime_s(&tm_info, &t);
+        char buf[12]{};
+        std::strftime(buf, sizeof(buf), "%H:%M:%S", &tm_info);
+        return buf;
+    }
+} // anonymous namespace
+
+void NetworkBridge::logDiscovery(const std::string& text)
+{
+    GE_LOG_INFO("NetworkBridge [Discovery]: " + text);
+    std::lock_guard<std::mutex> lock(m_discoveryLogMutex);
+    if (m_discoveryLog.size() >= MAX_DISCOVERY_LOG) { m_discoveryLog.pop_front(); }
+    m_discoveryLog.push_back({ wallClockStr(), text });
+}
+
+std::vector<NetworkBridge::DiscoveryEvent> NetworkBridge::GetDiscoveryLogSnapshot() const
+{
+    std::lock_guard<std::mutex> lock(m_discoveryLogMutex);
+    return { m_discoveryLog.begin(), m_discoveryLog.end() };
+}
+
+void NetworkBridge::ClearDiscoveryLog()
+{
+    std::lock_guard<std::mutex> lock(m_discoveryLogMutex);
+    m_discoveryLog.clear();
+}
+
+uint64_t NetworkBridge::GetPeerLastPacketMs(uint8_t peerId) const
+{
+    if (peerId < 1U || peerId > Networking::NetworkService::MAX_PEERS) { return 0U; }
+    return m_peerLastPacketMs[static_cast<std::size_t>(peerId - 1U)]
+        .load(std::memory_order_relaxed);
+}
 
 // ---------------------------------------------------------------------------
 // BroadcastOwnedStates
@@ -148,6 +193,12 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
 
     if (pkt.header.sequence <= m_lastSeenSequence[peerIdx]) { return; }
     m_lastSeenSequence[peerIdx] = pkt.header.sequence;
+
+    // Stamp arrival time for ImGui per-peer diagnostics
+    m_peerLastPacketMs[peerIdx].store(
+        static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count()),
+        std::memory_order_relaxed);
 
     // Dead reckoning: store authoritative state; blend will be applied
     // by UpdateRemoteEntities() on the physics thread.
@@ -462,7 +513,18 @@ void NetworkBridge::RegisterScenePeer(uint8_t peerId)
 void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPort,
                                           const uint8_t* data, std::size_t size)
 {
-    if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
+    // Log receipt BEFORE any early-return check — absence of this log in the terminal
+    // confirms the packet never reached the game socket (firewall / timing race).
+    {
+        char senderIp[INET_ADDRSTRLEN]{};
+        inet_ntop(AF_INET, &senderAddr, senderIp, sizeof(senderIp));
+        logDiscovery("<- DiscoveryHello from " + std::string(senderIp));
+    }
+
+    if ((m_service == nullptr) || !m_service->IsConnected()) {
+        logDiscovery("   (ignored — game socket not connected yet)");
+        return;
+    }
     const uint8_t myId = m_service->GetLocalPeerId();
     if (myId < 1U || myId > 4U) { return; }
 
@@ -480,8 +542,7 @@ void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPor
         std::lock_guard<std::mutex> lock(m_scenePathMutex);
         if (!incomingScene.empty() && !m_currentScenePath.empty()
             && incomingScene != m_currentScenePath) {
-            GE_LOG_INFO("NetworkBridge: ignoring DiscoveryHello — scene mismatch ("
-                        + incomingScene + ")");
+            logDiscovery("   rejected — scene mismatch (theirs: " + incomingScene + ")");
             return;
         }
     }
@@ -499,7 +560,7 @@ void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPor
     }
     m_service->SendRaw(senderAddr, senderPort, &resp, sizeof(resp));
 
-    GE_LOG_INFO("NetworkBridge: sent DiscoveryResponse (peer " + std::to_string(myId) + ")");
+    logDiscovery("-> DiscoveryResponse sent (I am Peer " + std::to_string(myId) + ")");
 
     // Relay DiscoveryResponse for every other registered peer so the joiner learns the
     // full peer topology from a single DiscoveryHello. peerAddr carries each peer's real
@@ -523,8 +584,7 @@ void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPor
             relay.scenePath[len] = '\0';
 
             m_service->SendRaw(senderAddr, senderPort, &relay, sizeof(relay));
-            GE_LOG_INFO("NetworkBridge: relayed DiscoveryResponse for peer "
-                        + std::to_string(peer.peerId));
+            logDiscovery("-> Relayed DiscoveryResponse for Peer " + std::to_string(peer.peerId));
         }
     }
 }
@@ -641,6 +701,16 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
             return;
         }
 
+        // Log the OS-assigned ephemeral port — useful for firewall debugging
+        {
+            sockaddr_in boundAddr{};
+            int boundLen = static_cast<int>(sizeof(boundAddr));
+            if (getsockname(tempSock, reinterpret_cast<sockaddr*>(&boundAddr), &boundLen) == 0) {
+                logDiscovery("Discovery temp socket open on port "
+                             + std::to_string(ntohs(boundAddr.sin_port)));
+            }
+        }
+
         u_long nbMode = 1;
         ioctlsocket(tempSock, FIONBIO, &nbMode);
 
@@ -665,29 +735,60 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
                 WSACleanup();
                 return;
             }
-            GE_LOG_INFO("NetworkBridge: unicasting DiscoveryHello to " + hostIP);
+            logDiscovery("-> DiscoveryHello unicast to " + hostIP);
         } else {
             dest.sin_addr.s_addr = INADDR_BROADCAST;
-            GE_LOG_INFO("NetworkBridge: broadcasting DiscoveryHello");
+            logDiscovery("-> DiscoveryHello broadcast (host mode)");
         }
 
-        for (int p = 0; p < 4; ++p) {
-            dest.sin_port = htons(static_cast<uint16_t>(BASE_PORT + p));
-            sendto(tempSock,
-                   reinterpret_cast<const char*>(&hello),
-                   static_cast<int>(sizeof(hello)), 0,
-                   reinterpret_cast<sockaddr*>(&dest),
-                   static_cast<int>(sizeof(dest)));
-        }
+        // Helper: send DiscoveryHello to all four game ports, log any OS send errors.
+        const auto sendHello = [&](const char* label) {
+            for (int p = 0; p < 4; ++p) {
+                dest.sin_port = htons(static_cast<uint16_t>(BASE_PORT + p));
+                const int sent = sendto(tempSock,
+                                        reinterpret_cast<const char*>(&hello),
+                                        static_cast<int>(sizeof(hello)), 0,
+                                        reinterpret_cast<sockaddr*>(&dest),
+                                        static_cast<int>(sizeof(dest)));
+                if (sent == SOCKET_ERROR) {
+                    logDiscovery(std::string("   sendto port ")
+                                 + std::to_string(BASE_PORT + p)
+                                 + " FAILED (WSA " + std::to_string(WSAGetLastError()) + ")"
+                                 + " [" + label + "]");
+                }
+            }
+        };
+
+        // Initial send, then two retries at 1/3 and 2/3 of the collection window.
+        // This compensates for UDP packet loss AND for the timing race where the
+        // host's game socket is briefly offline during its own discovery phase.
+        sendHello("initial");
 
         // --- Collect DiscoveryResponse packets for WAIT_MS milliseconds ---
         // key = peerID (1–4), value = sender IP (network byte order)
         std::map<uint8_t, uint32_t> discovered;
 
-        const auto deadline = std::chrono::steady_clock::now() +
-                              std::chrono::milliseconds(WAIT_MS);
+        const auto windowStart = std::chrono::steady_clock::now();
+        const auto deadline    = windowStart + std::chrono::milliseconds(WAIT_MS);
+        const auto retryAt1    = windowStart + std::chrono::milliseconds(WAIT_MS / 3);
+        const auto retryAt2    = windowStart + std::chrono::milliseconds(2 * WAIT_MS / 3);
+        bool sentRetry1 = false, sentRetry2 = false;
 
         while (std::chrono::steady_clock::now() < deadline && !stopToken.stop_requested()) {
+
+            // Retry sends within the wait window to handle packet loss and timing races
+            const auto now = std::chrono::steady_clock::now();
+            if (!sentRetry1 && now >= retryAt1) {
+                sentRetry1 = true;
+                sendHello("retry 1/2");
+                logDiscovery("-> DiscoveryHello retry 1/2 (500 ms)");
+            }
+            if (!sentRetry2 && now >= retryAt2) {
+                sentRetry2 = true;
+                sendHello("retry 2/2");
+                logDiscovery("-> DiscoveryHello retry 2/2 (1000 ms)");
+            }
+
             fd_set readSet;
             FD_ZERO(&readSet);
             FD_SET(tempSock, &readSet);
@@ -695,7 +796,7 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
             const int ready = select(0, &readSet, nullptr, nullptr, &tv);
             if (ready <= 0) { continue; }
 
-            char buf[256]{};  // must hold DiscoveryResponse (136 bytes)
+            char buf[256]{};
             sockaddr_in from{};
             int fromLen = static_cast<int>(sizeof(from));
             const int n = recvfrom(tempSock, buf, static_cast<int>(sizeof(buf)),
@@ -715,10 +816,19 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
             resp.scenePath[sizeof(resp.scenePath) - 1] = '\0';
             if (!localScene.empty() && resp.scenePath[0] != '\0'
                 && std::string(resp.scenePath) != localScene) {
-                GE_LOG_INFO("NetworkBridge: skipping DiscoveryResponse from peer "
-                            + std::to_string(resp.peerID) + " — scene mismatch ("
-                            + std::string(resp.scenePath) + ")");
+                logDiscovery("<- DiscoveryResponse from Peer " + std::to_string(resp.peerID)
+                             + " REJECTED — scene mismatch");
                 continue;
+            }
+
+            // Log the received response before storing it
+            {
+                char fromIp[INET_ADDRSTRLEN]{};
+                inet_ntop(AF_INET, &from.sin_addr, fromIp, sizeof(fromIp));
+                const bool isRelay = (resp.peerAddr != 0U);
+                logDiscovery("<- DiscoveryResponse: Peer " + std::to_string(resp.peerID)
+                             + " at " + std::string(fromIp)
+                             + (isRelay ? " [relayed]" : " [direct]"));
             }
 
             // Prefer relayed IP if the host provided one; otherwise use the packet sender's IP.
@@ -744,10 +854,11 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
             if (inet_pton(AF_INET, hostIP.c_str(), &assumedAddr) == 1) {
                 discovered[1] = assumedAddr;
                 assumedHost   = true;
-                GE_LOG_INFO("NetworkBridge: no DiscoveryResponse from " + hostIP
-                            + " — assuming Peer 1 at that address"
-                            + " (host firewall may be blocking unicast response)");
+                logDiscovery("!! No response after 3 attempts — assume-host fallback for "
+                             + hostIP + " (firewall or socket timing race)");
             }
+        } else if (discovered.empty() && hostIP.empty()) {
+            logDiscovery("No peers found via broadcast — connecting as host (Peer 1)");
         }
 
         // --- Determine lowest free slot ---
@@ -838,6 +949,9 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         m_pendingPostConnectSync.store(true);
         m_autoConnectState.store(AutoConnectState::Done);
 
+        logDiscovery("Connected as Peer " + std::to_string(slot)
+                     + " on port " + std::to_string(gamePort)
+                     + (assumedHost ? " [assume-host]" : " [full handshake]"));
         GE_LOG_INFO("NetworkBridge: auto-connect complete — " + m_autoConnectStatus);
     });
 }

@@ -5,12 +5,14 @@
 #include <cstdint>
 #include <array>
 #include <chrono>
+#include <deque>
 #include <map>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 /* parasoft-end-suppress ALL */
 
 // NetworkBridge is the ONLY class permitted to include both networking and ECS headers.
@@ -168,6 +170,25 @@ namespace GE {
             return m_remoteStates.size();
         }
 
+        // --- Network Diagnostics ---
+
+        /// A timestamped discovery event logged on every significant handshake step.
+        /// Displayed in the ImGui Network → Diagnostics panel and echoed to the terminal.
+        struct DiscoveryEvent {
+            std::string timestamp;  ///< "HH:MM:SS"
+            std::string text;       ///< human-readable description of the event
+        };
+
+        /// Thread-safe snapshot of the last MAX_DISCOVERY_LOG events. Safe to call from ImGui.
+        std::vector<DiscoveryEvent> GetDiscoveryLogSnapshot() const;
+
+        /// Clears the discovery log. Call from disconnectNetwork() between sessions.
+        void ClearDiscoveryLog();
+
+        /// Wall-clock milliseconds when the last StateUpdate arrived from peerId (1–4).
+        /// Returns 0 if no StateUpdate has been received yet from that peer.
+        uint64_t GetPeerLastPacketMs(uint8_t peerId) const;
+
     private:
         // Dead reckoning state for each tracked remote entity.
         // Lock ordering: physics thread acquires simMutex FIRST, then remoteStatesMutex.
@@ -213,6 +234,20 @@ namespace GE {
         std::string                   m_autoConnectStatus { "Idle" };
         std::jthread                  m_discoveryThread;
         std::atomic<bool>             m_pendingPostConnectSync { false };
+
+        // --- Network diagnostics (private storage) ---
+
+        /// Wall-clock ms of last received StateUpdate per peer (networking thread writes, main reads).
+        std::array<std::atomic<uint64_t>, Networking::NetworkService::MAX_PEERS> m_peerLastPacketMs {};
+
+        /// Discovery event ring buffer (mutex-protected; written by jthread + networking thread).
+        mutable std::mutex         m_discoveryLogMutex;
+        std::deque<DiscoveryEvent> m_discoveryLog;
+        static constexpr std::size_t MAX_DISCOVERY_LOG { 14U };
+
+        /// Appends a discovery event with the current wall-clock timestamp.
+        /// Also emits GE_LOG_INFO so the same text appears in the terminal.
+        void logDiscovery(const std::string& text);
 
         // --- Per-type packet handlers (called by ApplyReceivedState) ---
         void handleStateUpdate    (uint8_t senderId, const uint8_t* data, std::size_t size);

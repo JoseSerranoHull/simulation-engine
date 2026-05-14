@@ -1,4 +1,5 @@
 /* parasoft-begin-suppress ALL */
+#include <chrono>
 #include <filesystem>
 #include <algorithm>
 /* parasoft-end-suppress ALL */
@@ -1079,6 +1080,74 @@ void FlatBuffersScenario::OnGUI() {
             ImGui::TextDisabled("(no network bridge)");
         }
 
+        // ── Network Diagnostics ──────────────────────────────────────────────
+        ImGui::Separator();
+        if (ImGui::CollapsingHeader("Diagnostics##net")) {
+            // Socket status
+            ImGui::TextDisabled("Socket:");
+            ImGui::SameLine();
+            if (svc != nullptr && svc->IsConnected()) {
+                const int gamePort = static_cast<int>(54000 + svc->GetLocalPeerId() - 1);
+                ImGui::TextColored({ 0.2f, 1.0f, 0.2f, 1.0f },
+                                   "OPEN  port %d  (Peer %d)",
+                                   gamePort, static_cast<int>(svc->GetLocalPeerId()));
+            } else {
+                ImGui::TextColored({ 0.8f, 0.4f, 0.4f, 1.0f }, "OFFLINE");
+            }
+
+            // Per-peer last StateUpdate timestamp
+            if (bridge != nullptr && svc != nullptr && svc->IsConnected()) {
+                ImGui::Separator();
+                ImGui::TextDisabled("State packets received:");
+                const uint64_t nowMs = static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch()).count());
+
+                for (uint8_t p = 1U; p <= 4U; ++p) {
+                    if (!svc->HasPeer(p)) { continue; }
+                    const uint64_t lastMs = bridge->GetPeerLastPacketMs(p);
+                    ImGui::Text("  Peer %d:", static_cast<int>(p));
+                    ImGui::SameLine(90.0f);
+                    if (lastMs == 0U) {
+                        ImGui::TextColored({ 1.0f, 0.6f, 0.0f, 1.0f }, "no packets yet");
+                    } else {
+                        const int64_t agoMs = static_cast<int64_t>(nowMs - lastMs);
+                        if (agoMs < 300) {
+                            ImGui::TextColored({ 0.2f, 1.0f, 0.2f, 1.0f },
+                                              "%lld ms ago  LIVE", agoMs);
+                        } else if (agoMs < 2000) {
+                            ImGui::TextColored({ 1.0f, 1.0f, 0.3f, 1.0f },
+                                              "%lld ms ago  slow", agoMs);
+                        } else {
+                            ImGui::TextColored({ 1.0f, 0.3f, 0.3f, 1.0f },
+                                              "%lld ms ago  STALE", agoMs);
+                        }
+                    }
+                }
+            }
+
+            // Discovery event log
+            ImGui::Separator();
+            ImGui::TextDisabled("Discovery log:");
+            if (bridge != nullptr) {
+                const auto events = bridge->GetDiscoveryLogSnapshot();
+                if (events.empty()) {
+                    ImGui::TextDisabled("  (no events yet — click Auto Connect)");
+                }
+                for (const auto& ev : events) {
+                    ImGui::TextDisabled("%s", ev.timestamp.c_str());
+                    ImGui::SameLine(60.0f);
+                    // Colour-code: received (<-) green, sent (->) grey, warnings (!) orange
+                    ImVec4 col = { 0.7f, 0.7f, 0.7f, 1.0f };
+                    if (!ev.text.empty()) {
+                        if (ev.text[0] == '<') { col = { 0.3f, 1.0f, 0.5f, 1.0f }; }
+                        else if (ev.text[0] == '!') { col = { 1.0f, 0.6f, 0.2f, 1.0f }; }
+                    }
+                    ImGui::TextColored(col, "%s", ev.text.c_str());
+                }
+            }
+        }
+
         ImGui::EndMenu();
     }
 
@@ -1530,6 +1599,7 @@ void FlatBuffersScenario::disconnectNetwork() {
     }
     if (bridge != nullptr) {
         bridge->ClearRemoteStates();
+        bridge->ClearDiscoveryLog();
         bridge->ResetAutoConnect();
     }
 

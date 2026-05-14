@@ -619,6 +619,8 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
     // wasNew prevents infinite ping-pong: the second exchange finds wasNew=false → stops.
     if (wasNew) {
         const uint8_t myId = m_service->GetLocalPeerId();
+
+        // Reply to the new peer so they add us (existing bidirectional ack).
         Networking::Packets::PeerAnnounce reply{};
         reply.header.type     = Networking::Packets::PacketType::PeerAnnounce;
         reply.header.senderId = myId;
@@ -626,6 +628,36 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
         m_service->Send(peerID, &reply, sizeof(reply));
         GE_LOG_INFO("NetworkBridge: sent PeerAnnounce reply to new peer "
                     + std::to_string(peerID));
+
+        // Relay the new peer's PeerAnnounce to every OTHER registered peer via unicast.
+        //
+        // Why this is needed:
+        //   PeerAnnounce is broadcast to the subnet, but a peer whose game port
+        //   is inbound-blocked (e.g. Machine A port 54001) cannot receive the
+        //   broadcast.  However, it CAN receive from peers it has already
+        //   established a stateful firewall rule with (e.g. Machine B via discovery).
+        //   By forwarding PeerAnnounce{N} through Machine B → Machine A, Machine A
+        //   registers Peer N and sends a reply outbound (always allowed), which
+        //   creates the stateful rule for Peer N → Machine A — completing full sync.
+        //
+        // Loop terminates: forwarded packets arrive at already-connected peers with
+        // wasNew=false → no further relay → 1 hop maximum per new peer per notifier.
+        {
+            Networking::Packets::PeerAnnounce forward{};
+            forward.header.type     = Networking::Packets::PacketType::PeerAnnounce;
+            forward.header.senderId = peerID;  // looks like it originated from the new peer
+            forward.peerID          = peerID;
+
+            for (uint8_t p = 1U; p <= Networking::NetworkService::MAX_PEERS; ++p) {
+                if (p == peerID || p == myId) { continue; }  // skip new peer and self
+                if (m_service->HasPeer(p)) {
+                    m_service->Send(p, &forward, sizeof(forward));
+                    GE_LOG_INFO("NetworkBridge: relayed PeerAnnounce{" + std::to_string(peerID)
+                                + "} to Peer " + std::to_string(p)
+                                + " (assists inbound-blocked peers)");
+                }
+            }
+        }
     }
 }
 
@@ -821,14 +853,23 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
                 continue;
             }
 
-            // Log the received response before storing it
+            // Log the received response — for relayed entries show the actual peer IP
+            // (stored in peerAddr), not the packet sender's IP (always the host).
             {
                 char fromIp[INET_ADDRSTRLEN]{};
                 inet_ntop(AF_INET, &from.sin_addr, fromIp, sizeof(fromIp));
                 const bool isRelay = (resp.peerAddr != 0U);
+                char actualIp[INET_ADDRSTRLEN]{};
+                if (isRelay) {
+                    inet_ntop(AF_INET, &resp.peerAddr, actualIp, sizeof(actualIp));
+                } else {
+                    std::memcpy(actualIp, fromIp, sizeof(actualIp));
+                }
                 logDiscovery("<- DiscoveryResponse: Peer " + std::to_string(resp.peerID)
-                             + " at " + std::string(fromIp)
-                             + (isRelay ? " [relayed]" : " [direct]"));
+                             + " at " + std::string(actualIp)
+                             + (isRelay
+                                ? " [relayed via " + std::string(fromIp) + "]"
+                                : " [direct]"));
             }
 
             // Prefer relayed IP if the host provided one; otherwise use the packet sender's IP.
@@ -904,6 +945,26 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
             RegisterScenePeer(peerID);  // scene was verified during DiscoveryResponse filtering
             if (!connectedStr.empty()) { connectedStr += ", "; }
             connectedStr += "P" + std::to_string(peerID) + "(" + ipBuf + ")";
+        }
+
+        // --- UDP hole punch: Heartbeat from game socket to each discovered peer ---
+        // Windows Firewall is stateful for UDP: sending outbound from our game socket
+        // (A:54001 → B:54000) creates a temporary firewall rule allowing the reverse
+        // (B:54000 → A:54001) for ~30–120 s. This is how inbound StateUpdate packets
+        // from peers can reach a machine whose game port has no explicit inbound rule.
+        // Without this, the first BroadcastOwnedStates (up to 16 ms away) would do the
+        // same thing, but this immediate Heartbeat ensures the pinhole is open BEFORE
+        // any incoming PeerAnnounce reply or StateUpdate packet arrives.
+        if (!discovered.empty()) {
+            Networking::Packets::Heartbeat hb{};
+            hb.header.type     = Networking::Packets::PacketType::Heartbeat;
+            hb.header.senderId = slot;
+            hb.header.sequence = m_outSequence++;
+            for (const auto& [peerID, addr] : discovered) {
+                m_service->Send(peerID, &hb, sizeof(hb));
+            }
+            logDiscovery("-> Hole-punch Heartbeat to " + std::to_string(discovered.size())
+                         + " peer(s) — opens stateful firewall pinholes");
         }
 
         // --- Announce ourselves: unicast to discovered peers + raw subnet broadcast ---

@@ -72,6 +72,13 @@ namespace GE {
         void BroadcastSceneChange(const std::string& path);
 
         /**
+         * @brief Broadcasts a PeerLeave packet (sent 3× for reliability) so every
+         *        connected peer frees this slot before the local socket shuts down.
+         * Call site: disconnectNetwork(), BEFORE NetworkService::Shutdown().
+         */
+        void BroadcastPeerLeave();
+
+        /**
          * @brief Broadcasts the current elapsed/reversed state for every
          *        AnimatedObjectComponent so remote peers can snap their local
          *        animation timers to match. Call once after connecting.
@@ -257,6 +264,7 @@ namespace GE {
         void handleDiscoveryHello (uint32_t senderAddr, uint16_t senderPort,
                                    const uint8_t* data, std::size_t size);
         void handlePeerAnnounce   (uint8_t peerID, uint32_t senderAddr);
+        void handlePeerLeave      (uint8_t peerID);
     };
 
 } // namespace GE

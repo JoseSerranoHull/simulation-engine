@@ -19,6 +19,7 @@ namespace GE::Networking::Packets {
         DiscoveryHello    = 5,  ///< LAN auto-connect probe (new peer → existing peers)
         DiscoveryResponse = 6,  ///< Reply from existing peer (existing → new peer temp socket)
         PeerAnnounce      = 7,  ///< "I just joined as Peer N" broadcast after auto-connect
+        PeerLeave         = 8,  ///< "I am disconnecting" — sent before Shutdown so peers free the slot
     };
 
     // -------------------------------------------------------------------------
@@ -122,6 +123,14 @@ namespace GE::Networking::Packets {
         uint32_t peerAddr { 0 };      ///< NBO IPv4 of the announced peer; 0 = use packet sender's IP
     };
     static_assert(sizeof(PeerAnnounce) == 12, "PeerAnnounce wire size changed — update all peers");
+
+    // -------------------------------------------------------------------------
+    // PeerLeave — broadcast just before Shutdown so peers can free the slot
+    // -------------------------------------------------------------------------
+    struct PeerLeave {
+        Header header { PacketType::PeerLeave };  ///< senderId in header identifies who left
+    };
+    static_assert(sizeof(PeerLeave) == 4, "PeerLeave wire size changed — update all peers");
 
     #pragma pack(pop)
 

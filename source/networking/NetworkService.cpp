@@ -116,6 +116,12 @@ void NetworkService::AddPeer(uint8_t peerId, const std::string& ip, uint16_t por
                 " = " + ip + ":" + std::to_string(port));
 }
 
+void NetworkService::RemovePeer(uint8_t peerId) {
+    if (peerId < 1U || peerId > MAX_PEERS) { return; }
+    m_peers[static_cast<std::size_t>(peerId - 1U)] = PeerEntry{};
+    GE_LOG_INFO("NetworkService: peer " + std::to_string(peerId) + " removed (slot now free)");
+}
+
 // ---------------------------------------------------------------------------
 // Transmission
 // ---------------------------------------------------------------------------

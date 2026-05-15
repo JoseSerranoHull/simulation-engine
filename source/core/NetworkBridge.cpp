@@ -169,6 +169,12 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
             handlePeerAnnounce(pa.peerID, actualAddr);
         }
         break;
+    case Networking::Packets::PacketType::PeerLeave:
+        // senderId in the header already identifies who is leaving — no extra payload needed.
+        if (senderId >= 1U && senderId <= Networking::NetworkService::MAX_PEERS) {
+            handlePeerLeave(senderId);
+        }
+        break;
     default:
         break;  // Heartbeat, DiscoveryResponse (handled in jthread), and unknowns ignored
     }
@@ -367,6 +373,18 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
     rb->isStatic   = false;
     rb->useGravity = true;
     rb->velocity   = pkt.linearVelocity;
+
+    if (pkt.ownerPeerId >= 1U && pkt.ownerPeerId <= 4U) {
+        const auto ownerVal = static_cast<GE::Components::OwnerType>(pkt.ownerPeerId - 1U);
+        auto* oc = m_entityManager->TryGetTIComponent<GE::Components::OwnerComponent>(pkt.entityId);
+        if (oc != nullptr) {
+            oc->owner = ownerVal;
+        } else {
+            GE::Components::OwnerComponent newOc;
+            newOc.owner = ownerVal;
+            m_entityManager->AddComponent(pkt.entityId, newOc);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -665,6 +683,48 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// BroadcastPeerLeave — notify all peers this machine is disconnecting
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::BroadcastPeerLeave()
+{
+    if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
+
+    const uint8_t myId = m_service->GetLocalPeerId();
+    if (myId == 0U) { return; }
+
+    Networking::Packets::PeerLeave pkt{};
+    pkt.header.type     = Networking::Packets::PacketType::PeerLeave;
+    pkt.header.senderId = myId;
+    pkt.header.sequence = m_outSequence++;
+
+    // Send 3 times so at least one survives typical UDP packet loss.
+    for (int i = 0; i < 3; ++i) {
+        m_service->Broadcast(&pkt, sizeof(pkt));
+    }
+    GE_LOG_INFO("NetworkBridge: broadcast PeerLeave (Peer " + std::to_string(myId) + ")");
+}
+
+// ---------------------------------------------------------------------------
+// handlePeerLeave — a peer gracefully disconnected; free their slot
+// ---------------------------------------------------------------------------
+
+void NetworkBridge::handlePeerLeave(uint8_t peerID)
+{
+    if ((m_service == nullptr) || peerID < 1U || peerID > 4U) { return; }
+
+    m_service->RemovePeer(peerID);
+
+    // Clear from accepted scene-peer mask so their state packets are no longer applied.
+    const uint8_t bit = static_cast<uint8_t>(1U << (peerID - 1U));
+    m_acceptedPeerMask.fetch_and(static_cast<uint8_t>(~bit));
+
+    GE_LOG_INFO("NetworkBridge: Peer " + std::to_string(peerID)
+                + " left — slot freed, accepted mask cleared");
+    logDiscovery("Peer " + std::to_string(peerID) + " disconnected gracefully");
 }
 
 // ---------------------------------------------------------------------------

@@ -1595,6 +1595,9 @@ void FlatBuffersScenario::disconnectNetwork() {
     GE::Networking::NetworkService* svc = bridge ? bridge->GetService() : nullptr;
 
     if (svc != nullptr && svc->IsConnected()) {
+        // Notify peers before closing the socket so they free this slot immediately.
+        // Without this, a reconnect within seconds gets a new slot (e.g. Peer 3 instead of Peer 2).
+        if (bridge != nullptr) { bridge->BroadcastPeerLeave(); }
         svc->Shutdown();
     }
     if (bridge != nullptr) {

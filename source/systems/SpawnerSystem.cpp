@@ -85,6 +85,10 @@ namespace GE::Systems {
             ? static_cast<uint8_t>(sc.spawnedCount % 4)
             : (sc.ownerPeerId > 0U ? sc.ownerPeerId - 1U : 0U);
 
+        const uint8_t effectiveOwner = sc.isSequential
+            ? static_cast<uint8_t>(colorIdx + 1U)
+            : sc.ownerPeerId;
+
         // Pick random size variant if available, else fall back to canonical prefabTemplate
         const GE::Scene::FB::PrefabTemplate* tmpl = sc.prefabTemplate;
         if (!sc.prefabVariants.empty()) {
@@ -96,7 +100,7 @@ namespace GE::Systems {
 
         const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
             *tmpl, pos, glm::vec3{0.0f}, linVel, angVel,
-            sc.ownerPeerId, colorIdx, em);
+            effectiveOwner, colorIdx, em);
 
         if (id != UINT32_MAX) {
             ++sc.spawnedCount;
@@ -143,6 +147,10 @@ namespace GE::Systems {
                     ? static_cast<uint8_t>(sc.spawnedCount % 4)
                     : (sc.ownerPeerId > 0U ? sc.ownerPeerId - 1U : 0U);
 
+                const uint8_t effectiveOwner = sc.isSequential
+                    ? static_cast<uint8_t>(colorIdx + 1U)
+                    : sc.ownerPeerId;
+
                 // Pick random size variant if available, else fall back to canonical prefabTemplate
                 const GE::Scene::FB::PrefabTemplate* tmpl = sc.prefabTemplate;
                 if (!sc.prefabVariants.empty()) {
@@ -154,7 +162,7 @@ namespace GE::Systems {
 
                 const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
                     *tmpl, pos, glm::vec3{0.0f}, linVel, angVel,
-                    sc.ownerPeerId, colorIdx, em);
+                    effectiveOwner, colorIdx, em);
 
                 if (id == UINT32_MAX) { return; }
                 ++sc.spawnedCount;
@@ -165,7 +173,7 @@ namespace GE::Systems {
                     auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(id);
                     const float mass = (rb != nullptr && rb->inverseMass > 0.0f)
                                        ? (1.0f / rb->inverseMass) : 0.0f;
-                    bridge->BroadcastSpawnObject(id, sc.ownerPeerId, 0U, pos, glm::vec3{1.0f}, linVel, mass);
+                    bridge->BroadcastSpawnObject(id, effectiveOwner, 0U, pos, glm::vec3{1.0f}, linVel, mass);
                 }
             };
 

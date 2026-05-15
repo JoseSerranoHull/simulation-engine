@@ -57,6 +57,9 @@ namespace GE::Networking {
          */
         void AddPeer(uint8_t peerId, const std::string& ip, uint16_t port);
 
+        /** @brief Removes a single peer entry so its slot becomes available for reconnect. */
+        void RemovePeer(uint8_t peerId);
+
         // --- Transmission ---
 
         /** @brief Sends raw bytes to a specific peer (1-based ID). */

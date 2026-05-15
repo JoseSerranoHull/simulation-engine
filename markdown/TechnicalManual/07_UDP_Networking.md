@@ -62,6 +62,7 @@ enum class PacketType : uint8_t {
     DiscoveryHello    = 5,  // Auto-connect probe from a new peer
     DiscoveryResponse = 6,  // Reply from an already-connected peer
     PeerAnnounce      = 7,  // Broadcast after auto-connect: "I am Peer N"
+    PeerLeave         = 8,  // Sent before Shutdown so peers can free the slot
 };
 
 // ── Header — 4 bytes ───────────────────────────────────────────────────────
@@ -134,10 +135,21 @@ struct DiscoveryResponse {
 };
 
 // PeerAnnounce: broadcast after auto-connect so existing peers can add us.
+// peerAddr carries the actual IP when this packet is a relay — prevents routing corruption
+// when a relay node forwards the announcement and the receiver would otherwise use the
+// relay node's IP instead of the actual new peer's IP.
 struct PeerAnnounce {
-    Header  header { PacketType::PeerAnnounce };
-    uint8_t peerID { 0 };      // Slot just claimed (1–4)
-    uint8_t _pad[3]{};
+    Header   header   { PacketType::PeerAnnounce };
+    uint8_t  peerID   { 0 };      // Slot just claimed (1–4)
+    uint8_t  _pad[3]  {};
+    uint32_t peerAddr { 0 };      // NBO IPv4 of the announced peer; 0 = use packet sender's IP
+};
+
+// PeerLeave: sent 3× just before Shutdown() so remote peers can free the slot immediately.
+// Without this, a peer that disconnects and reconnects within seconds would be assigned a
+// different slot because the host still has the old entry in its peer table.
+struct PeerLeave {
+    Header header { PacketType::PeerLeave };  // senderId in header identifies who left
 };
 ```
 
@@ -164,6 +176,7 @@ public:
     void    Shutdown();                // Close socket + clear peer table
 
     void    AddPeer(uint8_t peerId, const std::string& ip, uint16_t port);
+    void    RemovePeer(uint8_t peerId);  // Free a single slot (called by handlePeerLeave)
     void    Send(uint8_t peerId, const void* data, std::size_t size);
     void    Broadcast(const void* data, std::size_t size); // Send to all peers
 
@@ -326,7 +339,20 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
     case PacketType::DiscoveryHello:
         handleDiscoveryHello(senderAddr, senderPort, data, size); break;
     case PacketType::PeerAnnounce:
-        handlePeerAnnounce(pkt.peerID, senderAddr); break;
+        if (size >= sizeof(Packets::PeerAnnounce)) {
+            Packets::PeerAnnounce pa{};
+            std::memcpy(&pa, data, sizeof(pa));
+            // peerAddr carries the real IP when relayed — prevents routing corruption
+            const uint32_t actualAddr = (pa.peerAddr != 0U) ? pa.peerAddr : senderAddr;
+            handlePeerAnnounce(pa.peerID, actualAddr);
+        }
+        break;
+    case PacketType::PeerLeave:
+        // senderId in the header identifies who left — no extra payload needed
+        if (senderId >= 1U && senderId <= MAX_PEERS) {
+            handlePeerLeave(senderId);
+        }
+        break;
     default: break;
     }
 }
@@ -867,13 +893,73 @@ SetThreadAffinityMask(networkingThread.native_handle(), 0x06);           // Core
    → BroadcastOwnedStates() — sends owned entity state to all peers
    → UpdateRemoteEntities(dt) — dead reckons + blends remote entities
 
-5. Scene change
-   → OnUnload() calls disconnectNetwork()
+5. Disconnect (user clicks Disconnect, or OnUnload() on scene change)
+   → disconnectNetwork() is called
+       → BroadcastPeerLeave() sends PeerLeave{senderId=N} × 3 to all peers
+         Each peer: handlePeerLeave(N) → RemovePeer(N) → slot freed immediately
+         Without this step, reconnecting within seconds claims a new slot (e.g. Peer 3
+         instead of Peer 2) because the host still has the old entry in its peer table.
        → Shutdown() closes socket + clears m_peers
        → ClearRemoteStates() clears m_remoteStates + zeroes m_acceptedPeerMask
        → SetCurrentScene("") clears scene path
    → Must reconnect after loading new scene
 ```
+
+---
+
+## 7.14 Bandwidth Budget
+
+Understanding bandwidth consumption helps you design packet rates, entity counts, and update frequencies without saturating the LAN.
+
+### StateUpdate Packet Size
+
+```
+Packet Header:     4 bytes   (type 1B + senderId 1B + entityId 2B)
+position:         12 bytes   (3 × float)
+orientation:      16 bytes   (4 × float, quaternion x/y/z/w)
+velocity:         12 bytes   (3 × float)
+angularVelocity:  12 bytes   (3 × float)
+sequenceNumber:    4 bytes   (uint32)
+─────────────────────────────
+Total:            60 bytes
+```
+
+The orientation is sent as a full quaternion (4 floats = 16 bytes) rather than a compressed form because at 60 Hz × 4 peers × 10 entities the additional overhead is negligible on a 100 Mbps LAN (~14 KB/s), and decompression cost on the hot receive path is eliminated.
+
+### Per-Peer Outbound Bandwidth
+
+Each peer sends one `StateUpdate` per owned entity per broadcast tick (~60 Hz):
+
+```
+outbound_Bps = 60 Hz × (entities owned) × 60 bytes
+
+entities = 1  →   3,600 B/s    (3.5 KB/s)   — typical single player sphere
+entities = 5  →  18,000 B/s   (17.6 KB/s)   — 5 owned objects
+entities = 20 →  72,000 B/s   (70.3 KB/s)   — dense spawner output
+entities = 50 → 180,000 B/s  (175.8 KB/s)   — near-extreme load
+entities = 500→ 1,800,000 B/s (1.7 MB/s)    — approaching 100 Mbps saturation at 4 peers
+```
+
+A 100 Mbps lab LAN has ~12.5 MB/s usable throughput. With 4 peers each broadcasting 500 entities, total aggregate traffic = `4 peers × 1.7 MB/s = 6.8 MB/s` — still within headroom but leaving little margin for other traffic.
+
+**Practical limit for this engine:** 50–100 entities per peer at 60 Hz is comfortable on RBB-335 hardware. Beyond 200 entities per peer, consider reducing broadcast Hz (30 Hz) or throttling by distance/relevance.
+
+### Other Packet Types
+
+| Packet | Size | Rate | Notes |
+|---|---|---|---|
+| `Heartbeat` | 4 B | 1 Hz | Keep-alive; negligible bandwidth |
+| `AnimationSync` | ~20 B | Scene load only | Per animated entity; not per-tick |
+| `SceneChange` | 132 B | User-triggered | Sent 3× on scene switch |
+| `SpawnObject` | ~60 B | Per spawn event | One per spawned entity; not continuous |
+| `DiscoveryHello` | 136 B | Connect only | Broadcast to discover peers |
+| `PeerAnnounce` | 12 B | Connect only | 2 round-trips per peer pair |
+
+Animation, spawn, and scene-change packets are **event-driven** — they add zero per-frame overhead once the simulation is running. Dead reckoning (§7.6) exists precisely because 60 Hz is already very generous; lowering to 10 Hz would still produce smooth motion with the 120 ms blend window.
+
+### Bandwidth vs. Latency Trade-Off
+
+Higher broadcast Hz reduces dead-reckoning error but increases bandwidth. At the lab network's typical RTT of 1–5 ms, even 10 Hz updates with 120 ms blending are visually smooth. The engine defaults to 60 Hz because it fits comfortably in bandwidth and matches the typical physics tick rate, making the `sequence` guard (drop stale packets) effective.
 
 ---
 
@@ -896,3 +982,4 @@ SetThreadAffinityMask(networkingThread.native_handle(), 0x06);           // Core
 | Spawned objects appear at world origin on remote | `SpawnObject` packet sent before entity is positioned | Log `entity.position` at the moment of broadcast | Apply position before broadcasting spawn packet |
 | Animation timer drifts out of sync | `BroadcastAnimationStates()` not called after connect | Log calls to `BroadcastAnimationStates` | Ensure `m_pendingPostConnectSync = true` is set during discovery and flushed in the next bridge tick |
 | Same-machine: second auto-connect instance takes the same peer slot as the first | Host's firewall blocked DiscoveryResponse so both instances ran assume-host and picked slot 2 | Check if port 54000 is reachable from the host machine; run `setup_firewall.bat` | With firewall rules open, the host relays its peer list and the second instance picks the correct slot; temp socket port-0 binding means both can run simultaneously without 54998 conflict |
+| Disconnect + reconnect gets a new slot (Peer 3 instead of Peer 2) | Host still has the old peer table entry for the slot — relay includes it in the next DiscoveryResponse | Check host log for "Relayed DiscoveryResponse for Peer N" after reconnect attempt | Fixed: `BroadcastPeerLeave()` is called before `Shutdown()`; each peer calls `RemovePeer(N)` on receipt, freeing the slot so the next reconnect claims it again |

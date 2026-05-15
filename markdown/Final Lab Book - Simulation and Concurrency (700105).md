@@ -61,23 +61,26 @@ The ECS uses `EntityManager` to manage entity IDs and packed `ComponentArray<T>`
 
 `ServiceLocator` provides global access to core services (time, input, assets, network bridge) without threading references through fifteen-plus subsystem constructors. All registered pointers are raw non-owning pointers, safe because `EngineOrchestrator` owns every service lifetime and outlives all consumers.
 
+Scene cameras are loaded from the FlatBuffers schema and listed in an ImGui **Camera** menu; selecting a named entry is a *local* user-interface action — it repositions and reorients the active camera without broadcasting to peers.
+
 ### 1.3 P2P Networking and Ownership
 
 <!-- TODO: With 2+ peers connected on the same scene, open the ImGui Network menu. Screenshot the Connected Peers list showing peer IDs, IP addresses, port numbers, and the current scene path in the auto-connect status line. Save as markdown-resources/FinalLab700105/s1_network_panel.png -->
 ![ImGui Network panel: Connected Peers list with peer IDs, IP:port entries, and the scene-matched auto-connect status confirming scene-aware discovery](markdown-resources/FinalLab700105/s1_network_panel.png)
 
-Up to four peers connect over LAN via auto-discovery: a new peer broadcasts or unicasts `DiscoveryHello` packets carrying `scenePath[128]`; the first recipient on the same scene replies with `DiscoveryResponse` and also relays one additional `DiscoveryResponse` per peer it already knows (with `peerAddr` carrying each peer's real IP), giving the joiner the complete peer topology in a single round trip. All peers send a raw subnet `PeerAnnounce` broadcast on connection; each recipient unicasts its own `PeerAnnounce` back if the sender was previously unknown, ensuring full mutual registration even when the host's firewall blocks inbound unicast. Peers on different scenes are silently filtered by an atomic `m_acceptedPeerMask` bitmask, preventing cross-scene packet pollution without explicit disconnect logic.
+Up to four peers connect over LAN via auto-discovery: a new peer broadcasts or unicasts `DiscoveryHello` packets carrying `scenePath[128]`; the first recipient on the same scene replies with `DiscoveryResponse` and also relays one additional `DiscoveryResponse` per peer it already knows (with `peerAddr` carrying each peer's real IP), giving the joiner the complete peer topology in a single round trip. All peers send a raw subnet `PeerAnnounce` broadcast on connection; each recipient unicasts its own `PeerAnnounce` back if the sender was previously unknown, ensuring full mutual registration even when the host's firewall blocks inbound unicast. On disconnect, `BroadcastPeerLeave()` sends a `PeerLeave` packet three times before closing the socket; each recipient calls `RemovePeer()` so the vacated slot is available immediately when the peer reconnects. Peers on different scenes are silently filtered by an atomic `m_acceptedPeerMask` bitmask, preventing cross-scene packet pollution.
 
 | Packet | ID | Key payload | Purpose |
 |---|---|---|---|
-| `Heartbeat` | 0 | — | Keep-alive |
+| `Heartbeat` | 0 | — | Keep-alive / UDP hole-punch |
 | `StateUpdate` | 1 | pos, quat, vel, angVel | Authoritative physics state (~60 Hz) |
-| `SceneChange` | 2 | `scenePath[128]` | Global scene switch broadcast |
+| `SceneChange` | 2 | `scenePath[128]` | Global scene switch broadcast (sent 3×) |
 | `SpawnObject` | 3 | entityId, type, pos, owner | Spawn replication |
-| `AnimationSync` | 4 | entityId, timer, waypointIdx | Animation state synchronisation |
+| `AnimationSync` | 4 | entityId, timer, reversed | Animation state synchronisation |
 | `DiscoveryHello` | 5 | `scenePath[128]` | LAN discovery probe |
 | `DiscoveryResponse` | 6 | peerId, peerAddr, scenePath | Discovery reply + host relay |
-| `PeerAnnounce` | 7 | peerId | Post-connect broadcast |
+| `PeerAnnounce` | 7 | peerId, peerAddr | Post-connect broadcast; peerAddr prevents relay IP corruption |
+| `PeerLeave` | 8 | — | Graceful disconnect; peers free the slot for immediate reuse |
 
 Each entity carries an `OwnerComponent` (ONE–FOUR, colour-coded Red/Green/Blue/Yellow). The owning peer alone runs physics and resolves collisions for its entities, preventing impulses from being duplicated across the network. Static and animated objects are owned locally by all peers and do not broadcast `StateUpdate`.
 
@@ -190,6 +193,8 @@ Without orthogonalisation, accumulated floating-point errors would cause the mat
 
 Sequential passes are used rather than a unified shape-pair dispatcher because each algorithm is specialised — sphere-plane uses a closed-form signed distance, box-box uses SAT, capsule shapes use closest-point-on-segment — and mixing them would introduce branching inside each algorithm without benefit. Adding new shape pairs is additive: a new pass is appended without modifying existing code.
 
+Objects with `collision_type = CONTAINER` invert face winding at load time so that the collision response correctly confines bodies to the *inside* of the container geometry (e.g. the open-box arena walls in `01_multiplayer.bin`).
+
 Animated platforms are handled as a special case in Pass B: they contribute their `linearVelocity` to the relative-velocity calculation but have `inverseMass = 0`, so they transfer momentum to physics objects without being deflected themselves. This produces the expected conveyor-belt behaviour.
 
 ### 2.5 Impulse-Based Collision Response
@@ -256,3 +261,5 @@ At 200 agents, the Octree reduces per-tick neighbour checks by over 90 % compare
 - **Did I make any mistakes?** Yes. Cloth was originally built on force-spring (Hooke) integration and diverged at fabric-level stiffness — switching to Jakobsen positional constraints was a significant but necessary rework. The accumulator had no elapsed-time clamping early on; a single file-system hitch queued thousands of ticks and locked the engine solid until the eight-tick clamp was added.
 
 - **How has my knowledge improved?** I moved from understanding concurrency abstractly to implementing a three-thread engine with explicit memory-ordering guarantees and a distributed ownership model. On the physics side, progressing from a single-body Euler integrator to a ten-pass collision pipeline with angular dynamics and two Level 3 features gave me a working mental model of how simulation complexity compounds.
+
+- **GPU Compute (Level 3 Extended Concurrency):** The particle system offloads simulation to the GPU via five Vulkan compute shaders (snow, rain, fire, dust, smoke). Each shader reads from an SSBO of particle structs, advances position, velocity, and lifetime entirely on the GPU, and writes results back; the CPU only dispatches a `vkCmdDispatch` call per effect and reads per-frame statistics. This satisfies the extended concurrency requirement for GPU-based simulation elements.

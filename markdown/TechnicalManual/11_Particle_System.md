@@ -195,6 +195,130 @@ if (m_velocity.w <= 0.0) {
 }
 ```
 
+---
+
+## 11.4b Inside snow.comp — Full Annotated Walkthrough
+
+Below is the complete `shaders/snow.comp` compute shader with line-by-line explanation. This is the blueprint for all five particle compute shaders — understanding one means understanding all of them.
+
+```glsl
+#version 450
+
+// Workgroup size: 256 threads per workgroup, 1D dispatch.
+// 256 is a near-universal sweet spot: large enough to hide memory latency
+// (GPU keeps 256 threads in flight to overlap memory fetches with ALU),
+// small enough that 256 * 4 vec4s (4 KB) fits in shared memory if needed.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+```
+
+**Why 256?** GPUs execute threads in **warps** (NVIDIA) or **wavefronts** (AMD) of 32 or 64 threads. 256 is exactly 8 warps / 4 wavefronts — a multiple of both common warp sizes, guaranteeing no wasted lanes.
+
+```glsl
+// The Particle struct — 48 bytes (3 × vec4)
+struct Particle {
+    vec4 position; // xyz = world position,   w = point sprite screen size
+    vec4 velocity; // xyz = velocity (m/s),   w = life (1.0=new, 0.0=dead)
+    vec4 color;    // rgba, alpha fades with age
+};
+```
+
+Packing two semantic values into a single `vec4` (e.g., position + size, velocity + life) keeps the struct at 3×16 = 48 bytes instead of 6×16 = 96 bytes. This halves SSBO bandwidth — the most constrained resource in a particle dispatch.
+
+```glsl
+// The UBO (small per-frame constants pushed from CPU once):
+layout(binding = 0) uniform ParameterUBO {
+    float deltaTime;      // seconds since last frame
+    float spawnEnabled;   // 1.0 = spawn on, 0.0 = spawn off
+    float totalTime;      // elapsed engine time (for deterministic sin/cos sway)
+    float padding;        // std140 alignment: every float3 pads to float4
+    vec3  lightColor;
+    float padding2;
+    vec3  emitterPos;     // world-space emitter centre (updated each frame)
+} ubo;
+
+// The SSBO (large per-particle mutable data):
+layout(std140, binding = 1) buffer ParticleBuffer {
+    Particle particles[];  // indexed 0..particleCount-1
+};
+```
+
+**`std140` vs `std430` on the SSBO:** `std140` is more conservative (every array element aligns to 16 bytes). The Particle struct is already exactly 48 bytes which is a multiple of 16, so `std140` and `std430` produce the same layout here. For structs containing loose floats or vec3s, prefer `std430` on SSBOs to avoid padding waste.
+
+```glsl
+float hash(float n) {
+    return fract(sin(n) * 43758.5453123);
+}
+```
+
+This is a deterministic pseudo-random function. **Why not `rand()` or a seeded RNG?** There is no global state in a compute shader — 256 threads execute in parallel and each needs its own random value. This hash maps any float to `[0, 1)` deterministically: particle 47 at time 5.2s always gets the same random position. This makes respawn visually consistent and avoids race conditions (no shared counter to atomically increment).
+
+```glsl
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+
+    // Guard: the last workgroup may have more invocations than particles.
+    // ceil(3000 / 256) = 12 workgroups × 256 = 3072 invocations.
+    // Invocations 3000..3071 have no particle → early return.
+    if (index >= 3000) return;
+
+    Particle p = particles[index];  // load from SSBO into registers
+```
+
+`gl_GlobalInvocationID.x` = `workgroupID.x * 256 + localInvocationID.x`. Each thread handles exactly one particle — the simplest possible mapping. The local copy `p` is held in registers during the computation; it is written back to the SSBO with `particles[index] = p` at the very end.
+
+```glsl
+    // --- Physics update ---
+    // Sinusoidal sway simulates turbulent air resistance.
+    // Each particle has a unique phase offset (float(index)) so they sway independently.
+    float sway = sin(ubo.totalTime * 1.5 + float(index)) * 0.2;
+    p.position.x += sway         * ubo.deltaTime;
+    p.position.z += cos(ubo.totalTime * 1.2 + float(index)) * 0.1 * ubo.deltaTime;
+    p.position.y += p.velocity.y * ubo.deltaTime;   // gravity stored in velocity.y
+```
+
+Note: there is no `barrier()` call between updating particles. **`barrier()` synchronises threads within a workgroup** — it is needed when threads share data via shared memory (`shared` qualifier). Here every thread reads and writes only its own particle; there is zero inter-particle dependency, so no barrier is needed.
+
+```glsl
+    // --- Bounds check and respawn ---
+    vec3  sphereCenter  = vec3(0.0, -0.3, 0.0);
+    float globeRadius   = 1.70;
+    float distFromCenter = length(p.position.xyz - sphereCenter);
+
+    if (p.position.y < -0.12 || distFromCenter > globeRadius) {
+        if (ubo.spawnEnabled > 0.5) {
+            // Respawn at a random point in the top hemisphere using spherical coordinates.
+            float seed  = float(index) + ubo.totalTime;
+            float r     = (globeRadius - 0.05) * pow(hash(seed), 0.33);   // bias toward centre
+            float phi   = hash(seed + 1.0) * 1.57;  // [0, π/2] — top hemisphere only
+            float theta = hash(seed + 2.0) * 6.28;  // [0, 2π] — full rotation
+
+            p.position.x = r * sin(phi) * cos(theta) + sphereCenter.x;
+            p.position.z = r * sin(phi) * sin(theta) + sphereCenter.z;
+            p.position.y = r * cos(phi)               + sphereCenter.y;
+            p.position.w = 0.4 + hash(seed + 4.0) * 0.4;   // random point sprite size
+            p.velocity.y = -0.3 - hash(seed + 3.0) * 0.2;   // slow downward drift
+            p.color      = vec4(0.9, 0.9, 1.0, 0.8);
+        } else {
+            p.color.a = 0.0;   // hide without deallocating
+        }
+    }
+
+    particles[index] = p;   // write back to SSBO — visible after the post-compute barrier
+}
+```
+
+**Why `pow(hash(...), 0.33)` for the radius?** Uniform `r` in spherical coordinates concentrates particles near the centre (the pole). `pow(r, 1/3)` compensates — it stretches samples toward the sphere's surface, producing uniform volume density.
+
+### Memory Visibility: Why the CPU Barrier Matters
+
+The `barrier()` GLSL intrinsic synchronises threads within one workgroup. The Vulkan `vkCmdPipelineBarrier` (§11.4) synchronises between pipeline stages across the whole GPU. After `particles[index] = p` is written, the write is in the L1/L2 GPU cache but is **not guaranteed visible** to the vertex shader until the `VK_ACCESS_SHADER_WRITE_BIT → VK_ACCESS_SHADER_READ_BIT` barrier is executed. Without this barrier:
+
+1. The vertex shader may read stale particle positions from its cache line.
+2. The computed new positions are written to a different cache line.
+3. The GPU sees inconsistent particle data → visual corruption (particles lag or teleport).
+
+The barrier flushes the write cache and invalidates the read cache, ensuring coherency.
+
 ### How the Engine Chooses a Shader
 
 `FBSceneAdapter` reads the `emitter_type` string from the FlatBuffers table and maps it to

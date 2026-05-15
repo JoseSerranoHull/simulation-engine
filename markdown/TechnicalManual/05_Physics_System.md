@@ -583,3 +583,269 @@ rb.orientation[2] = glm::vec4(col2, 0.0f);
 
 This should be applied every N ticks (e.g., every 100 ticks) rather than every tick, as it is
 relatively expensive for a minor correction.
+
+---
+
+## 5.13 Collision Algorithm Reference — All 10 Passes
+
+This section explains the mathematical primitive behind every collision pass in `PhysicsSystem::ResolveCollisions()`. Each subsection gives: the input data, the detection test, how to compute the contact normal and penetration depth, and the most common implementation mistake. After detection, **all passes feed the same impulse formula** from §5.5.
+
+---
+
+### Pass A — Sphere vs Plane
+
+**Primitive:** Signed distance from a point to a half-space.
+
+A plane is defined by a unit normal `n̂` and a distance `d` from the world origin: any point `p` on the plane satisfies `dot(p, n̂) = d`. The signed distance from an arbitrary point `c` to the plane is `signed_dist = dot(c, n̂) − d`.
+
+```
+signed_dist = dot(sphere.center, plane.normal) − plane.d
+penetration = sphere.radius − signed_dist
+
+if penetration > 0:
+    contact_normal = plane.normal          // points from plane into sphere
+    push sphere.center by +contact_normal * penetration
+    reflect velocity: v -= (1+e) * dot(v, n̂) * n̂
+```
+
+**Common mistake:** Using the unsigned distance. If the sphere is on the back side of the plane, `signed_dist` is negative and `penetration` would be large and positive — the sphere would be pushed *into* the plane instead of out of it. Always test `signed_dist > 0` (sphere is on the front side) before applying the response.
+
+---
+
+### Pass B — Sphere vs Sphere
+
+**Primitive:** Distance between two points vs. sum of radii.
+
+```
+delta = centerA − centerB
+distSq = dot(delta, delta)
+sumR   = radiusA + radiusB
+
+if distSq < sumR² and distSq > 0:
+    dist        = sqrt(distSq)
+    normal      = delta / dist          // unit vector A←B (points into A)
+    penetration = sumR − dist
+    → apply two-body impulse (§5.5) along normal
+    → apply positional correction (§5.5) along normal
+```
+
+**Common mistake:** Not guarding `distSq > 0`. Two coincident spheres give `delta = {0,0,0}`, making `dist = 0` and the normal division undefined (NaN). In practice this happens when a spawner creates two objects at the same position; the guard skips the resolve for that one frame and they separate naturally.
+
+---
+
+### Pass C — Sphere vs Axis-Aligned Box (AABB)
+
+**Primitive:** Clamp sphere centre to the box extents; measure distance to the clamped point.
+
+The box is defined by its world-space centre `boxCenter` and half-extents `halfExtents` (a vec3). The closest point on the box surface to the sphere centre is found by clamping each coordinate independently:
+
+```
+closest = clamp(sphere.center, boxCenter − halfExtents, boxCenter + halfExtents)
+delta   = sphere.center − closest
+distSq  = dot(delta, delta)
+
+if distSq < sphere.radius²:
+    if distSq > 0:
+        dist    = sqrt(distSq)
+        normal  = delta / dist      // sphere centre is outside box
+    else:
+        // sphere centre is INSIDE the box — find the shallowest escape axis
+        find the axis where (sphere.center − boxMin) or (boxMax − sphere.center) is smallest
+        normal = outward direction along that axis
+        dist   = 0
+    penetration = sphere.radius − dist
+    → apply impulse + correction (treat box as static if inverseMass = 0)
+```
+
+**Common mistake:** Not handling the inside-sphere case (`distSq = 0`). If the sphere centre is fully inside the box (happens after spawning inside geometry), `delta = {0,0,0}` and normalisation fails. The fallback finds the minimum-penetration axis and ejects the sphere along it.
+
+---
+
+### Pass D — Box vs Plane (Support Point)
+
+**Primitive:** The "support point" — the box vertex (corner) that is furthest in the direction opposite the plane normal.
+
+For collision, the deepest penetrating corner of the box is the one that most violates the plane. Iterate all 8 corners of the box (constructed from ±halfExtents rotated by the box's world orientation), compute the signed distance of each to the plane, and take the most negative one:
+
+```
+for each of 8 corners c of box:
+    signed_dist = dot(c, plane.normal) − plane.d
+    if signed_dist < deepest:
+        deepest      = signed_dist
+        deepest_corner = c
+
+penetration = -deepest   // positive if corner is on wrong side
+if penetration > 0:
+    normal = plane.normal
+    push box by +normal * penetration * inverseMass  (if not static)
+    apply impulse at contact_point = deepest_corner
+```
+
+**Why only one corner?** For a resting box on a flat floor, two corners touch simultaneously. Using the deepest single corner produces a one-point contact, which can cause rocking. A more accurate solver contacts all penetrating corners; for this engine, the multi-pass solver (3 iterations) corrects the rocking within a few ticks.
+
+**Common mistake:** Forgetting to rotate the corner offsets by the box's world orientation matrix. `boxCenter ± halfExtents` gives the axis-aligned corners — correct only when `orientation = identity`.
+
+---
+
+### Pass E — Capsule vs Plane
+
+**Primitive:** Closest point on a line segment to the plane.
+
+A capsule is a cylinder with hemispherical end-caps: defined by two endpoints `A` and `B` on the central axis and a radius `r`. Its closest point to a plane is one of the two endpoints (whichever has the smaller signed distance):
+
+```
+distA = dot(capsule.pointA, plane.normal) − plane.d
+distB = dot(capsule.pointB, plane.normal) − plane.d
+
+deepest_point = (distA < distB) ? capsule.pointA : capsule.pointB
+deepest_dist  = min(distA, distB)
+
+penetration = capsule.radius − deepest_dist
+if penetration > 0:
+    normal = plane.normal
+    push capsule along +normal * penetration
+    apply impulse
+```
+
+**Why endpoints only?** The closest point on a line segment to an infinite plane is always one of the endpoints (or both, when the segment is parallel to the plane). The interior of the segment is farther from the plane than both endpoints combined.
+
+**Common mistake:** Computing the closest point on the segment to the *plane's origin point* (a sphere-segment distance test) rather than the closest point to the plane itself. These give different results when the segment is not perpendicular to the plane.
+
+---
+
+### Pass F — Cylinder vs Plane
+
+**Primitive:** Same as Pass E — the cylinder's two axis endpoints plus radius.
+
+A cylinder in this engine is Y-axis aligned in local space and rotated by the entity's world orientation. Its axis runs from `axisBottom` to `axisTop` (world space), each with the cylinder's radius:
+
+```
+// Identical to Pass E:
+deepest_dist = min(dot(axisBottom, plane.normal), dot(axisTop, plane.normal)) − plane.d
+penetration  = cylinder.radius − deepest_dist
+```
+
+The only difference from a capsule is that a capsule's end-caps are hemispherical (so the radius adds uniformly to any axis point), while a cylinder's end-caps are flat discs. For plane collision, both reduce to the same endpoint test because the flat disc's lowest edge is at the same signed distance as the axis endpoint plus radius.
+
+---
+
+### Pass G — Capsule vs Box
+
+**Primitive:** Distance from a line segment to a point (box centre), then treat as sphere–box.
+
+This is a compound test:
+1. Find the closest point on the capsule's axis segment to the box centre.
+2. Treat that closest point as a sphere centre with the capsule's radius.
+3. Run Pass C (sphere–AABB) against the box.
+
+```
+// Step 1: closest point on segment to box center
+t = clamp(dot(boxCenter − segA, segDir) / segLenSq, 0, 1)
+closestOnSeg = segA + t * (segB − segA)
+
+// Step 2: treat closestOnSeg as sphere center, run Pass C
+// (sphere.center = closestOnSeg, sphere.radius = capsule.radius)
+```
+
+**Why this works:** The capsule is effectively a swept sphere along its axis. The closest axis-point to the box gives the worst-case penetration scenario. This is an approximation — it misses cases where the capsule end-cap overlaps a box corner — but is accurate enough for games and avoids the full GJK algorithm.
+
+---
+
+### Pass H — Sphere vs Capsule
+
+**Primitive:** Distance from a point to a line segment.
+
+The closest point on the capsule axis to the sphere centre determines whether they collide:
+
+```
+// Parameterised projection of sphere.center onto the segment
+t = clamp(dot(sphere.center − segA, segDir) / segLenSq, 0, 1)
+closestOnAxis = segA + t * (segB − segA)
+
+delta       = sphere.center − closestOnAxis
+distSq      = dot(delta, delta)
+contactDist = sphere.radius + capsule.radius
+
+if distSq < contactDist²:
+    dist        = sqrt(distSq)
+    normal      = (dist > 0) ? delta / dist : UP
+    penetration = contactDist − dist
+    → apply two-body impulse + correction
+```
+
+The `t = clamp(…, 0, 1)` ensures the closest point is on the segment, not its infinite line extension. `t = 0` means the sphere is closest to `segA`; `t = 1` to `segB`; anything in between to a point along the axis.
+
+**Common mistake:** Forgetting the `clamp` — the sphere would detect a collision with the imaginary extension of the capsule's axis beyond its endpoints, producing phantom impulses in empty space.
+
+---
+
+### Pass I — Box vs Box (Separating Axis Theorem, 3-Axis SAT)
+
+**Primitive:** Separating Axis Theorem (SAT) — two convex objects do NOT collide if there exists a separating axis where their projections do not overlap.
+
+For two AABBs (axis-aligned boxes), only three axes need to be tested: world X, Y, and Z. For oriented boxes (OBBs), 15 axes are needed — but this engine approximates box–box with AABB since boxes rarely have both non-trivial orientations active at once:
+
+```
+for axis in {world_X, world_Y, world_Z}:
+    projA = half_extent_A_along_axis
+    projB = half_extent_B_along_axis
+    dist  = |center_A_along_axis − center_B_along_axis|
+    overlap_along_axis = (projA + projB) − dist
+
+    if overlap_along_axis <= 0:
+        return NO_COLLISION     // Separating axis found
+
+// If no separating axis found, find the axis with minimum overlap:
+min_overlap = min(overlap_X, overlap_Y, overlap_Z)
+contact_normal = axis corresponding to min_overlap (signed toward A)
+penetration    = min_overlap
+→ apply impulse + correction
+```
+
+**Why minimum overlap?** Resolving along the axis of minimum penetration moves the boxes the smallest possible distance to separate them, which minimises positional correction artifacts.
+
+**Common mistake:** Using the center-to-center vector as the normal instead of the minimum-overlap axis. For boxes resting on a floor, the center-to-center vector points diagonally, pushing the box sideways; the minimum-overlap axis correctly points straight up (Y axis).
+
+---
+
+### Pass J — Cylinder vs Sphere / Box
+
+**Primitive:** Closest point on the cylinder's central axis to the other object's centre.
+
+This is the same closest-point-on-segment primitive used in Passes G and H, applied with the cylinder's axis. For cylinder–sphere:
+
+```
+t = clamp(dot(sphere.center − cylBottom, cylAxis) / cylLen², 0, 1)
+closestOnAxis = cylBottom + t * cylDir * cylLen
+
+radialDist = length(sphere.center − closestOnAxis)
+axialDepth = ... (check if sphere is also within the axial extent)
+
+contactDist = cyl.radius + sphere.radius
+if radialDist < contactDist:
+    normal      = normalize(sphere.center − closestOnAxis)
+    penetration = contactDist − radialDist
+```
+
+For cylinder–box: use the box-centre as the query point (same as Pass G but with cylinder parameters).
+
+**Limitation:** This approximation treats the cylinder as a capsule for collision purposes (hemispherical end-caps instead of flat discs). For a game engine with axis-aligned cylinders and moderate velocity, this is visually indistinguishable from the correct flat-cap test. The full cylinder–box test requires 5-axis SAT with edge cross-products.
+
+---
+
+### Summary: Which Primitive for Each Shape Pair?
+
+| Shape pair | Primitive | Key function |
+|---|---|---|
+| Sphere–Plane | Signed distance to plane | `dot(center, normal) − d` |
+| Sphere–Sphere | Point–point distance | `length(A − B)` |
+| Sphere–Box | Closest point on AABB | `clamp(center, boxMin, boxMax)` |
+| Box–Plane | Support point (deepest corner) | iterate 8 corners |
+| Capsule–Plane | Closest endpoint to plane | `min(dist(A,plane), dist(B,plane))` |
+| Cylinder–Plane | Same as capsule | same |
+| Capsule–Box | Closest point on segment to box centre | `closestOnSeg` → sphere–AABB |
+| Sphere–Capsule | Closest point on segment to sphere centre | `clamp(t, 0, 1)` projection |
+| Box–Box | 3-axis SAT | min-overlap axis |
+| Cylinder–Sphere/Box | Closest point on axis | `clamp(t, 0, 1)` projection |
+
+All detections produce a `(contact_normal, penetration)` pair. Everything else — the impulse, the mass weighting, the positional correction — is identical across all pairs (§5.5).

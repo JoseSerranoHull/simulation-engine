@@ -107,6 +107,20 @@ More iterations improve convergence; 2 is the default and sufficient for visual 
 
 **Rest-length shrinkage (Dayong 2011):** `effectiveRest = restLen × max(1 - heat × shrinkScale, 0.1)`. As a particle heats up, the constraint target shortens, pulling neighbouring fabric inward and creating natural wrinkling around burn zones.
 
+### Why the /200 Divisor and the 0.5 Factor
+
+**The stiffness mapping:** `stiffness = clamp(kSpring / 200, 0, 1)` converts a spring constant expressed in N/m (where fabric stiffness sits between 50 and 400) into the unitless `[0, 1]` correction fraction that the Jakobsen method requires. The reference value of 200 was chosen because the structural spring constant (`springK = 200`) should produce a fully rigid constraint (`stiffness = 1.0`) — any weaker spring (shear = 100, flexion = 50) produces a softer correction.
+
+If you use a different structural stiffness, scale the divisor accordingly: `JAKOBSEN_REF_K = springK`. Using a divisor too small gives `stiffness > 1`, which **overcorrects** — each iteration moves particles past their rest lengths, causing oscillation that looks like vibrating jelly. Using a divisor too large gives `stiffness ≈ 0`, which **undercorrects** — the cloth stretches indefinitely like rubber.
+
+**The 0.5 factor:** The correction `move = delta * (0.5 * stiffness * (len - restLen) / len)` splits the correction equally between the two particles: A moves +move, B moves -move. The factor 0.5 ensures the total correction sums to `(len - restLen)` — it is not a half-step; it is the equal-mass equal-share split. If particle A is pinned, the full correction goes to B; the `if (!A.pinned)` guard drops A's contribution so B naturally absorbs all of it (the 0.5 factor then under-corrects, which is intentional — overshoot compensation from multiple iterations).
+
+### Why Jakobsen Is Stable at High Physics Hz
+
+A force-spring system with Hooke stiffness `k` is numerically stable only when `k · dt² < 2m` (derived from the stability region of explicit Euler on a harmonic oscillator). For fabric-level stiffness (`k ≈ 200`) and particle mass `m ≈ 0.1`, this limits stability to `dt < sqrt(2 × 0.1 / 200) ≈ 0.032s`, i.e. physics must run at ≥ 31 Hz and cannot exceed ~1000 Hz without requiring implicit integration.
+
+Jakobsen's positional correction has no dt dependency — the correction fraction `stiffness ∈ [0, 1]` is bounded regardless of timestep. At 2000 Hz, the cloth is identical in behaviour to 120 Hz (just resolved more finely). This is why the engine can expose a 1–2000 Hz physics slider without breaking cloth.
+
 ---
 
 ## 6.2 The Spring Network: Three Types
@@ -251,6 +265,33 @@ if (curLen > effectiveThreshold * s.restLen) {
 **Stress transfer** lowers `stressAccum` on neighbour springs, enabling cracks to propagate along lines of tension. The effective threshold floor (0.5) prevents zero-length tears from accumulating stress instability.
 
 **Tear edge jitter** uses `hashNoise` (deterministic, thread-safe, no RNG) seeded from particle and spring indices so the same spring always jitters in the same direction.
+
+### Stress Cascade Algorithm — Plain Pseudocode
+
+```
+Each tick, after constraint relaxation:
+
+for each active spring S:
+    current_strain = currentLength(S) / S.restLen
+    effective_threshold = max(tearThreshold - S.stressAccum, 0.5)
+
+    if current_strain > effective_threshold:
+        S.active = false                       // spring breaks
+
+        excessStress = (current_strain - tearThreshold) / tearThreshold
+        delta        = excessStress * stressTransferRate   // partial transfer
+
+        for each active spring N adjacent to S:     // shares particle S.a or S.b
+            N.stressAccum += delta                 // raises N's damage level
+```
+
+**What `stressAccum` physically means:** It is accumulated structural damage. A spring with `stressAccum = 0.5` and `tearThreshold = 3.0` behaves as if its tear threshold were 2.5 — it is already weakened and will tear at lower strain than an undamaged spring. Physically this models fatigue: a material repeatedly stressed below its yield point eventually fails.
+
+**Why partial transfer, not full:** If `stressTransferRate = 1.0`, the entire excess stress is transferred to neighbours, which immediately raises their damage levels to near-threshold, causing them to break next tick — producing an instantaneous total failure (the cloth explodes). With `stressTransferRate = 0.4`, only 40% of the excess propagates, allowing tears to advance one spring at a time along lines of tension, which is visually realistic.
+
+**Why adjacency (shared particle) matters:** The cascade only transfers to springs that share a particle with the broken spring. This limits propagation to the local spring graph neighbourhood — stress cannot teleport across disconnected regions. The effect is a crack that advances along grain lines rather than jumping to random remote locations.
+
+**The effective threshold floor (0.5):** Without it, a spring that receives enormous stress transfers could have `tearThreshold - stressAccum` go negative, making `effectiveThreshold` negative, and the condition `curLen > negative * restLen` is always true — infinite-tear glitch. The `max(…, 0.5)` clamps the threshold to at least 50% extension, which is physically still "heavily stressed but not broken."
 
 **ImGui:** Tearing section — Tear Threshold, Tear Roughness, Stress Transfer, **Reset Cloth** (reactivates all springs, clears `stressAccum` and `wasCurled`, resets all particle heat).
 

@@ -373,18 +373,6 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
     rb->isStatic   = false;
     rb->useGravity = true;
     rb->velocity   = pkt.linearVelocity;
-
-    if (pkt.ownerPeerId >= 1U && pkt.ownerPeerId <= 4U) {
-        const auto ownerVal = static_cast<GE::Components::OwnerType>(pkt.ownerPeerId - 1U);
-        auto* oc = m_entityManager->TryGetTIComponent<GE::Components::OwnerComponent>(pkt.entityId);
-        if (oc != nullptr) {
-            oc->owner = ownerVal;
-        } else {
-            GE::Components::OwnerComponent newOc;
-            newOc.owner = ownerVal;
-            m_entityManager->AddComponent(pkt.entityId, newOc);
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

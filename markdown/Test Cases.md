@@ -135,18 +135,18 @@ All tests run against `x64/Release/simulation-engine.exe` (or Debug for validati
 
 ## TC-006: Spawner with Single-Instance Ownership
 
-**Preconditions:** Load `config/flatbufferConfig/05_spawner_factory.bin`. Open the **Network** menu and set **Local Peer ID = 1**.
+**Preconditions:** Load `config/flatbufferConfig/04_spawner_factory.bin`. Open the **Network** menu and set **Local Peer ID = 1**.
 
 **Steps:**
 1. Wait for **t = 2.0 s** after scene load (watch log or count).
 2. **Spawner 1** (owner ONE = Peer 1) fires: 8 rubber spheres should appear scattered above the floor and bounce.
 3. Observe **Spawner 2** (owner TWO = Peer 2): since local peer is 1, this spawner will NOT fire locally. It requires a connected Peer 2 instance.
-4. Observe **Spawner 3** (SEQUENTIAL): the first entity spawns assigned to Peer 1 (red), second would be Peer 2, etc. Since only Peer 1 is connected, only the first spawn in each cycle fires locally.
+4. Observe **Spawner 3** (SEQUENTIAL): owned by Peer 1, so **all 8 entities spawn** regardless of which peer is connected. Each spawn cycles ownership: Peer 1 (red) → Peer 2 (green) → Peer 3 (blue) → Peer 4 (yellow) → repeat. With Local Peer ID = 1, WASD controls only the **red** entities; green/blue/yellow entities exist in the scene but respond only to their respective peer's input.
 
 **Expected (single instance, Peer 1):**
 - Spawner 1 fires at t=2s: 8 spheres drop and bounce.
 - Spawner 2 does not fire (owned by Peer 2 who is not connected).
-- Spawner 3 fires one entity per cycle (Peer 1's slot), with cycling IDs for future peers.
+- Spawner 3 fires all 8 entities; only the 2 red ones (spawn index 0 and 4) respond to WASD.
 
 **Two-instance test:**
 1. Launch Instance A: Peer ID = 1. Launch Instance B: Peer ID = 2.

@@ -82,7 +82,7 @@ namespace GE::Components {
         const GE::Scene::FB::PrefabTemplate* prefabTemplate { nullptr };
         uint32_t                             spawnedCount   { 0 };
         uint32_t                             maxCount       { 0 };
-        // True when SpawnerOwnerType::SEQUENTIAL — color cycles across 4 peers per spawn.
+        // True when SpawnerOwnerType::SEQUENTIAL — ownership AND color cycle across 4 peers per spawn (1→2→3→4→1).
         bool                                 isSequential   { false };
         // When true, the auto-spawn timer freezes; ForceSpawnOne (Fire button) still works.
         bool                                 paused         { false };

@@ -324,8 +324,8 @@ struct SpawnerComponent {
     const GE::Scene::FB::PrefabTemplate* prefabTemplate { nullptr };
 
     // --- Color cycling ---
-    bool isSequential { false };  // true = cycle peer colors 0→1→2→3→0→…
-                                  // false = always use ownerPeerId color
+    bool isSequential { false };  // true = cycle ownership AND color 1→2→3→4→1 per spawn
+                                  // false = all spawns belong to ownerPeerId
 
     // --- Runtime state ---
     uint32_t spawnedCount { 0 };
@@ -372,16 +372,20 @@ void SpawnerSystem::OnUpdate(float dt) {
             const glm::vec3 linVel = randomInRange(sc.linVelMin, sc.linVelMax);
             const glm::vec3 angVel = randomInRange(sc.angVelMin, sc.angVelMax);
 
-            // Color selection:
-            // SEQUENTIAL mode cycles 0→1→2→3 per spawn count
-            // NON-SEQUENTIAL mode uses the ownerPeerId color slot
+            // Color and ownership selection:
+            // SEQUENTIAL: colorIdx cycles 0→1→2→3; effectiveOwner = colorIdx+1 rotates 1→2→3→4
+            // NON-SEQUENTIAL: both derived from the spawner's fixed ownerPeerId
             const uint8_t colorIdx = sc.isSequential
                 ? static_cast<uint8_t>(sc.spawnedCount % 4)
                 : (sc.ownerPeerId > 0 ? sc.ownerPeerId - 1 : 0);
 
+            const uint8_t effectiveOwner = sc.isSequential
+                ? static_cast<uint8_t>(colorIdx + 1U)
+                : sc.ownerPeerId;
+
             const GE::ECS::EntityID id = GE::Scene::EntityFactory::InstantiatePrefab(
                 *sc.prefabTemplate, pos, glm::vec3{0.0f},
-                linVel, angVel, sc.ownerPeerId, colorIdx, em);
+                linVel, angVel, effectiveOwner, colorIdx, em);
 
             if (id == UINT32_MAX) return;
             ++sc.spawnedCount;
@@ -391,7 +395,7 @@ void SpawnerSystem::OnUpdate(float dt) {
             if (netActive && bridge) {
                 const auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(id);
                 const float mass = (rb && rb->inverseMass > 0) ? (1.0f / rb->inverseMass) : 0.0f;
-                bridge->BroadcastSpawnObject(id, sc.ownerPeerId, 0, pos, {1,1,1}, linVel, mass);
+                bridge->BroadcastSpawnObject(id, effectiveOwner, 0, pos, {1,1,1}, linVel, mass);
             }
         };
 
@@ -481,12 +485,12 @@ ownerMeshes[3]  →  Peer 4 color (yellow)
 
 At spawn time, `colorIdx` selects which slot to use:
 
-| `isSequential` | `colorIdx` selection | Effect |
-|----------------|---------------------|--------|
-| `false` | `ownerPeerId - 1` | All entities spawned by peer N use color N |
-| `true` | `spawnedCount % 4` | Entities cycle through all 4 colors regardless of owner |
+| `isSequential` | `colorIdx` | `effectiveOwner` | Effect |
+|----------------|-----------|-----------------|--------|
+| `false` | `ownerPeerId - 1` | `ownerPeerId` | All entities from peer N are color N and owned by N |
+| `true` | `spawnedCount % 4` | `colorIdx + 1` | Ownership rotates 1→2→3→4→1; color always matches owner |
 
-Sequential mode is useful for single-player or demonstration scenes where you want visual variety without a networked session.
+Sequential mode distributes ownership across all peers from a single spawner — useful for demo scenes and networked sessions where one peer fires a spawner whose entities should be controlled by different players.
 
 ---
 
@@ -557,7 +561,7 @@ When `ownerPeerId > 0`, only the owning peer fires the spawner. After instantiat
 ```cpp
 bridge->BroadcastSpawnObject(
     id,               // New entity's EntityID
-    sc.ownerPeerId,   // Owning peer
+    effectiveOwner,   // Per-spawn owner (cycles 1→2→3→4 for sequential, fixed otherwise)
     0U,               // Prefab type hint (unused in current protocol)
     pos,              // Spawn world position
     glm::vec3{1.0f},  // Scale (always 1 for spawned entities)

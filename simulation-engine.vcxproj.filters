@@ -135,6 +135,9 @@
     <Filter Include="Markdown Files\Documentation">
       <UniqueIdentifier>{md000003-0000-0000-0000-000000000003}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Markdown Files\Legacy">
+      <UniqueIdentifier>{md000004-0000-0000-0000-000000000004}</UniqueIdentifier>
+    </Filter>
     <Filter Include="FlatBuffers Files">
       <UniqueIdentifier>{2cfc2d12-e698-4386-8e6b-4fea1ac25ee8}</UniqueIdentifier>
     </Filter>
@@ -478,6 +481,9 @@
     <None Include="shaders\water.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\compile.bat">
+      <Filter>Shader Files</Filter>
+    </None>
     <!-- Config / FlatBuffers -->
     <None Include="config\snow_globe.ini">
       <Filter>Config Files\Legacy Lab</Filter>
@@ -549,37 +555,37 @@
       <Filter>Markdown Files\Lab Books</Filter>
     </None>
     <None Include="markdown\SimulationLab2.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\SimulationLab3.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\SimulationLab4.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\SimulationLab5.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\SimulationLab6.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\SimulationLab7.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\Lab-3.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\Lab-4.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\Lab-5.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\Lab-6.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <None Include="markdown\Lab-7.md">
-      <Filter>Markdown Files\Lab Books</Filter>
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
     <!-- Markdown: Technical Manual -->
     <None Include="markdown\TechnicalManual\README.md">
@@ -625,9 +631,6 @@
       <Filter>Markdown Files\Technical Manual</Filter>
     </None>
     <!-- Markdown: Documentation -->
-    <None Include="markdown\SimulationWorkshops.md">
-      <Filter>Markdown Files\Documentation</Filter>
-    </None>
     <None Include="markdown\Test Cases.md">
       <Filter>Markdown Files\Documentation</Filter>
     </None>
@@ -636,6 +639,16 @@
     </None>
     <None Include="markdown\C++ Programming and Design - Real-time Graphics - Final Lab README.md">
       <Filter>Markdown Files\Documentation</Filter>
+    </None>
+    <!-- Markdown: Legacy (old lab briefs and refactor plans) -->
+    <None Include="markdown\SimulationWorkshops.md">
+      <Filter>Markdown Files\Legacy</Filter>
+    </None>
+    <None Include="markdown\Claude - Refactor Plan.md">
+      <Filter>Markdown Files\Legacy</Filter>
+    </None>
+    <None Include="markdown\Gemini - Refactor Plan.md">
+      <Filter>Markdown Files\Legacy</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

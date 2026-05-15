@@ -739,3 +739,63 @@ These are the most common validation layer errors encountered when modifying the
 | `VK_ERROR_DEVICE_LOST` | Accessing deleted resource, out-of-bounds shader write, or invalid draw | Enable validation layers in Debug build, look for `VK_LAYER_KHRONOS_validation` output preceding the crash |
 | Flickering / frame tearing | Presenting faster than the monitor refresh with IMMEDIATE present mode | Switch to `VK_PRESENT_MODE_FIFO_KHR` (vsync) or `MAILBOX_KHR` (triple-buffering) |
 | Descriptor set bound after pipeline destroyed | Old descriptor references resource from unloaded scenario | Destroy descriptor sets (or their pool) before destroying the resources they reference |
+
+---
+
+## 3.14 Descriptor Pool Sizing
+
+Every descriptor set must be allocated from a **descriptor pool** (`VkDescriptorPool`). The pool is created upfront with a fixed capacity; if you try to allocate more sets than the pool allows, `vkAllocateDescriptorSets` returns `VK_ERROR_OUT_OF_POOL_MEMORY` and the engine crashes.
+
+### How This Engine Sizes Its Pool
+
+```cpp
+// include/graphics/VulkanContext.h — pool creation (in initDescriptorPool())
+std::array<VkDescriptorPoolSize, 3> poolSizes = {{
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         MAX_FRAMES_IN_FLIGHT * 100 },
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_FRAMES_IN_FLIGHT * 100 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         MAX_FRAMES_IN_FLIGHT * 10  },
+}};
+VkDescriptorPoolCreateInfo poolInfo{};
+poolInfo.maxSets       = MAX_FRAMES_IN_FLIGHT * 100;  // max simultaneous descriptor sets
+poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+poolInfo.pPoolSizes    = poolSizes.data();
+```
+
+`MAX_FRAMES_IN_FLIGHT = 2` (double-buffered). The `× 100` multiplier reserves headroom for:
+- 1 global UBO set per frame (1 × 2 = 2 sets)
+- 1 material set per pipeline per frame (≤10 pipelines × 2 = 20 sets)
+- 1 set per particle emitter (≤5 emitters × 2 = 10 sets)
+- 1 set per shadow map (1 × 2 = 2 sets)
+- Plus generous future headroom (~66 sets unused)
+
+### How to Calculate Pool Size for Your Project
+
+```
+Required sets per frame:
+  + Global UBO:              1
+  + Shadow map:              1
+  + Material pipelines:      (number of material types)
+  + Per-model textures:      (number of unique texture sets)
+  + Particle emitters:       (number of emitter instances)
+  ─────────────────────────────────────────────────────────
+  Total per frame:           T
+
+maxSets = T × MAX_FRAMES_IN_FLIGHT × safety_factor (1.5–2.0)
+
+poolSizes[UNIFORM_BUFFER]         = (global + shadow + material UBOs) × maxSets
+poolSizes[COMBINED_IMAGE_SAMPLER] = (texture sets × bindings_per_set) × maxSets
+poolSizes[STORAGE_BUFFER]         = (particle SSBOs) × maxSets
+```
+
+### What Happens When the Pool Is Exhausted
+
+`vkAllocateDescriptorSets` returns `VK_ERROR_OUT_OF_POOL_MEMORY`. If unhandled, this produces a Vulkan validation error and typically a null descriptor set, causing a GPU hang or `VK_ERROR_DEVICE_LOST` on the next submit.
+
+**Symptom:** Engine starts correctly with 2 emitters, but adding a 3rd particle system crashes at scene load. The new `GpuParticleBackend` tries to allocate a descriptor set and fails silently.
+
+**Fix options:**
+1. Increase `maxSets` and the matching `poolSizeCount` (simplest — pay a small upfront allocation cost).
+2. Use `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` and free/reallocate sets when emitters are destroyed (needed if entities spawn and despawn frequently).
+3. Use a descriptor pool growable pattern: allocate multiple pools, each 64 sets; on exhaustion, create a new pool (Vulkan-HPP's `DynamicDescriptorPool` pattern).
+
+This engine uses option 1 with a generous multiplier. Since scenes are loaded infrequently (not every frame), the upfront pool allocation cost is paid once per scene load — negligible compared to GPU memory.

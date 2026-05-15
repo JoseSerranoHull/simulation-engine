@@ -116,11 +116,12 @@ namespace GE::Networking::Packets {
     // PeerAnnounce — broadcast after auto-connect so existing peers can add us
     // -------------------------------------------------------------------------
     struct PeerAnnounce {
-        Header  header { PacketType::PeerAnnounce };
-        uint8_t peerID { 0 };   ///< slot this peer just claimed (1–4)
-        uint8_t _pad[3]{};
+        Header   header   { PacketType::PeerAnnounce };
+        uint8_t  peerID   { 0 };      ///< slot this peer just claimed (1–4)
+        uint8_t  _pad[3]  {};
+        uint32_t peerAddr { 0 };      ///< NBO IPv4 of the announced peer; 0 = use packet sender's IP
     };
-    static_assert(sizeof(PeerAnnounce) == 8, "PeerAnnounce wire size changed — update all peers");
+    static_assert(sizeof(PeerAnnounce) == 12, "PeerAnnounce wire size changed — update all peers");
 
     #pragma pack(pop)
 

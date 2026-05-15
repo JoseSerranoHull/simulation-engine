@@ -163,7 +163,10 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
         if (size >= sizeof(Networking::Packets::PeerAnnounce)) {
             Networking::Packets::PeerAnnounce pa{};
             std::memcpy(&pa, data, sizeof(pa));
-            handlePeerAnnounce(pa.peerID, senderAddr);
+            // peerAddr carries the actual peer IP when this packet is a relay from another node.
+            // Without it, senderAddr would be the relay node's IP, corrupting peer routing.
+            const uint32_t actualAddr = (pa.peerAddr != 0U) ? pa.peerAddr : senderAddr;
+            handlePeerAnnounce(pa.peerID, actualAddr);
         }
         break;
     default:
@@ -647,6 +650,9 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
             forward.header.type     = Networking::Packets::PacketType::PeerAnnounce;
             forward.header.senderId = peerID;  // looks like it originated from the new peer
             forward.peerID          = peerID;
+            // peerAddr carries the new peer's actual IP so receivers don't overwrite
+            // their peer table with this relay node's IP (the packet's source address).
+            forward.peerAddr        = senderAddr;
 
             for (uint8_t p = 1U; p <= Networking::NetworkService::MAX_PEERS; ++p) {
                 if (p == peerID || p == myId) { continue; }  // skip new peer and self

@@ -164,8 +164,13 @@ namespace GE::ECS {
 		// Clear the removed entity's mapping
 		m_allComponentIndices[typeID * m_maxEntities + entityID] = UINT32_MAX;
 
-		// Update the mapping for the moved slot/entity
-		m_allComponentIndices[typeID * m_maxEntities + movedSlot] = newPackedIdx;
+		// Update the mapping for the moved entity — only when a different entity was moved
+		// (movedSlot == entityID when removing the last element; in that case there is
+		// nothing to update and we must NOT overwrite the UINT32_MAX we just wrote above).
+		// Store the moved entity's own ID so that Get(entityID) → m_reverse[entityID] works.
+		if (movedSlot != entityID) {
+			m_allComponentIndices[typeID * m_maxEntities + movedSlot] = movedSlot;
+		}
 
 		return ERROR_CODE::OK;
 	}

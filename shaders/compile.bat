@@ -40,4 +40,7 @@ C:/VulkanSDK/1.4.321.1/Bin/glslc.exe smoke.comp -o smoke_comp.spv
 C:/VulkanSDK/1.4.321.1/Bin/glslc.exe particle.vert -o particle_vert.spv
 C:/VulkanSDK/1.4.321.1/Bin/glslc.exe particle.frag -o particle_frag.spv
 C:/VulkanSDK/1.4.321.1/Bin/glslc.exe particle.comp -o particle_comp.spv
+C:/VulkanSDK/1.4.321.1/Bin/glslc.exe flock_brute.comp -o flock_brute_comp.spv
+C:/VulkanSDK/1.4.321.1/Bin/glslc.exe flock.vert -o flock_vert.spv
+C:/VulkanSDK/1.4.321.1/Bin/glslc.exe flock.frag -o flock_frag.spv
 pause

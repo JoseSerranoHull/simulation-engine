@@ -162,6 +162,8 @@
     <ClCompile Include="source\assets\Mesh.cpp" />
     <ClCompile Include="source\assets\Model.cpp" />
     <ClCompile Include="source\particles\GpuParticleBackend.cpp" />
+    <ClCompile Include="source\particles\FlockGpuBackend.cpp" />
+    <ClCompile Include="source\systems\FlockGpuSystem.cpp" />
     <ClCompile Include="source\systems\AnimationSystem.cpp" />
     <ClCompile Include="source\systems\ClothSystem.cpp" />
     <ClCompile Include="source\systems\FlockingSystem.cpp" />
@@ -344,6 +346,8 @@
     <ClInclude Include="include\components\ParticleComponent.h" />
     <ClInclude Include="include\systems\ParticleEmitterSystem.h" />
     <ClInclude Include="include\particles\GpuParticleBackend.h" />
+    <ClInclude Include="include\particles\FlockGpuBackend.h" />
+    <ClInclude Include="include\systems\FlockGpuSystem.h" />
     <ClInclude Include="include\physics\Physics.h" />
     <ClInclude Include="include\physics\Physics2D.h" />
     <ClInclude Include="include\components\PhysicsComponents.h" />

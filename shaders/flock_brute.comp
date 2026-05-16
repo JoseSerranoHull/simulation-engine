@@ -1,0 +1,172 @@
+#version 450
+
+/**
+ * @file flock_brute.comp
+ * @brief GPU compute shader — BruteForce Reynolds boid steering.
+ *
+ * Each invocation handles one boid. It reads all N boids from the input
+ * SSBO, accumulates separation / alignment / cohesion forces using the same
+ * Weighted Truncated Sum as the CPU FlockingSystem, integrates velocity and
+ * position via Euler, then writes the result to the output SSBO.
+ *
+ * Ping-pong double-buffering (ubo.pingPong flag) avoids read-write hazards:
+ *   pingPong == 0 → read bufA, write bufB
+ *   pingPong == 1 → read bufB, write bufA
+ *
+ * Demonstrates: elements of the simulation implemented on the GPU using
+ * Compute Shaders (Simulation and Concurrency final lab — Extended Concurrency).
+ */
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// --- Data Structures ---
+struct BoidState {
+    vec4 posGroup; // xyz = world position, w = groupId (as float)
+    vec4 vel;      // xyz = velocity,        w = 0 (unused)
+};
+
+// --- Simulation Parameters ---
+layout(binding = 0) uniform FlockUBO {
+    float deltaTime;
+    uint  boidCount;
+    uint  pingPong;       // 0 = read A / write B; 1 = read B / write A
+    float pad0;
+
+    float separationRadius;
+    float alignmentRadius;
+    float cohesionRadius;
+    float wSeparation;
+
+    float wAlignment;
+    float wCohesion;
+    float maxSpeed;
+    float maxForce;
+
+    vec4  spawnCenterRadius; // xyz = spawn centre, w = spawn radius
+    float containmentK;      // spring constant
+    float pad1, pad2, pad3;
+} ubo;
+
+// --- Ping-pong Storage Buffers ---
+layout(std140, binding = 1) buffer BoidBufferA { BoidState boids[]; } bufA;
+layout(std140, binding = 2) buffer BoidBufferB { BoidState boids[]; } bufB;
+
+// ---------------------------------------------------------------------------
+// Helper: read one boid from the current input buffer.
+// ---------------------------------------------------------------------------
+BoidState readBoid(uint i) {
+    return (ubo.pingPong == 0u) ? bufA.boids[i] : bufB.boids[i];
+}
+
+// ---------------------------------------------------------------------------
+// Helper: write the updated boid to the current output buffer.
+// ---------------------------------------------------------------------------
+void writeBoid(uint i, BoidState b) {
+    if (ubo.pingPong == 0u) bufB.boids[i] = b;
+    else                    bufA.boids[i] = b;
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= ubo.boidCount) { return; }
+
+    BoidState self = readBoid(idx);
+    vec3 pos     = self.posGroup.xyz;
+    vec3 vel     = self.vel.xyz;
+    float groupId = self.posGroup.w;
+
+    // --- Neighbour accumulation ---
+    vec3 separation = vec3(0.0);
+    vec3 alignment  = vec3(0.0);
+    vec3 cohesion   = vec3(0.0);
+    int  sepCnt = 0, alignCnt = 0, cohCnt = 0;
+
+    float sepR2   = ubo.separationRadius * ubo.separationRadius;
+    float alignR2 = ubo.alignmentRadius  * ubo.alignmentRadius;
+    float cohR2   = ubo.cohesionRadius   * ubo.cohesionRadius;
+
+    for (uint i = 0u; i < ubo.boidCount; ++i) {
+        if (i == idx) { continue; }
+
+        BoidState other = readBoid(i);
+        float otherGroup = other.posGroup.w;
+
+        // Respect groupId — same behaviour as CPU FlockingSystem
+        if (groupId != 0.0 && otherGroup != 0.0 && groupId != otherGroup) { continue; }
+
+        vec3  diff  = pos - other.posGroup.xyz;
+        float dist2 = dot(diff, diff);
+
+        // Separation: proximity-weighted repulsion (normalize(diff) / dist = diff/dist²)
+        if (dist2 < sepR2 && dist2 > 1e-12) {
+            separation += diff / dist2;
+            sepCnt++;
+        }
+        // Alignment: average neighbour velocity
+        if (dist2 < alignR2) {
+            alignment += other.vel.xyz;
+            alignCnt++;
+        }
+        // Cohesion: accumulate centre of mass
+        if (dist2 < cohR2) {
+            cohesion += other.posGroup.xyz;
+            cohCnt++;
+        }
+    }
+
+    // --- Weighted Truncated Sum (priority: separation → alignment → cohesion) ---
+    float budget = ubo.maxForce * 4.0;
+    vec3  force  = vec3(0.0);
+
+    if (sepCnt > 0 && length(separation) > 1e-6) {
+        vec3  f = normalize(separation) * ubo.maxForce * ubo.wSeparation;
+        float m = length(f);
+        if (m > budget) { f *= budget / m; }
+        force  += f;
+        budget -= min(m, budget);
+    }
+
+    if (budget > 0.0 && alignCnt > 0) {
+        vec3 avgVel  = alignment / float(alignCnt);
+        vec3 desired = avgVel - vel;
+        if (length(desired) > 1e-6) {
+            vec3  f = normalize(desired) * ubo.maxForce * ubo.wAlignment;
+            float m = length(f);
+            if (m > budget) { f *= budget / m; }
+            force  += f;
+            budget -= min(m, budget);
+        }
+    }
+
+    if (budget > 0.0 && cohCnt > 0) {
+        vec3 center  = cohesion / float(cohCnt);
+        vec3 desired = center - pos;
+        if (length(desired) > 1e-6) {
+            vec3  f = normalize(desired) * ubo.maxForce * ubo.wCohesion;
+            float m = length(f);
+            if (m > budget) { f *= budget / m; }
+            force  += f;
+        }
+    }
+
+    // --- Containment: soft spring toward spawn centre when outside spawn sphere ---
+    vec3  toCenter     = ubo.spawnCenterRadius.xyz - pos;
+    float distFromCtr  = length(toCenter);
+    float spawnR       = ubo.spawnCenterRadius.w;
+    if (distFromCtr > spawnR && distFromCtr > 1e-6) {
+        float overshoot   = distFromCtr - spawnR;
+        force += normalize(toCenter) * ubo.containmentK * overshoot;
+    }
+
+    // --- Euler integration (mass = 1.0) ---
+    vel += force * ubo.deltaTime;
+    float speed = length(vel);
+    if (speed > ubo.maxSpeed && speed > 1e-6) { vel *= ubo.maxSpeed / speed; }
+    pos += vel * ubo.deltaTime;
+
+    // --- Write result ---
+    BoidState updated;
+    updated.posGroup = vec4(pos, groupId);
+    updated.vel      = vec4(vel, 0.0);
+    writeBoid(idx, updated);
+}

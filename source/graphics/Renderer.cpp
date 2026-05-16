@@ -5,6 +5,7 @@
 #include "components/ParticleComponent.h"
 #include "systems/ParticleEmitterSystem.h"
 #include "systems/ColliderVisualizerSystem.h"
+#include "particles/FlockGpuBackend.h"
 
 /* parasoft-begin-suppress ALL */
 #include <array>
@@ -345,6 +346,10 @@ void Renderer::recordParticles(
             if (backend) backend->draw(cb, globalSet);
         }
     }
+
+    // GPU flock boids: draw point sprites from the output SSBO when GPU mode is active.
+    GE::Particles::FlockGpuBackend* flockBackend = ServiceLocator::GetFlockGpuBackend();
+    if (flockBackend != nullptr) { flockBackend->Draw(cb, globalSet); }
 }
 
 } // namespace GE::Graphics

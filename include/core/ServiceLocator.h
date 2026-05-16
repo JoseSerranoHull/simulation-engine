@@ -16,6 +16,7 @@ namespace GE::Graphics { struct VulkanContext; class GpuResourceManager; }
 class TimeService;
 namespace GE::Systems { class ParticleEmitterSystem; }
 namespace GE::Systems { class SpringSystem; }
+namespace GE::Particles { class FlockGpuBackend; }
 
 // NEW: Forward declaration for Scene
 namespace GE::Scene { class Scene; }
@@ -35,6 +36,7 @@ public:
 	static void Provide(GE::Systems::ParticleEmitterSystem* particleEmitterSystem) { m_particleEmitterSystem = particleEmitterSystem; }
     static void Provide(GE::Systems::SpringSystem* springSystem) { m_springSystem = springSystem; }
     static void Provide(GE::NetworkBridge* bridge) { m_networkBridge = bridge; }
+    static void ProvideFlockGpuBackend(GE::Particles::FlockGpuBackend* b) { m_flockGpuBackend = b; }
 
     // --- Retrievers ---
     static GE::Graphics::VulkanContext* GetContext() {
@@ -87,8 +89,9 @@ public:
         return m_particleEmitterSystem;
 	}
 
-    static GE::Systems::SpringSystem* GetSpringSystem() { return m_springSystem; }
-    static GE::NetworkBridge* GetNetworkBridge() { return m_networkBridge; }
+    static GE::Systems::SpringSystem*     GetSpringSystem()     { return m_springSystem; }
+    static GE::NetworkBridge*             GetNetworkBridge()    { return m_networkBridge; }
+    static GE::Particles::FlockGpuBackend* GetFlockGpuBackend() { return m_flockGpuBackend; }
 
 private:
     static inline GE::Graphics::VulkanContext* m_context = nullptr;
@@ -101,6 +104,7 @@ private:
     static inline GE::Scene::Scene* m_scene = nullptr;
 	static inline TimeService* m_timeManager = nullptr;
 	static inline GE::Systems::ParticleEmitterSystem* m_particleEmitterSystem = nullptr;
-    static inline GE::Systems::SpringSystem* m_springSystem = nullptr;
-    static inline GE::NetworkBridge* m_networkBridge = nullptr;
+    static inline GE::Systems::SpringSystem*      m_springSystem    = nullptr;
+    static inline GE::NetworkBridge*              m_networkBridge   = nullptr;
+    static inline GE::Particles::FlockGpuBackend* m_flockGpuBackend = nullptr;
 };

@@ -9,8 +9,12 @@
 #include "scene/Scenario.h"
 #include "scene/fb/FBSceneContext.h"      // for FBCameraRecord, PrefabTemplate
 #include "physics/MaterialInteractionRegistry.h"
+#include "particles/FlockGpuBackend.h"    // full type needed for unique_ptr member
+#include "components/Components.h"        // MeshRenderer for flock agent visibility toggle
+#include "components/PhysicsComponents.h" // SphereCollider for flock agent visibility toggle
+#include "ecs/Entity.h"                   // EntityID typedef
 
-namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class ScriptSystem; class ColliderVisualizerSystem; }
+namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class FlockGpuSystem; class ScriptSystem; class ColliderVisualizerSystem; }
 namespace GE::Components { struct ClothComponent; }
 namespace GE::ECS { class EntityManager; }
 
@@ -64,6 +68,23 @@ namespace GE {
         GE::Systems::SpawnerSystem*   m_spawnerSystem   { nullptr };
         GE::Systems::ClothSystem*     m_clothSystem     { nullptr };
         GE::Systems::FlockingSystem*  m_flockingSystem  { nullptr };
+        GE::Systems::FlockGpuSystem*  m_flockGpuSystem  { nullptr };
+
+        // --- GPU flock backend (optional — created only when flock agents exist) ---
+        std::unique_ptr<GE::Particles::FlockGpuBackend> m_flockGpuBackend;
+        std::atomic<bool>                                m_useGpuFlock { false };
+
+        // Flock agent entity IDs + their MeshRenderers, stored at OnLoad so we can
+        // hide/show CPU spheres when toggling between GPU and CPU computation modes.
+        struct FlockAgentRecord {
+            GE::ECS::EntityID              id;
+            GE::Components::MeshRenderer   meshRenderer;
+            GE::Components::SphereCollider sphereCollider;
+            bool                           hadSphereCollider { false };
+        };
+        std::vector<FlockAgentRecord> m_flockAgents;
+        bool                          m_flockMeshesHidden { false };
+
         GE::Systems::ScriptSystem*              m_scriptSystem      { nullptr };
         GE::Systems::ColliderVisualizerSystem*  m_visualizerSystem  { nullptr };
 

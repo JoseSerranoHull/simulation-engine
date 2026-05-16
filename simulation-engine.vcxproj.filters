@@ -257,6 +257,12 @@
     <ClCompile Include="source\particles\GpuParticleBackend.cpp">
       <Filter>Source Files\particles</Filter>
     </ClCompile>
+    <ClCompile Include="source\particles\FlockGpuBackend.cpp">
+      <Filter>Source Files\particles</Filter>
+    </ClCompile>
+    <ClCompile Include="source\systems\FlockGpuSystem.cpp">
+      <Filter>Source Files\systems</Filter>
+    </ClCompile>
     <!-- assets -->
     <ClCompile Include="source\assets\AssetManager.cpp">
       <Filter>Source Files\assets</Filter>
@@ -845,6 +851,12 @@
     <!-- particle headers -->
     <ClInclude Include="include\particles\GpuParticleBackend.h">
       <Filter>Header Files\particles</Filter>
+    </ClInclude>
+    <ClInclude Include="include\particles\FlockGpuBackend.h">
+      <Filter>Header Files\particles</Filter>
+    </ClInclude>
+    <ClInclude Include="include\systems\FlockGpuSystem.h">
+      <Filter>Header Files\systems</Filter>
     </ClInclude>
     <ClInclude Include="include\particles\Particle.h">
       <Filter>Header Files\particles</Filter>

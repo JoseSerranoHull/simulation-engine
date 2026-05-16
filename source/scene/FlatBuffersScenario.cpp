@@ -10,6 +10,8 @@
 #include "systems/AnimationSystem.h"
 #include "systems/ClothSystem.h"
 #include "systems/FlockingSystem.h"
+#include "systems/FlockGpuSystem.h"
+#include "particles/FlockGpuBackend.h"
 #include "systems/PhysicsSystem.h"
 #include "systems/SpawnerSystem.h"
 #include "systems/ScriptSystem.h"
@@ -183,6 +185,45 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     if (m_flockingSystem != nullptr) {
         m_flockingSystem->m_spawnOrigin = adaptCtx.flockSpawnOrigin;
         m_flockingSystem->m_spawnRadius = adaptCtx.flockSpawnRadius;
+    }
+
+    // 11c. Build FlockGpuBackend if the scene contains flock agents.
+    //      Seeds initial boid positions from ECS, then registers FlockGpuSystem (IGpuSystem)
+    //      so the compute dispatch is recorded before the transparent render pass each frame.
+    {
+        auto& fcarr = em->GetCompArr<GE::Components::FlockingComponent>();
+        if (fcarr.GetCount() > 0U) {
+            VulkanContext* vkCtx = ServiceLocator::GetContext();
+            const PostProcessBackend* pp = ServiceLocator::GetExperience()->GetPostProcessBackend();
+            const VkRenderPass transparentPass = pp->getTransparentRenderPass();
+
+            m_flockGpuBackend = std::make_unique<GE::Particles::FlockGpuBackend>(
+                transparentPass, vkCtx->globalSetLayout);
+
+            // Seed initial boid state from ECS Transforms and RigidBodies.
+            // Also snapshot each agent's MeshRenderer so we can hide/show CPU
+            // spheres when toggling between GPU and CPU computation modes.
+            std::vector<GE::Particles::GpuBoid> initialBoids;
+            initialBoids.reserve(fcarr.GetCount());
+            for (uint32_t i = 0U; i < fcarr.GetCount(); ++i) {
+                const GE::ECS::EntityID eid = fcarr.Index()[i];
+                const auto* tr = em->TryGetTIComponent<GE::Components::Transform>(eid);
+                const auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
+                const auto& fc = fcarr.Data()[i];
+                GE::Particles::GpuBoid b{};
+                b.posGroup = glm::vec4(tr ? tr->m_worldPosition : glm::vec3(0.0f),
+                                       static_cast<float>(fc.groupId));
+                b.vel      = glm::vec4(rb ? rb->velocity : glm::vec3(0.0f), 0.0f);
+                initialBoids.push_back(b);
+            }
+            m_flockGpuBackend->Init(std::move(initialBoids));
+
+            auto* fgs = new GE::Systems::FlockGpuSystem(m_flockGpuBackend.get(), m_useGpuFlock);
+            fgs->m_spawnCenter = adaptCtx.flockSpawnOrigin;
+            fgs->m_spawnRadius = adaptCtx.flockSpawnRadius;
+            m_flockGpuSystem = fgs;
+            em->RegisterSystem(fgs);
+        }
     }
 
     // Build SpawnerComponent entities from adapted spawner records
@@ -693,6 +734,16 @@ void FlatBuffersScenario::OnUnload() {
         em->UnregisterSystemByID(m_flockingSystem->GetID());
         m_flockingSystem = nullptr;
     }
+
+    if ((m_flockGpuSystem != nullptr) && (em != nullptr)) {
+        em->UnregisterSystemByID(m_flockGpuSystem->GetID()); // EntityManager owns + deletes
+        m_flockGpuSystem = nullptr;
+    }
+    m_flockGpuBackend.reset();
+    m_useGpuFlock.store(false);
+    m_flockMeshesHidden = false;
+    m_flockAgents.clear();
+    ServiceLocator::ProvideFlockGpuBackend(nullptr);
 
     if ((m_physicsSystem != nullptr) && (em != nullptr)) {
         em->UnregisterSystemByID(m_physicsSystem->GetID());
@@ -1351,29 +1402,99 @@ void FlatBuffersScenario::OnGUI() {
             } else {
 
             if (ImGui::Button("Restart Flock")) {
-                m_flockingSystem->Restart(ServiceLocator::GetEntityManager());
+                if (m_useGpuFlock.load() && m_flockGpuBackend && m_flockGpuSystem) {
+                    m_flockGpuBackend->Restart(m_flockGpuSystem->m_spawnCenter,
+                                               m_flockGpuSystem->m_spawnRadius);
+                    m_flockGpuSystem->m_frozen.store(false);
+                } else {
+                    m_flockingSystem->Restart(ServiceLocator::GetEntityManager());
+                }
             }
             ImGui::SameLine();
             {
-                bool frozen = m_flockingSystem->m_frozen.load();
+                bool frozen = m_useGpuFlock.load()
+                    ? (m_flockGpuSystem != nullptr && m_flockGpuSystem->m_frozen.load())
+                    : m_flockingSystem->m_frozen.load();
                 if (ImGui::Checkbox("Freeze", &frozen)) {
-                    m_flockingSystem->m_frozen.store(frozen);
+                    if (m_useGpuFlock.load()) {
+                        if (m_flockGpuSystem != nullptr) { m_flockGpuSystem->m_frozen.store(frozen); }
+                    } else {
+                        m_flockingSystem->m_frozen.store(frozen);
+                    }
                 }
             }
             ImGui::Separator();
 
-            // Spatial mode selector
-            static const char* modeNames[] = { "Brute Force", "Uniform Grid", "Octree" };
-            int modeIdx = static_cast<int>(m_flockingSystem->m_spatialMode);
-            if (ImGui::Combo("Spatial Mode", &modeIdx, modeNames, 3)) {
-                m_flockingSystem->m_spatialMode = static_cast<GE::Systems::FlockSpatialMode>(modeIdx);
+            // Computation mode — CPU spatial modes + GPU BruteForce
+            static const char* modeNames[] = { "CPU Brute Force", "CPU Uniform Grid", "CPU Octree", "GPU Brute Force" };
+            int modeIdx = m_useGpuFlock.load() ? 3 : static_cast<int>(m_flockingSystem->m_spatialMode);
+            if (ImGui::Combo("Computation Mode", &modeIdx, modeNames, 4)) {
+                GE::ECS::EntityManager* em2 = ServiceLocator::GetEntityManager();
+                if (modeIdx == 3) {
+                    // GPU mode: freeze CPU system, hide CPU spheres, show GPU sprites
+                    m_useGpuFlock.store(true);
+                    m_flockingSystem->m_frozen.store(true);
+                    ServiceLocator::ProvideFlockGpuBackend(m_flockGpuBackend.get());
+                    if (!m_flockMeshesHidden && em2 != nullptr) {
+                        // Rebuild from the LIVE FlockingComponent array so entity IDs are
+                        // always current (OnLoad snapshot may be stale after spawner cycles).
+                        m_flockAgents.clear();
+                        auto& liveFk = em2->GetCompArr<GE::Components::FlockingComponent>();
+                        for (uint32_t i = 0U; i < liveFk.GetCount(); ++i) {
+                            const GE::ECS::EntityID eid = liveFk.Index()[i];
+
+                            FlockAgentRecord rec;
+                            rec.id = eid;
+
+                            // Snapshot and remove MeshRenderer (hides solid mesh)
+                            const auto* mr = em2->TryGetTIComponent<GE::Components::MeshRenderer>(eid);
+                            if (mr != nullptr) {
+                                rec.meshRenderer = *mr;
+                                em2->RemoveComponent<GE::Components::MeshRenderer>(eid);
+                            }
+
+                            // Snapshot and remove SphereCollider (hides collider wireframe)
+                            const auto* sc = em2->TryGetTIComponent<GE::Components::SphereCollider>(eid);
+                            if (sc != nullptr) {
+                                rec.sphereCollider    = *sc;
+                                rec.hadSphereCollider = true;
+                                em2->RemoveComponent<GE::Components::SphereCollider>(eid);
+                            }
+
+                            m_flockAgents.push_back(std::move(rec));
+                        }
+                        m_flockMeshesHidden = true;
+                    }
+                } else {
+                    // CPU mode: disable GPU sprites, restore CPU spheres, unfreeze CPU system
+                    m_useGpuFlock.store(false);
+                    ServiceLocator::ProvideFlockGpuBackend(nullptr);
+                    if (m_flockMeshesHidden && em2 != nullptr) {
+                        for (const auto& rec : m_flockAgents) {
+                            em2->AddComponent(rec.id, rec.meshRenderer);
+                            if (rec.hadSphereCollider) {
+                                em2->AddComponent(rec.id, rec.sphereCollider);
+                            }
+                        }
+                        m_flockMeshesHidden = false;
+                    }
+                    m_flockingSystem->m_frozen.store(false);
+                    m_flockingSystem->m_spatialMode = static_cast<GE::Systems::FlockSpatialMode>(modeIdx);
+                }
             }
-            ImGui::SliderFloat("Grid Cell Size", &m_flockingSystem->m_gridCellSize, 1.0f, 20.0f);
+            if (!m_useGpuFlock.load()) {
+                ImGui::SliderFloat("Grid Cell Size", &m_flockingSystem->m_gridCellSize, 1.0f, 20.0f);
+            }
 
             ImGui::Separator();
             ImGui::Text("Performance (last frame):");
-            ImGui::Text("  Neighbour checks: %llu", m_flockingSystem->m_neighbourChecksLastFrame);
-            ImGui::Text("  Update time:      %.3f ms", m_flockingSystem->m_lastUpdateMs);
+            if (m_useGpuFlock.load()) {
+                ImGui::TextColored({ 0.2f, 1.0f, 0.4f, 1.0f }, "  GPU BruteForce active");
+                ImGui::TextColored({ 0.2f, 1.0f, 0.4f, 1.0f }, "  %u boids computed on GPU", m_flockGpuBackend->GetBoidCount());
+            } else {
+                ImGui::Text("  Neighbour checks: %llu", m_flockingSystem->m_neighbourChecksLastFrame);
+                ImGui::Text("  Update time:      %.3f ms", m_flockingSystem->m_lastUpdateMs);
+            }
 
             // Per-agent parameter editing (all FlockingComponents simultaneously)
             if (em != nullptr) {

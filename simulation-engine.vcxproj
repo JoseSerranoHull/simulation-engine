@@ -320,7 +320,8 @@
     <ClInclude Include="include\scene\ISceneAdapter.h" />
     <ClInclude Include="include\scene\fb\FBSceneContext.h" />
     <ClInclude Include="include\scene\fb\FBSceneAdapter.h" />
-    <ClInclude Include="include\components\AnimationComponents.h" />
+    <ClInclude Include="include\components\AnimationComponent.h" />
+    <ClInclude Include="include\components\SpawnerComponent.h" />
     <ClInclude Include="include\components\ClothComponent.h" />
     <ClInclude Include="include\components\FlockingComponent.h" />
     <ClInclude Include="include\systems\ClothSystem.h" />

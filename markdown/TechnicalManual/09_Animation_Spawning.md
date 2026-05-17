@@ -13,7 +13,7 @@ This is a purely kinematic system — animated objects move along their path reg
 ### AnimatedObjectComponent
 
 ```cpp
-// include/components/AnimationComponents.h
+// include/components/AnimationComponent.h
 namespace GE::Components {
 
 enum class EasingType : uint8_t {
@@ -285,7 +285,7 @@ em->AddComponent(id, tr);
 ## 9.9 SpawnerComponent
 
 ```cpp
-// include/components/AnimationComponents.h
+// include/components/SpawnerComponent.h
 namespace GE::Components {
 
 enum class SpawnLocType : uint8_t {

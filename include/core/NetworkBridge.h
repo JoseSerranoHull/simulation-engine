@@ -19,7 +19,7 @@
 #include "networking/NetworkService.h"
 #include "networking/Packets.h"
 #include "ecs/EntityManager.h"
-#include "components/AnimationComponents.h"
+#include "components/AnimationComponent.h"
 #include "components/PhysicsComponents.h"
 #include "components/Transform.h"
 

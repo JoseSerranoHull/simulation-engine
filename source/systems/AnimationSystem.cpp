@@ -1,7 +1,7 @@
 #include "systems/AnimationSystem.h"
 #include "core/ServiceLocator.h"
 #include "ecs/EntityManager.h"
-#include "components/AnimationComponents.h"
+#include "components/AnimationComponent.h"
 #include "components/Transform.h"
 
 /* parasoft-begin-suppress ALL */

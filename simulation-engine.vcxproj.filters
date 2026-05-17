@@ -721,7 +721,10 @@
     <ClInclude Include="include\components\PhysicsComponents.h">
       <Filter>Header Files\components</Filter>
     </ClInclude>
-    <ClInclude Include="include\components\AnimationComponents.h">
+    <ClInclude Include="include\components\AnimationComponent.h">
+      <Filter>Header Files\components</Filter>
+    </ClInclude>
+    <ClInclude Include="include\components\SpawnerComponent.h">
       <Filter>Header Files\components</Filter>
     </ClInclude>
     <ClInclude Include="include\components\ClothComponent.h">

@@ -5,7 +5,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "ecs/IECSystem.h"
-#include "components/AnimationComponents.h"  // SpawnerComponent, SpawnLocType
+#include "components/SpawnerComponent.h"
 
 namespace GE::Systems {
 

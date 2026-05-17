@@ -6,7 +6,8 @@
 #include "core/ServiceLocator.h"
 #include "components/Tag.h"
 #include "components/Transform.h"
-#include "components/AnimationComponents.h"  // SpawnerComponent::spawnedEntityIds
+#include "components/AnimationComponent.h"
+#include "components/SpawnerComponent.h"
 
 /* parasoft-begin-suppress ALL */
 #include <filesystem>

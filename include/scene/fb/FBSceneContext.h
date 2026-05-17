@@ -9,7 +9,8 @@
 #include <glm/glm.hpp>
 /* parasoft-end-suppress ALL */
 
-#include "components/AnimationComponents.h"  // SpawnLocType
+#include "components/AnimationComponent.h"
+#include "components/SpawnerComponent.h"
 
 // Forward declarations to avoid pulling in heavy headers
 namespace GE::ECS    { class EntityManager; }

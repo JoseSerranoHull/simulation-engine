@@ -1,7 +1,7 @@
 #include "systems/PhysicsSystem.h"
 #include "core/ServiceLocator.h"
 #include "components/PhysicsComponents.h"
-#include "components/AnimationComponents.h"
+#include "components/AnimationComponent.h"
 #include "physics/Sphere.h"
 #include "physics/Plane.h"
 #include "components/Transform.h"

@@ -58,8 +58,6 @@ public:
 
     /**
      * @brief Optional extra push constant block to inject AFTER the model matrix push.
-     * Used by specialised pipelines (e.g. checkerboard) that declare additional
-     * fragment-stage push constant fields beyond the standard mat4 model matrix.
      */
     struct ExtraPushConstants {
         const void*        data        = nullptr;
@@ -68,8 +66,6 @@ public:
         VkShaderStageFlags stages      = VK_SHADER_STAGE_FRAGMENT_BIT;
         // Stages to use for the model matrix push (step 4).
         // Must cover ALL stages in any overlapping pipeline layout range.
-        // For the checkerboard pipeline (single VERT|FRAG range over [0,100))
-        // this must be VERT|FRAG; for all other pipelines VERT_BIT is correct.
         VkShaderStageFlags modelStages = VK_SHADER_STAGE_VERTEX_BIT;
     };
 
@@ -82,7 +78,7 @@ public:
     /**
      * @brief Records draw commands for this specific mesh.
      * @param extraPush  Optional extra push constant data injected after the model matrix.
-     *                   Set to nullptr (default) for standard phong/shadow pipelines.
+     * Set to nullptr (default) for standard phong/shadow pipelines.
      */
     void draw(
         VkCommandBuffer commandBuffer,

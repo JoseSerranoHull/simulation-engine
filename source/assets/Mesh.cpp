@@ -62,8 +62,6 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPip
 
         // 3. Bind Descriptor Sets.
         // Only bind Set 1 (material) if the material has a valid descriptor set.
-        // Pipelines with includeMaterialSet=false (e.g. flat-color) have a null
-        // descriptor set; passing VK_NULL_HANDLE violates VUID-vkCmdBindDescriptorSets-pDescriptorSets-00358.
         const VkDescriptorSet matSet =
             (material != nullptr) ? material->getDescriptorSet() : VK_NULL_HANDLE;
         const uint32_t activeSetCount = (matSet != VK_NULL_HANDLE) ? SET_COUNT : 1U;
@@ -73,8 +71,6 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPip
             activePipeline->getPipelineLayout(), SET_GLOBAL, activeSetCount, sets, 0U, nullptr);
 
         // 4. Update World Matrix via Push Constants.
-        // Use the caller-supplied modelStages when present (e.g. the checkerboard pipeline
-        // declares a single VERT|FRAG range over [0,100), so both pushes must use VERT|FRAG).
         const VkShaderStageFlags matrixStages = (extraPush != nullptr)
             ? extraPush->modelStages
             : VK_SHADER_STAGE_VERTEX_BIT;
@@ -83,8 +79,6 @@ void Mesh::draw(VkCommandBuffer cb, VkDescriptorSet globalSet, const GraphicsPip
             static_cast<uint32_t>(sizeof(glm::mat4)), &worldMatrix);
 
         // 4b. Optional extra push constants (e.g. checkerboard colours)
-        // These must be pushed AFTER the pipeline bind (which happens at step 2 above)
-        // and BEFORE the draw call to satisfy Vulkan's push constant validity rules.
         if ((extraPush != nullptr) && (extraPush->data != nullptr) && (extraPush->size > 0U)) {
             vkCmdPushConstants(cb, activePipeline->getPipelineLayout(),
                 extraPush->stages, extraPush->offset, extraPush->size, extraPush->data);

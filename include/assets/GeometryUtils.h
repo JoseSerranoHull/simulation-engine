@@ -75,7 +75,7 @@ public:
     /**
      * @brief Generates a wire box as LINE_LIST pairs (8 vertices, 24 indices).
      * Half-extents are all 1.0; caller scales via model matrix.
-     * @param color  RGB color baked into every vertex (default: #83d42b green).
+     * @param color RGB color baked into every vertex (default: #83d42b green).
      */
     static GE::Assets::OBJLoader::MeshData generateWireBox(
         const glm::vec3& color = glm::vec3(0.514f, 0.831f, 0.169f));
@@ -84,7 +84,7 @@ public:
      * @brief Generates three great-circle rings (XY, XZ, YZ) as LINE_LIST pairs.
      * Vertex color is baked in. Radius = 1.0; caller scales via model matrix.
      * @param segments Number of segments per ring (default 32).
-     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     * @param color RGB color baked into every vertex (default: #83d42b green).
      */
     static GE::Assets::OBJLoader::MeshData generateWireSphere(
         uint32_t segments = 32U,
@@ -95,7 +95,7 @@ public:
      * @brief Generates a border quad + cross center in the local XZ plane as LINE_LIST pairs.
      * Intended as a visual indicator for PlaneColliders; caller applies orientation via model matrix.
      * @param halfSize Half-extent of the quad in world units (default 5.0).
-     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     * @param color RGB color baked into every vertex (default: #83d42b green).
      */
     static GE::Assets::OBJLoader::MeshData generateWirePlane(
         float halfSize = 5.0f,
@@ -107,7 +107,7 @@ public:
      * Half-height = 1, radius = 1; caller applies non-uniform scale via model matrix.
      * Reused for CylinderCollider (1 draw call) and CapsuleCollider body (1 of 3 draw calls).
      * @param segments Number of ring segments (default 24).
-     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     * @param color RGB color baked into every vertex (default: #83d42b green).
      */
     static GE::Assets::OBJLoader::MeshData generateWireCylinder(
         uint32_t segments = 24U,
@@ -119,7 +119,7 @@ public:
      * (XY plane and ZY plane) rising from y=0 to y=+1. Radius = 1.
      * For a capsule: draw with scale(r,r,r) translated ±halfH in Y; flip Y scale for lower cap.
      * @param segments Number of ring segments; arcs use segments/2 edges (default 24).
-     * @param color    RGB color baked into every vertex (default: #83d42b green).
+     * @param color RGB color baked into every vertex (default: #83d42b green).
      */
     static GE::Assets::OBJLoader::MeshData generateWireHemisphere(
         uint32_t segments = 24U,

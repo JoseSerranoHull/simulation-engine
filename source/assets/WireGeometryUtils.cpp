@@ -28,21 +28,21 @@ OBJLoader::MeshData GeometryUtils::generateWireSphere(
             const float sinA  = std::sin(angle);
 
             GE::Assets::Vertex v{};
-            v.color   = color;
+            v.color = color;
             v.texcoord = glm::vec2(FLOAT_ZERO);
 
             if (c == 0U) {
                 // XY plane
                 v.position = glm::vec3(cosA, sinA, FLOAT_ZERO);
-                v.normal   = glm::vec3(FLOAT_ZERO, FLOAT_ZERO, FLOAT_ONE);
+                v.normal = glm::vec3(FLOAT_ZERO, FLOAT_ZERO, FLOAT_ONE);
             } else if (c == 1U) {
                 // XZ plane
                 v.position = glm::vec3(cosA, FLOAT_ZERO, sinA);
-                v.normal   = glm::vec3(FLOAT_ZERO, FLOAT_ONE, FLOAT_ZERO);
+                v.normal = glm::vec3(FLOAT_ZERO, FLOAT_ONE, FLOAT_ZERO);
             } else {
                 // YZ plane
                 v.position = glm::vec3(FLOAT_ZERO, cosA, sinA);
-                v.normal   = glm::vec3(FLOAT_ONE, FLOAT_ZERO, FLOAT_ZERO);
+                v.normal = glm::vec3(FLOAT_ONE, FLOAT_ZERO, FLOAT_ZERO);
             }
 
             data.vertices.push_back(v);
@@ -91,8 +91,8 @@ OBJLoader::MeshData GeometryUtils::generateWirePlane(
     for (const auto& pos : corners) {
         GE::Assets::Vertex v{};
         v.position = pos;
-        v.color    = color;
-        v.normal   = up;
+        v.color = color;
+        v.normal = up;
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }
@@ -100,8 +100,8 @@ OBJLoader::MeshData GeometryUtils::generateWirePlane(
     for (const auto& pos : midpoints) {
         GE::Assets::Vertex v{};
         v.position = pos;
-        v.color    = color;
-        v.normal   = up;
+        v.color = color;
+        v.normal = up;
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }
@@ -131,8 +131,8 @@ OBJLoader::MeshData GeometryUtils::generateWireCylinder(
         const float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(segments);
         GE::Assets::Vertex v{};
         v.position = glm::vec3(std::cos(angle), FLOAT_ONE, std::sin(angle));
-        v.color    = color;
-        v.normal   = glm::vec3(FLOAT_ZERO, FLOAT_ONE, FLOAT_ZERO);
+        v.color = color;
+        v.normal = glm::vec3(FLOAT_ZERO, FLOAT_ONE, FLOAT_ZERO);
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }
@@ -146,8 +146,8 @@ OBJLoader::MeshData GeometryUtils::generateWireCylinder(
         const float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(segments);
         GE::Assets::Vertex v{};
         v.position = glm::vec3(std::cos(angle), -FLOAT_ONE, std::sin(angle));
-        v.color    = color;
-        v.normal   = glm::vec3(FLOAT_ZERO, -FLOAT_ONE, FLOAT_ZERO);
+        v.color = color;
+        v.normal = glm::vec3(FLOAT_ZERO, -FLOAT_ONE, FLOAT_ZERO);
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }
@@ -184,8 +184,8 @@ OBJLoader::MeshData GeometryUtils::generateWireHemisphere(
         const float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(segments);
         GE::Assets::Vertex v{};
         v.position = glm::vec3(std::cos(angle), FLOAT_ZERO, std::sin(angle));
-        v.color    = color;
-        v.normal   = glm::vec3(FLOAT_ZERO, FLOAT_ONE, FLOAT_ZERO);
+        v.color = color;
+        v.normal = glm::vec3(FLOAT_ZERO, FLOAT_ONE, FLOAT_ZERO);
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }
@@ -203,8 +203,8 @@ OBJLoader::MeshData GeometryUtils::generateWireHemisphere(
         const float angle = PI * static_cast<float>(i) / static_cast<float>(halfSegs);
         GE::Assets::Vertex v{};
         v.position = glm::vec3(std::cos(angle), std::sin(angle), FLOAT_ZERO);
-        v.color    = color;
-        v.normal   = glm::vec3(FLOAT_ZERO, FLOAT_ZERO, FLOAT_ONE);
+        v.color = color;
+        v.normal = glm::vec3(FLOAT_ZERO, FLOAT_ZERO, FLOAT_ONE);
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }
@@ -221,8 +221,8 @@ OBJLoader::MeshData GeometryUtils::generateWireHemisphere(
         const float angle = PI * static_cast<float>(i) / static_cast<float>(halfSegs);
         GE::Assets::Vertex v{};
         v.position = glm::vec3(FLOAT_ZERO, std::sin(angle), std::cos(angle));
-        v.color    = color;
-        v.normal   = glm::vec3(FLOAT_ONE, FLOAT_ZERO, FLOAT_ZERO);
+        v.color = color;
+        v.normal = glm::vec3(FLOAT_ONE, FLOAT_ZERO, FLOAT_ZERO);
         v.texcoord = glm::vec2(FLOAT_ZERO);
         data.vertices.push_back(v);
     }

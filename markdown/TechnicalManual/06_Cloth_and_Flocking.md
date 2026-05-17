@@ -577,7 +577,7 @@ For each particle, a green line from `p.position` to `p.position + normal × 0.0
 
 ### GPU buffer
 
-A single host-coherent buffer (`m_clothDebugBuf`, 50,000 vertices ≈ 2.8 MB) is allocated in the `ColliderVisualizerSystem` constructor. It is filled each frame in `RecordPass()` and drawn with one `vkCmdDraw` call per cloth.
+A single host-coherent buffer (`m_clothDebugBuf`, 200,000 vertices ≈ 11 MB) is allocated in the `ColliderVisualizerSystem` constructor. The limit was raised from 50,000 to support dense 80 × 80 grids — at maximum dimensions a single cloth produces ~51,200 spring lines + particle crosses + normals, comfortably within 200,000. It is filled each frame in `RecordPass()` and drawn with one `vkCmdDraw` call per cloth.
 
 ### ImGui controls
 
@@ -599,7 +599,9 @@ These flags live on `m_visualizerSystem` (the `ColliderVisualizerSystem*` stored
 
 ## 6.5e PBR Textures, Normal Mapping, and Heat Tinting
 
-When a cloth entity in the scene JSON has `texture_path` set and the scene is in **material colour mode** (`useOwnerColors = false`), `FBSceneAdapter` creates a Phong material (pipeline 0) with descriptor set 1 bound to five PBR textures: albedo, normal map, AO, metallic, roughness.
+When a cloth entity in the scene JSON has `texture_path` set and the scene is in **material colour mode** (`useOwnerColors = false`), `FBSceneAdapter` creates a Phong material using **pipeline 10** with descriptor set 1 bound to five PBR textures: albedo, normal map, AO, metallic, roughness.
+
+**Double-sided rendering — pipeline 10:** Cloth is visible from both faces. The engine creates pipeline 10 in `FlatBuffersScenario::OnLoad()` using the same `phong.vert` / `phong.frag` shaders as pipeline 0 (the standard Phong pipeline), but with `enableCulling = false` → `VK_CULL_MODE_NONE`. Vulkan's default (`VK_CULL_MODE_BACK_BIT`) discards fragments whose triangle winding faces away from the camera, making the cloth back-face invisible. With `VK_CULL_MODE_NONE`, all fragments are shaded regardless of winding. Because `phong.frag` computes shading from the interpolated geometric normal, the back face is shaded with its own outward-pointing normal — no `gl_FrontFacing` flip is needed. Flat-colour cloth (non-textured) uses pipeline 8 which also has `enableCulling = false` for the same reason.
 
 The Phong fragment shader computes a TBN matrix from the per-vertex tangent and geometric normal (both recomputed each frame from deformed particle positions) and uses it to decode the normal map into world-space shading normals.
 
@@ -621,21 +623,33 @@ The cloth grid can be resized interactively at runtime without reloading the sce
 
 ### How Rebuild Works
 
-`FlatBuffersScenario::applyClothRebuild()` is the core function. It runs on the physics thread at the start of the next `OnUpdate()` tick after any rebuild is requested (deferred via `ClothRebuildState::rebuildPending`). No Vulkan resource recreation is needed — the GPU buffer was pre-allocated for the maximum grid size at load time.
+**Thread-safe deferred dispatch.** Particle mutation (resizing the `particles` vector, rebuilding the spring list) must happen on the **physics thread** because `ClothSystem::OnUpdate()` iterates the same data on that thread every tick. Calling `particles.clear()` from the render thread (ImGui callback) while the physics thread is mid-iteration is a data race and undefined behaviour.
 
-Steps performed by `applyClothRebuild()`:
-1. Re-initialise particle grid (new `rows × cols`, pinned top row, world-space positions)
+The solution uses the same benign-race pattern as `cc.windEnabled`: the ImGui buttons write four POD fields on `ClothComponent` and then set `cc.rebuildPending = true`. At the top of the physics-thread loop in `ClothSystem::OnUpdate()`, before any iteration begins, the flag is tested and cleared:
+
+```cpp
+if (cc.rebuildPending) {
+    cc.rebuildPending = false;
+    performGeometryRebuild(cc, clothArr.Index()[ci], em);
+}
+```
+
+`ClothSystem::performGeometryRebuild()` is the core function. It executes entirely on the physics thread and performs:
+
+1. Re-initialise particle grid (`rebuildRows × rebuildCols`, pinned top row, world-space positions)
 2. Rebuild spring list (structural / shear / flexion — exact replica of `FBSceneAdapter` spring-building)
 3. Reset `burnSources` (one default inactive source at cloth centre)
 4. Update `cc.vertexCount`, `cc.indexCount` (buffer region reused; `cc.indexOffset` unchanged)
 5. Write initial vertex data (local space) into the persistently-mapped buffer
 6. Call `mesh->setIndexCount(cc.indexCount)` to sync the `Mesh` object's cached count so the Renderer draws the correct number of indices
 
-After rebuild the per-frame loops in `OnUpdate()` (vertex refresh + index rebuild) run immediately, producing correct normals and burned-hole tracking for the new geometry.
+No Vulkan resource recreation is needed — the GPU buffer was pre-allocated for the maximum grid size at load time.
+
+After rebuild the per-frame loops in `ClothSystem::OnUpdate()` (integration, constraints, tearing, burning) and `FlatBuffersScenario::OnUpdate()` (vertex refresh) run immediately, producing correct normals and burned-hole tracking for the new geometry.
 
 ### Size Controls (physical size changes)
 
-`[− Rows]` / `[+ Rows]` and `[− Cols]` / `[+ Cols]` step the active grid by ±1 in one axis. The cloth's `cellSize` is preserved, so physical dimensions scale with the count. Range: 2–80. Triggers an immediate rebuild.
+`[− Rows]` / `[+ Rows]` and `[− Cols]` / `[+ Cols]` step the active grid by ±1 in one axis. Each button writes directly to `cc.rebuildRows`, `cc.rebuildCols`, `cc.rebuildCellSize` (preserving the current cell size so physical dimensions scale with the count), then sets `cc.rebuildPending = true`. Range: 2–80. The physics thread executes the rebuild at the start of the next tick.
 
 ### Density Controls (physical size preserved)
 
@@ -655,15 +669,32 @@ Maximum density is auto-computed as `MAX_CLOTH_DIM / max(origRows, origCols)` to
 
 Restores all physics parameters (spring constants, damping, burn settings, wind, constraint iterations) **and** the original rows/cols/cellSize from the scene file snapshot captured at load time. Also resets `density` to 1.
 
+### Rebuild trigger fields (in `ClothComponent`)
+
+The four fields written by the render thread (ImGui) and read+cleared by the physics thread (`ClothSystem`):
+
+```cpp
+// ClothComponent (include/components/ClothComponent.h)
+bool  rebuildPending  { false };  // set true by ImGui; cleared by ClothSystem
+int   rebuildRows     { 0 };      // target row count
+int   rebuildCols     { 0 };      // target col count
+float rebuildCellSize { 0.2f };   // target cell size (density/size controls write this)
+```
+
+These fields follow the same benign-race contract as `cc.windEnabled`: they are plain POD scalars written once by the render thread and read once by the physics thread per tick; no synchronisation primitive is needed because the worst case is acting on a slightly stale value, which simply defers the rebuild by one tick.
+
 ### ClothRebuildState (in `FlatBuffersScenario.h`)
+
+`ClothRebuildState` holds only the **scene-file snapshot** used for density tracking and Reset to Defaults. It has no rebuild trigger or target fields — those live on `ClothComponent` directly.
 
 ```cpp
 struct ClothRebuildState {
-    int   targetRows, targetCols;     // target for next rebuild
-    int   density;                    // density multiplier (1 = original)
-    float origCellSize, targetCellSize; // load-time and rebuild-time cell size
-    bool  rebuildPending, useDefaults;
-    // + origRows/Cols + all orig* physics param snapshots
+    int   density      { 1    };  // density multiplier (1 = original; min 1)
+    float origCellSize { 0.2f };  // load-time cellSize (for density calculation)
+    int   origRows     { 30  };   // load-time dimensions (for density + Reset)
+    int   origCols     { 30  };
+    // + origSpringK, origShearK, origFlexionK, origDamping, origTearThreshold ...
+    // + all other physics param snapshots from the scene file
 };
 ```
 
@@ -869,6 +900,106 @@ void FlockingSystem::Restart(GE::ECS::EntityManager* em) {
 ```
 
 `m_spawnOrigin` and `m_spawnRadius` are set from the scene JSON at load time via `adaptCtx.flockSpawnOrigin / flockSpawnRadius`.
+
+---
+
+## 6.14 GPU BruteForce Flocking — Compute Shader
+
+The engine implements a fully GPU-driven flocking mode alongside the CPU `FlockingSystem`. When activated, the entire O(N²) BruteForce steering loop (separation, alignment, cohesion) runs inside a Vulkan compute shader — one GPU thread per boid — with no CPU readback.
+
+### Architecture Overview
+
+| Class | File | Role |
+|---|---|---|
+| `FlockGpuBackend` | `include/particles/FlockGpuBackend.h` | Owns SSBOs, UBO, compute pipeline, point-sprite graphics pipeline |
+| `FlockGpuSystem` | `include/systems/FlockGpuSystem.h` | `IGpuSystem` — records `vkCmdDispatch` each frame before the render pass |
+| `flock_brute.comp` | `shaders/flock_brute.comp` | Compute shader: N² neighbour accumulation + Euler integration |
+
+### Ping-Pong SSBOs
+
+Two device-local SSBOs (`m_ssboA`, `m_ssboB`) store all boid state. A `pingPong` flag in the UBO toggles which is read and which is written each frame, eliminating read-write hazards without per-frame staging:
+
+```
+pingPong = 0 → shader reads SSBO A, writes SSBO B
+pingPong = 1 → shader reads SSBO B, writes SSBO A
+```
+
+Both SSBOs carry `VK_BUFFER_USAGE_VERTEX_BUFFER_BIT` so the rendering pass can bind the output buffer directly as a vertex stream for point-sprite rendering — no copy needed.
+
+### `GpuBoid` Layout
+
+```cpp
+struct alignas(16) GpuBoid {
+    glm::vec4 posGroup; // xyz = world position, w = groupId
+    glm::vec4 vel;      // xyz = velocity,        w = 0
+};  // 32 bytes; exactly two vec4s → no std140 padding
+```
+
+### The Compute Shader (`flock_brute.comp`)
+
+`local_size_x = 256`. Each invocation is one boid. The inner loop iterates all N boids from the input SSBO:
+
+```glsl
+// Separation: proximity-weighted repulsion
+if (dist2 < sepR2 && dist2 > 1e-12) {
+    separation += diff / dist2;   // = normalize(diff) / dist
+    sepCnt++;
+}
+// Alignment: average velocity of neighbours
+if (dist2 < alignR2) { alignment += other.vel.xyz; alignCnt++; }
+// Cohesion: steer toward centre of mass
+if (dist2 < cohR2)   { cohesion  += other.posGroup.xyz; cohCnt++; }
+```
+
+Forces are combined with the **Weighted Truncated Sum** (matching the CPU path): separation is highest priority, then alignment, then cohesion. A remaining-budget variable ensures the total never exceeds `maxForce × 4`. Euler integration advances velocity and position:
+
+```glsl
+vel += force * deltaTime;
+if (length(vel) > maxSpeed) vel *= maxSpeed / length(vel);
+pos += vel * deltaTime;
+```
+
+A **containment spring** prevents drift: when a boid exceeds the spawn-sphere radius, a restoring force `containmentK × overshoot × dirToCenter` is added before integration. `containmentK = maxForce × 2` keeps boids comfortably inside the boundary without eliminating emergent clustering.
+
+### Vulkan Dispatch and Synchronisation
+
+`FlockGpuSystem::OnUpdate(dt, cb)` is an `IGpuSystem` and runs inside `em->UpdateGpuStages()` — **before** the render pass begins. The dispatch sequence:
+
+```
+vkCmdBindPipeline (COMPUTE)
+vkCmdBindDescriptorSets
+vkCmdDispatch((N + 255) / 256, 1, 1)
+VkBufferMemoryBarrier:
+    srcAccess = SHADER_WRITE, dstAccess = VERTEX_ATTRIBUTE_READ
+    srcStage  = COMPUTE_SHADER, dstStage = VERTEX_INPUT
+```
+
+The barrier guarantees the compute writes to the output SSBO are visible to the vertex shader before `flockBackend->Draw()` is called inside `recordParticles()` during the transparent pass.
+
+### Restart Safety: `vkDeviceWaitIdle`
+
+`FlockGpuBackend::Restart()` seeds fresh random positions into **both** SSBOs. Because `OnGUI` fires inside the current frame's command-buffer recording window (after `UpdateGpuStages` has already recorded a dispatch), the in-flight dispatch may be using either SSBO. Writing only to SSBO A while the dispatch reads SSBO B would leave boids at the origin. Writing to both SSBOs ensures valid initial data regardless of which is the current input. `vkDeviceWaitIdle` precedes the CPU writes because frame N-1 may still be executing on the GPU when the button is pressed — the per-frame fence only covers frame N-maxFrames.
+
+### CPU ↔ GPU Mode Toggle
+
+Switching to GPU mode removes the `MeshRenderer` and `SphereCollider` from every flock agent (hiding the CPU spheres and collider wireframes) by iterating the live `FlockingComponent` array and calling `EntityManager::RemoveComponent`. Switching back restores both components from snapshots stored in `FlockAgentRecord`. This relies on the corrected `RemoveComponent` implementation (see §6.15).
+
+### §6.15 `EntityManager::RemoveComponent` Bug Fix
+
+The packed `ComponentArray` uses swap-and-pop: when entity X is removed, the last element Y moves into X's packed slot. `m_allComponentIndices` must be updated so subsequent `Get(Y)` finds Y's new position. The original code stored the packed index in that entry (`= newPackedIdx`), but `Get(entityID)` feeds its input to `m_reverse[entityID]`, treating it as an entity ID — causing a silent wrong-component lookup for Y.
+
+The fix:
+
+```cpp
+// EntityManager.h — RemoveComponent
+m_allComponentIndices[typeID * m_maxEntities + entityID] = UINT32_MAX;  // clear removed
+if (movedSlot != entityID) {
+    // Store movedSlot's own entity ID so Get(movedSlot) → m_reverse[movedSlot] works.
+    m_allComponentIndices[typeID * m_maxEntities + movedSlot] = movedSlot;
+}
+```
+
+The guard `movedSlot != entityID` handles the last-element case: when removing the last packed element, `movedSlot == entityID` and the overwrite would corrupt the `UINT32_MAX` sentinel just written, making `HasComponent` return true for a removed component.
 
 ---
 

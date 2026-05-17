@@ -118,8 +118,6 @@ private:
     static constexpr uint32_t BINDING_UBO            = 0U;
     static constexpr uint32_t BINDING_SSBO_A         = 1U;
     static constexpr uint32_t BINDING_SSBO_B         = 2U;
-    static constexpr uint32_t DESCRIPTOR_COUNT_ONE   = 1U;
-    static constexpr uint32_t SET_INDEX_GLOBAL        = 0U;
 
     // --- Configuration ---
     uint32_t              m_boidCount    { 0 };

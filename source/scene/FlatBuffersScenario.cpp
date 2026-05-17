@@ -109,6 +109,20 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         VK_COMPARE_OP_LESS,
         true));              // frontFaceCull = true  [pipeline 9]
 
+    // Pipeline 10: Cloth Phong — Phong shaders with culling DISABLED for double-sided cloth.
+    // Reuses phong_vert/frag shader modules [0] and [1] from createMaterialPipelines().
+    // phong.frag uses gl_FrontFacing to flip the geometric normal on back faces so
+    // lighting is correct when viewing the cloth from either side.
+    m_pipelines.push_back(std::make_unique<GraphicsPipeline>(
+        offscreenPass,
+        vkCtx->materialSetLayout,    // Set 1: 5 PBR material textures
+        m_shaderModules[0].get(),    // phong.vert
+        m_shaderModules[1].get(),    // phong.frag
+        false,                       // enableCulling = OFF — double-sided
+        false,                       // enableBlending = false
+        true,                        // enableDepthWrite = true
+        msaa));                      // [pipeline 10]
+
     // 3. Load and adapt the FlatBuffers binary
     GE::Scene::FB::FBSceneAdapter adapter;
     if (!adapter.load(m_configPath)) {
@@ -346,8 +360,8 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         for (uint32_t i = 0U; i < clothArr.GetCount(); ++i) {
             const GE::Components::ClothComponent& cc = clothArr.Data()[i];
             ClothRebuildState s;
-            s.targetRows = s.origRows = cc.rows;
-            s.targetCols = s.origCols = cc.cols;
+            s.origRows = cc.rows;
+            s.origCols = cc.cols;
             s.origSpringK            = cc.springK;
             s.origShearK             = cc.shearK;
             s.origFlexionK           = cc.flexionK;
@@ -366,137 +380,14 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
             s.origWindEnabled        = cc.windEnabled;
             s.origWindX              = cc.windX;
             s.origWindZ              = cc.windZ;
-            s.density                = 1;
-            s.origCellSize           = cc.cellSize;
-            s.targetCellSize         = cc.cellSize;
+            s.density      = 1;
+            s.origCellSize = cc.cellSize;
             m_clothStates.push_back(s);
         }
     }
 
     GE_LOG_INFO("FlatBuffersScenario: Loaded '" + m_sceneName + "' from " + m_configPath);
     GE_LOG_INFO("FlatBuffersScenario: Network / Simulation / Display menus are only active when a .bin FlatBuffers scene is loaded.");
-}
-
-// ===========================================================================
-// SECTION 3: OnUpdate helpers
-// ===========================================================================
-
-void FlatBuffersScenario::applyClothRebuild(
-    GE::Components::ClothComponent& cc,
-    uint32_t eid,
-    GE::ECS::EntityManager* em,
-    int newRows, int newCols) const
-{
-    if (cc.mappedVertices == nullptr)    { return; }
-    if (newRows * newCols > 65535)       { return; }   // uint16_t spring index limit
-    if (newRows < 2 || newCols < 2)      { return; }
-
-    const GE::Components::Transform* tr =
-        em->TryGetTIComponent<GE::Components::Transform>(eid);
-    const glm::vec3 origin = (tr != nullptr) ? tr->m_worldPosition : glm::vec3{ 0.0f };
-
-    cc.rows = newRows;
-    cc.cols = newCols;
-
-    // Reinitialise particles
-    cc.particles.clear();
-    cc.particles.reserve(static_cast<std::size_t>(newRows * newCols));
-    for (int r = 0; r < newRows; ++r) {
-        for (int c = 0; c < newCols; ++c) {
-            GE::Components::ClothParticle p;
-            p.position     = origin + glm::vec3(static_cast<float>(c) * cc.cellSize,
-                                                0.0f,
-                                                static_cast<float>(r) * cc.cellSize);
-            p.prevPosition = p.position;
-            p.pinned       = (r == 0);
-            cc.particles.push_back(p);
-        }
-    }
-
-    // Rebuild springs — exact replica of FBSceneAdapter spring-building
-    cc.springs.clear();
-    const float restStruct = cc.cellSize;
-    const float restShear  = cc.cellSize * 1.41421356f;
-    const float restFlex   = cc.cellSize * 2.0f;
-    const int R = newRows, C = newCols;
-
-    for (int r = 0; r < R; ++r) {
-        for (int c = 0; c < C; ++c) {
-            if (c + 1 < C)
-                cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
-                                       static_cast<uint16_t>(r*C+c+1),
-                                       restStruct, cc.springK, true });
-            if (r + 1 < R)
-                cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
-                                       static_cast<uint16_t>((r+1)*C+c),
-                                       restStruct, cc.springK, true });
-        }
-    }
-    for (int r = 0; r < R-1; ++r) {
-        for (int c = 0; c < C-1; ++c) {
-            cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
-                                   static_cast<uint16_t>((r+1)*C+c+1),
-                                   restShear, cc.shearK, true, 0.0f,
-                                   GE::Components::SpringType::Shear });
-            cc.springs.push_back({ static_cast<uint16_t>(r*C+c+1),
-                                   static_cast<uint16_t>((r+1)*C+c),
-                                   restShear, cc.shearK, true, 0.0f,
-                                   GE::Components::SpringType::Shear });
-        }
-    }
-    for (int r = 0; r < R; ++r)
-        for (int c = 0; c < C-2; ++c)
-            cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
-                                   static_cast<uint16_t>(r*C+c+2),
-                                   restFlex, cc.flexionK, true, 0.0f,
-                                   GE::Components::SpringType::Flexion });
-    for (int r = 0; r < R-2; ++r)
-        for (int c = 0; c < C; ++c)
-            cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
-                                   static_cast<uint16_t>((r+2)*C+c),
-                                   restFlex, cc.flexionK, true, 0.0f,
-                                   GE::Components::SpringType::Flexion });
-
-    // Reset burn sources — one default inactive source at cloth centre/bottom
-    cc.burnSources.clear();
-    {
-        GE::Components::BurnSource src;
-        src.center = {
-            origin.x + static_cast<float>(C - 1) * 0.5f * cc.cellSize,
-            origin.y - static_cast<float>(R - 1) * cc.cellSize,
-            origin.z + static_cast<float>(R - 1) * 0.5f * cc.cellSize
-        };
-        src.radius = 0.8f;
-        src.active = false;
-        cc.burnSources.push_back(src);
-    }
-
-    // Update render counts (indexOffset is fixed at MAX_CLOTH_VERTS*sizeof(Vertex) — never changes)
-    cc.vertexCount = static_cast<uint32_t>(newRows * newCols);
-    cc.indexCount  = static_cast<uint32_t>((newRows - 1) * (newCols - 1) * 6);
-
-    // Write initial vertex data in local space
-    auto* verts = static_cast<GE::Assets::Vertex*>(cc.mappedVertices);
-    const glm::vec3 coldColor = cc.useTextureMode ? glm::vec3{ 1.0f } : cc.color;
-    for (int r = 0; r < newRows; ++r) {
-        for (int c = 0; c < newCols; ++c) {
-            const int idx = r * newCols + c;
-            GE::Assets::Vertex& v = verts[idx];
-            v.position = cc.particles[idx].position - origin;
-            v.color    = coldColor;
-            v.texcoord = glm::vec2{ static_cast<float>(c) / static_cast<float>(newCols - 1),
-                                    static_cast<float>(r) / static_cast<float>(newRows - 1) };
-            v.normal   = glm::vec3{ 0.0f, 1.0f, 0.0f };
-            v.tangent  = glm::vec3{ 1.0f, 0.0f, 0.0f };
-        }
-    }
-
-    // Sync Mesh::indexCount — Mesh captures it by value at load time; update it here
-    // so the Renderer draws the correct number of indices for the new grid.
-    auto* mr = em->TryGetTIComponent<GE::Components::MeshRenderer>(eid);
-    if (mr != nullptr && !mr->subMeshes.empty() && mr->subMeshes[0].m_mesh != nullptr) {
-        mr->subMeshes[0].m_mesh->setIndexCount(cc.indexCount);
-    }
 }
 
 // ===========================================================================
@@ -523,51 +414,10 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
     }
 
     // Refresh cloth vertex buffers from current particle positions (HOST_COHERENT — no flush needed).
+    // Geometry rebuilds are handled by ClothSystem on the physics thread (cc.rebuildPending).
 
     auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
     const uint32_t count = clothArr.GetCount();
-
-    // Process any pending cloth geometry rebuilds BEFORE refreshing vertices.
-    for (uint32_t i = 0U; i < count; ++i) {
-        if (i >= static_cast<uint32_t>(m_clothStates.size())) { break; }
-        ClothRebuildState& state = m_clothStates[i];
-        if (!state.rebuildPending) { continue; }
-        state.rebuildPending = false;
-
-        GE::Components::ClothComponent& ccRb = clothArr.Data()[i];
-        const GE::ECS::EntityID eidRb        = clothArr.Index()[i];
-
-        if (state.useDefaults) {
-            state.useDefaults = false;
-            ccRb.springK            = state.origSpringK;
-            ccRb.shearK             = state.origShearK;
-            ccRb.flexionK           = state.origFlexionK;
-            ccRb.damping            = state.origDamping;
-            ccRb.tearThreshold      = state.origTearThreshold;
-            ccRb.tearRoughness      = state.origTearRoughness;
-            ccRb.stressTransferRate = state.origStressTransferRate;
-            ccRb.burnRate           = state.origBurnRate;
-            ccRb.curlAmount         = state.origCurlAmount;
-            ccRb.heatConductivity   = state.origHeatConductivity;
-            ccRb.shrinkScale        = state.origShrinkScale;
-            ccRb.dragCoeff          = state.origDragCoeff;
-            ccRb.gustAmplitude      = state.origGustAmplitude;
-            ccRb.gustFrequency      = state.origGustFrequency;
-            ccRb.constraintIters    = state.origConstraintIters;
-            ccRb.windEnabled        = state.origWindEnabled;
-            ccRb.windX              = state.origWindX;
-            ccRb.windZ              = state.origWindZ;
-            state.density        = 1;
-            state.targetCellSize = state.origCellSize;
-            state.targetRows     = state.origRows;
-            state.targetCols     = state.origCols;
-        }
-
-        ccRb.cellSize = state.targetCellSize;   // apply density or preserved cell size
-        const int newR = glm::clamp(state.targetRows, 2, MAX_CLOTH_DIM);
-        const int newC = glm::clamp(state.targetCols, 2, MAX_CLOTH_DIM);
-        applyClothRebuild(ccRb, eidRb, em, newR, newC);
-    }
 
     for (uint32_t i = 0U; i < count; ++i) {
         const GE::Components::ClothComponent& cc = clothArr.Data()[i];
@@ -741,7 +591,6 @@ void FlatBuffersScenario::OnUnload() {
     }
     m_flockGpuBackend.reset();
     m_useGpuFlock.store(false);
-    m_flockMeshesHidden = false;
     m_flockAgents.clear();
     ServiceLocator::ProvideFlockGpuBackend(nullptr);
 
@@ -1218,54 +1067,77 @@ void FlatBuffersScenario::OnGUI() {
                     }
 
                     // --- Geometry resize ---
+                    // Rebuild is triggered via cc.rebuildPending (POD write, render thread).
+                    // ClothSystem picks it up on the physics thread to avoid racing with particle iteration.
                     if (i < static_cast<uint32_t>(m_clothStates.size())) {
                         ClothRebuildState& state = m_clothStates[i];
                         ImGui::Separator();
                         ImGui::Text("Geometry  (current: %dx%d)", cc.rows, cc.cols);
 
-                        // Size: ± buttons change raw row/col count (physical size changes with it)
+                        // Size ± buttons: change raw row/col count (physical size scales with count)
                         ImGui::Text("Rows: %d", cc.rows);
                         ImGui::SameLine();
                         if (ImGui::Button("-##rows_dec")) {
-                            state.targetRows     = glm::max(cc.rows - 1, 2);
-                            state.targetCellSize = cc.cellSize;
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = glm::max(cc.rows - 1, 2);
+                            cc.rebuildCols     = cc.cols;
+                            cc.rebuildCellSize = cc.cellSize;
+                            cc.rebuildPending  = true;
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("+##rows_inc")) {
-                            state.targetRows     = glm::min(cc.rows + 1, MAX_CLOTH_DIM);
-                            state.targetCellSize = cc.cellSize;
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = glm::min(cc.rows + 1, MAX_CLOTH_DIM);
+                            cc.rebuildCols     = cc.cols;
+                            cc.rebuildCellSize = cc.cellSize;
+                            cc.rebuildPending  = true;
                         }
                         ImGui::Text("Cols: %d", cc.cols);
                         ImGui::SameLine();
                         if (ImGui::Button("-##cols_dec")) {
-                            state.targetCols     = glm::max(cc.cols - 1, 2);
-                            state.targetCellSize = cc.cellSize;
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = cc.rows;
+                            cc.rebuildCols     = glm::max(cc.cols - 1, 2);
+                            cc.rebuildCellSize = cc.cellSize;
+                            cc.rebuildPending  = true;
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("+##cols_inc")) {
-                            state.targetCols     = glm::min(cc.cols + 1, MAX_CLOTH_DIM);
-                            state.targetCellSize = cc.cellSize;
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = cc.rows;
+                            cc.rebuildCols     = glm::min(cc.cols + 1, MAX_CLOTH_DIM);
+                            cc.rebuildCellSize = cc.cellSize;
+                            cc.rebuildPending  = true;
                         }
                         ImGui::TextDisabled("Clears burn/tear state and re-pins top row.");
                         if (ImGui::Button("Regenerate Cloth")) {
-                            state.targetCellSize = cc.cellSize;
-                            state.targetRows     = cc.rows;
-                            state.targetCols     = cc.cols;
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = cc.rows;
+                            cc.rebuildCols     = cc.cols;
+                            cc.rebuildCellSize = cc.cellSize;
+                            cc.rebuildPending  = true;
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset to Defaults")) {
-                            state.rebuildPending = true;
-                            state.useDefaults    = true;
+                            // Reset physics params (safe: POD scalar writes, same pattern as windEnabled)
+                            cc.springK            = state.origSpringK;
+                            cc.shearK             = state.origShearK;
+                            cc.flexionK           = state.origFlexionK;
+                            cc.damping            = state.origDamping;
+                            cc.tearThreshold      = state.origTearThreshold;
+                            cc.tearRoughness      = state.origTearRoughness;
+                            cc.stressTransferRate = state.origStressTransferRate;
+                            cc.burnRate           = state.origBurnRate;
+                            cc.curlAmount         = state.origCurlAmount;
+                            cc.heatConductivity   = state.origHeatConductivity;
+                            cc.shrinkScale        = state.origShrinkScale;
+                            cc.dragCoeff          = state.origDragCoeff;
+                            cc.gustAmplitude      = state.origGustAmplitude;
+                            cc.gustFrequency      = state.origGustFrequency;
+                            cc.constraintIters    = state.origConstraintIters;
+                            cc.windEnabled        = state.origWindEnabled;
+                            cc.windX              = state.origWindX;
+                            cc.windZ              = state.origWindZ;
+                            state.density      = 1;
+                            cc.rebuildRows     = state.origRows;
+                            cc.rebuildCols     = state.origCols;
+                            cc.rebuildCellSize = state.origCellSize;
+                            cc.rebuildPending  = true;
                         }
 
                         // Density: multiplies origRows/Cols, divides cellSize → physical size preserved
@@ -1277,22 +1149,20 @@ void FlatBuffersScenario::OnGUI() {
                         if (state.density <= 1) { ImGui::BeginDisabled(); }
                         if (ImGui::Button("-##dens_dec")) {
                             state.density--;
-                            state.targetRows     = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
-                            state.targetCols     = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
-                            state.targetCellSize = state.origCellSize / static_cast<float>(state.density);
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildCols     = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildCellSize = state.origCellSize / static_cast<float>(state.density);
+                            cc.rebuildPending  = true;
                         }
                         if (state.density <= 1) { ImGui::EndDisabled(); }
                         ImGui::SameLine();
                         if (state.density >= glm::max(maxDensity, 1)) { ImGui::BeginDisabled(); }
                         if (ImGui::Button("+##dens_inc")) {
                             state.density++;
-                            state.targetRows     = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
-                            state.targetCols     = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
-                            state.targetCellSize = state.origCellSize / static_cast<float>(state.density);
-                            state.rebuildPending = true;
-                            state.useDefaults    = false;
+                            cc.rebuildRows     = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildCols     = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildCellSize = state.origCellSize / static_cast<float>(state.density);
+                            cc.rebuildPending  = true;
                         }
                         if (state.density >= glm::max(maxDensity, 1)) { ImGui::EndDisabled(); }
                         ImGui::TextDisabled("1 = original; 2 = double resolution, same physical size. Max: %d", glm::max(maxDensity, 1));
@@ -1435,7 +1305,7 @@ void FlatBuffersScenario::OnGUI() {
                     m_useGpuFlock.store(true);
                     m_flockingSystem->m_frozen.store(true);
                     ServiceLocator::ProvideFlockGpuBackend(m_flockGpuBackend.get());
-                    if (!m_flockMeshesHidden && em2 != nullptr) {
+                    if (m_flockAgents.empty() && em2 != nullptr) {
                         // Rebuild from the LIVE FlockingComponent array so entity IDs are
                         // always current (OnLoad snapshot may be stale after spawner cycles).
                         m_flockAgents.clear();
@@ -1463,20 +1333,18 @@ void FlatBuffersScenario::OnGUI() {
 
                             m_flockAgents.push_back(std::move(rec));
                         }
-                        m_flockMeshesHidden = true;
                     }
                 } else {
                     // CPU mode: disable GPU sprites, restore CPU spheres, unfreeze CPU system
                     m_useGpuFlock.store(false);
                     ServiceLocator::ProvideFlockGpuBackend(nullptr);
-                    if (m_flockMeshesHidden && em2 != nullptr) {
+                    if (!m_flockAgents.empty() && em2 != nullptr) {
                         for (const auto& rec : m_flockAgents) {
                             em2->AddComponent(rec.id, rec.meshRenderer);
                             if (rec.hadSphereCollider) {
                                 em2->AddComponent(rec.id, rec.sphereCollider);
                             }
                         }
-                        m_flockMeshesHidden = false;
                     }
                     m_flockingSystem->m_frozen.store(false);
                     m_flockingSystem->m_spatialMode = static_cast<GE::Systems::FlockSpatialMode>(modeIdx);

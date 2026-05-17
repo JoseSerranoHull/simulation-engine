@@ -38,6 +38,7 @@
 static constexpr std::size_t PHONG_PIPELINE_INDEX      = 0U;   // phong.vert + phong.frag
 static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX  = 8U;   // flat vertex-color, no descriptor set
 static constexpr std::size_t CONTAINER_PIPELINE_INDEX  = 9U;   // flat vertex-color, front-face culling (hollow containers)
+static constexpr std::size_t CLOTH_PHONG_PIPELINE_INDEX = 10U; // phong shaders, culling OFF — double-sided cloth
 
 // Cloth GPU buffer pre-allocation constants.
 // The combined vertex+index buffer is allocated for MAX_CLOTH_DIM² at load time so that
@@ -817,7 +818,7 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
                                       obj->texture_path() != nullptr &&
                                       !obj->texture_path()->str().empty() &&
                                       ctx.pipelines != nullptr &&
-                                      ctx.pipelines->size() > PHONG_PIPELINE_INDEX);
+                                      ctx.pipelines->size() > CLOTH_PHONG_PIPELINE_INDEX);
         if (clothHasTexture) {
             auto whiteTex       = ctx.am->loadTexture("textures/white.png");
             auto blackTex       = ctx.am->loadTexture("textures/black.png");
@@ -834,7 +835,7 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
                                   ? ctx.am->loadTexture(obj->metallic_path()->str())  : blackTex;
                 auto phongMat  = ctx.am->createMaterial(
                     albedo, normalTex, aoTex, metalTex, roughTex,
-                    (*ctx.pipelines)[PHONG_PIPELINE_INDEX].get());
+                    (*ctx.pipelines)[CLOTH_PHONG_PIPELINE_INDEX].get());
                 if (phongMat) {
                     phongMat->SetCastsShadows(false);
                     clothMat = std::move(phongMat);

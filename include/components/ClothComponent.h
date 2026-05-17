@@ -104,6 +104,14 @@ struct ClothComponent {
     float dragCoeff     { 1.2f };  // aerodynamic drag coefficient (Cd), tunable 0.1-4.0
     float gustAmplitude { 0.3f };  // gust amplitude: wind scales by (1 ± gustAmplitude)
     float gustFrequency { 0.8f };  // gust oscillation rate in Hz
+
+    // Geometry rebuild request — written by render thread (ImGui), read+executed by
+    // ClothSystem on the physics thread to avoid racing with particle iteration.
+    // All three POD fields are written before rebuildPending is set to true.
+    bool  rebuildPending  { false };
+    int   rebuildRows     { 0 };
+    int   rebuildCols     { 0 };
+    float rebuildCellSize { 0.2f };
 };
 
 } // namespace GE::Components

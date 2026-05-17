@@ -82,8 +82,7 @@ namespace GE {
             GE::Components::SphereCollider sphereCollider;
             bool                           hadSphereCollider { false };
         };
-        std::vector<FlockAgentRecord> m_flockAgents;
-        bool                          m_flockMeshesHidden { false };
+        std::vector<FlockAgentRecord> m_flockAgents; // non-empty ↔ CPU meshes currently hidden
 
         GE::Systems::ScriptSystem*              m_scriptSystem      { nullptr };
         GE::Systems::ColliderVisualizerSystem*  m_visualizerSystem  { nullptr };
@@ -120,14 +119,12 @@ namespace GE {
         // read+cleared by physics thread (OnUpdate) — same pattern as cc.windEnabled.
         static constexpr int MAX_CLOTH_DIM = 80;
 
+        // Stores load-time defaults for each cloth entity (density tracking + Reset to Defaults).
+        // The actual rebuild is triggered via ClothComponent::rebuildPending (set from OnGUI)
+        // and executed by ClothSystem on the physics thread to avoid data races.
         struct ClothRebuildState {
-            int   targetRows    { 30 };
-            int   targetCols    { 30 };
-            int   density       { 1    };   // density multiplier (1 = original; min 1)
-            float origCellSize  { 0.2f };   // load-time cellSize (for density / reset)
-            float targetCellSize{ 0.2f };   // cellSize to apply at next rebuild
-            bool  rebuildPending { false };
-            bool  useDefaults    { false };
+            int   density      { 1    };  // density multiplier (1 = original; min 1)
+            float origCellSize { 0.2f };  // load-time cellSize (for density calculation)
 
             // Snapshot of scene-file load-time values (for "Reset to Defaults")
             int   origRows { 30 }, origCols { 30 };
@@ -149,10 +146,6 @@ namespace GE {
         void applyActiveCamera() const;
         void scanSceneDirectory();
         void disconnectNetwork();
-        void applyClothRebuild(GE::Components::ClothComponent& cc,
-                               uint32_t eid,
-                               GE::ECS::EntityManager* em,
-                               int newRows, int newCols) const;
     };
 
 } // namespace GE

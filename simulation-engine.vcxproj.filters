@@ -490,6 +490,15 @@
     <None Include="shaders\compile.bat">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\flock_brute.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\flock.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\flock.frag">
+      <Filter>Shader Files</Filter>
+    </None>
     <!-- Config / FlatBuffers -->
     <None Include="config\snow_globe.ini">
       <Filter>Config Files\Legacy Lab</Filter>

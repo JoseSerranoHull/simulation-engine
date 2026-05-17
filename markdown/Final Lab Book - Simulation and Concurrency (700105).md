@@ -57,6 +57,7 @@ The ECS uses `EntityManager` to manage entity IDs and packed `ComponentArray<T>`
 | `AnimationSystem` | `ICpuSystem` | GameLogic | Waypoint interpolation; momentum transfer to spheres |
 | `SpawnerSystem` | `ICpuSystem` | GameLogic | Entity-pool spawning with peer ownership assignment |
 | `FlockingSystem` | `ICpuSystem` | GameLogic | Reynolds boids + three spatial-partitioning backends |
+| `FlockGpuSystem` | `IGpuSystem` | Particle | GPU BruteForce boid compute dispatch |
 | `ParticleEmitterSystem` | `IGpuSystem` | Render | GPU compute particle dispatch |
 
 `ServiceLocator` provides global access to core services (time, input, assets, network bridge) without threading references through fifteen-plus subsystem constructors. All registered pointers are raw non-owning pointers, safe because `EngineOrchestrator` owns every service lifetime and outlives all consumers.
@@ -252,6 +253,20 @@ Tearing accumulates `stressAccum` on each spring and transfers a fraction (`stre
 
 At 200 agents, the Octree reduces per-tick neighbour checks by over 90 % compared to brute force, with negligible tree-rebuild cost. Spatial mode and all per-agent parameters (radii, force weights, max speed) are adjustable at runtime via ImGui without restarting the simulation.
 
+### GPU BruteForce Mode (Extended Concurrency)
+
+<!-- TODO: Run 06_flocking_boids.bin. Open ImGui Flocking → Computation Mode → GPU Brute Force. Screenshot the GPU point sprites animating (visible as coloured circles distinct from the now-hidden CPU spheres). Save as markdown-resources/FinalLab700105/s2_flocking_gpu.png -->
+![GPU BruteForce flocking: 60 boid point sprites animated entirely by the compute shader; CPU sphere meshes and collider wireframes are hidden while GPU mode is active](markdown-resources/FinalLab700105/s2_flocking_gpu.png)
+
+A fourth computation mode — **GPU BruteForce** — offloads the entire O(N²) steering loop to a Vulkan compute shader (`flock_brute.comp`). One GPU thread handles one boid: it reads all N neighbours from a device-local SSBO, accumulates separation, alignment, and cohesion forces using the same Weighted Truncated Sum as the CPU path, integrates velocity and position via Euler, and writes the result to the output SSBO. A containment spring prevents drift outside the spawn sphere.
+
+State is double-buffered (ping-pong SSBOs): a `pingPong` flag in the UBO tells the shader which SSBO to read and which to write, eliminating read-write hazards without any CPU readback. `FlockGpuSystem` (`IGpuSystem`) records `vkCmdDispatch((N+255)/256, 1, 1)` before the render pass each frame; a `VkBufferMemoryBarrier` (`COMPUTE_SHADER → VERTEX_INPUT`) ensures the output SSBO is visible to the point-sprite vertex shader before drawing. When GPU mode is active, CPU sphere `MeshRenderer` and `SphereCollider` components are removed so only the GPU point sprites are visible; switching back to a CPU mode restores all components from snapshots.
+
+| Mode | Thread | Work |
+|---|---|---|
+| CPU BruteForce / Grid / Octree | Physics thread (`ICpuSystem`) | Steering forces → `RigidBody::forceAccum` |
+| **GPU BruteForce** | Graphics thread (`IGpuSystem`) | Full steering + integration in compute shader |
+
 ---
 
 ## 3. Final Reflection
@@ -262,4 +277,4 @@ At 200 agents, the Octree reduces per-tick neighbour checks by over 90 % compare
 
 - **How has my knowledge improved?** I moved from understanding concurrency abstractly to implementing a three-thread engine with explicit memory-ordering guarantees and a distributed ownership model. On the physics side, progressing from a single-body Euler integrator to a ten-pass collision pipeline with angular dynamics and two Level 3 features gave me a working mental model of how simulation complexity compounds.
 
-- **GPU Compute (Level 3 Extended Concurrency):** The particle system offloads simulation to the GPU via five Vulkan compute shaders (snow, rain, fire, dust, smoke). Each shader reads from an SSBO of particle structs, advances position, velocity, and lifetime entirely on the GPU, and writes results back; the CPU only dispatches a `vkCmdDispatch` call per effect and reads per-frame statistics. This satisfies the extended concurrency requirement for GPU-based simulation elements.
+- **GPU Compute (Extended Concurrency ~10%):** The flocking simulation implements a fully GPU-driven BruteForce mode via `flock_brute.comp`. One GPU invocation per boid reads all N neighbours from a ping-pong SSBO, accumulates separation, alignment, and cohesion forces (Weighted Truncated Sum), applies a containment spring, and integrates position and velocity — the complete boid steering loop runs in parallel on the GPU with no CPU readback. `FlockGpuSystem` (`IGpuSystem`) records `vkCmdDispatch((N+255)/256, 1, 1)` each frame; a `VkBufferMemoryBarrier` synchronises compute writes with the point-sprite vertex pass. The ImGui **Computation Mode** combo lets the user switch live between CPU BruteForce, CPU UniformGrid, CPU Octree, and GPU BruteForce, making the GPU acceleration directly observable. Beyond flocking, five particle-effect compute shaders (snow, rain, fire, dust, smoke) also run simulation elements on the GPU, each advancing SSBO particle state entirely on-device.

@@ -95,7 +95,6 @@ void FlockGpuBackend::Init(std::vector<GpuBoid> initialBoids) {
 void FlockGpuBackend::Dispatch(VkCommandBuffer cb, const FlockUBO& params) {
     if (m_boidCount == 0U || m_computePipeline == VK_NULL_HANDLE) { return; }
 
-    // Upload UBO
     FlockUBO ubo = params;
     ubo.pingPong  = m_pingPong;
     ubo.boidCount = m_boidCount;
@@ -103,9 +102,9 @@ void FlockGpuBackend::Dispatch(VkCommandBuffer cb, const FlockUBO& params) {
 
     // Compute dispatch
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeline);
-    const VkDescriptorSet sets[DESCRIPTOR_COUNT_ONE] = { m_descriptorSet };
+    const VkDescriptorSet sets[GE::EngineConstants::COUNT_ONE] = { m_descriptorSet };
     vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeLayout,
-        GE::EngineConstants::INDEX_ZERO, DESCRIPTOR_COUNT_ONE, sets,
+        GE::EngineConstants::INDEX_ZERO, GE::EngineConstants::COUNT_ONE, sets,
         GE::EngineConstants::OFFSET_ZERO, nullptr);
 
     const uint32_t groupCount = (m_boidCount + COMPUTE_WORKGROUP_SIZE - 1U) / COMPUTE_WORKGROUP_SIZE;
@@ -141,14 +140,14 @@ void FlockGpuBackend::Draw(VkCommandBuffer cb, VkDescriptorSet globalDescriptorS
     //   m_pingPong == 1 → last dispatch wrote to ssboB (pingPong was 0) → bind ssboB
     //   m_pingPong == 0 → last dispatch wrote to ssboA (pingPong was 1) → bind ssboA
     const VkBuffer renderBuf = (m_pingPong == 1U) ? m_ssboB : m_ssboA;
-    const VkBuffer vertexBuffers[DESCRIPTOR_COUNT_ONE] = { renderBuf };
-    const VkDeviceSize offsets[DESCRIPTOR_COUNT_ONE] = { 0ULL };
+    const VkBuffer vertexBuffers[GE::EngineConstants::COUNT_ONE] = { renderBuf };
+    const VkDeviceSize offsets[GE::EngineConstants::COUNT_ONE] = { 0ULL };
     vkCmdBindVertexBuffers(cb, GE::EngineConstants::INDEX_ZERO,
                            GE::EngineConstants::COUNT_ONE, vertexBuffers, offsets);
 
-    const VkDescriptorSet sets[DESCRIPTOR_COUNT_ONE] = { globalDescriptorSet };
+    const VkDescriptorSet sets[GE::EngineConstants::COUNT_ONE] = { globalDescriptorSet };
     vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, m_gfxPipeLayout,
-        SET_INDEX_GLOBAL, DESCRIPTOR_COUNT_ONE, sets,
+        GE::EngineConstants::INDEX_ZERO, GE::EngineConstants::COUNT_ONE, sets,
         GE::EngineConstants::OFFSET_ZERO, nullptr);
 
     vkCmdDraw(cb, m_boidCount, GE::EngineConstants::COUNT_ONE,
@@ -203,14 +202,14 @@ void FlockGpuBackend::Restart(glm::vec3 spawnCenter, float spawnRadius) {
     //
     // Do NOT reset m_pingPong: the current frame's draw call already captured
     // it and will read from the correct output buffer after the dispatch runs.
-    void* mapped { nullptr };
-    static_cast<void>(vkMapMemory(ctx->device, m_memA, 0ULL, boidBytes, 0U, &mapped));
-    static_cast<void>(std::memcpy(mapped, boids.data(), static_cast<size_t>(boidBytes)));
-    vkUnmapMemory(ctx->device, m_memA);
-
-    static_cast<void>(vkMapMemory(ctx->device, m_memB, 0ULL, boidBytes, 0U, &mapped));
-    static_cast<void>(std::memcpy(mapped, boids.data(), static_cast<size_t>(boidBytes)));
-    vkUnmapMemory(ctx->device, m_memB);
+    auto uploadToBuffer = [&](VkDeviceMemory mem) {
+        void* mapped { nullptr };
+        static_cast<void>(vkMapMemory(ctx->device, mem, 0ULL, boidBytes, 0U, &mapped));
+        static_cast<void>(std::memcpy(mapped, boids.data(), static_cast<size_t>(boidBytes)));
+        vkUnmapMemory(ctx->device, mem);
+    };
+    uploadToBuffer(m_memA);
+    uploadToBuffer(m_memB);
 }
 
 // ============================================================================

@@ -5,10 +5,13 @@
 #include "systems/ClothSystem.h"
 #include "components/ClothComponent.h"
 #include "components/PhysicsComponents.h"
+#include "components/Components.h"   // MeshRenderer / SubMesh for setIndexCount after rebuild
 #include "components/Transform.h"
 #include "ecs/ComponentArray.h"
 #include "core/ServiceLocator.h"
 #include "core/Common.h"
+#include "assets/Vertex.h"           // GE::Assets::Vertex — layout of the mapped vertex buffer
+#include "assets/Mesh.h"             // Mesh::setIndexCount()
 
 /* parasoft-begin-suppress ALL */
 #include <glm/glm.hpp>
@@ -61,6 +64,127 @@ static glm::vec3 closestPointOnSegment(
     const float     denom = glm::dot(AB, AB);
     if (denom < 1e-12f) { return A; }
     return A + AB * glm::clamp(glm::dot(P - A, AB) / denom, 0.0f, 1.0f);
+}
+
+// Geometry rebuild — called from the physics thread when cc.rebuildPending is set.
+// ALL particle and spring mutation is done here (physics thread only) so the render
+// thread's vertex refresh loop never races with a particles.clear() call.
+static void performGeometryRebuild(
+    GE::Components::ClothComponent& cc,
+    GE::ECS::EntityID               eid,
+    GE::ECS::EntityManager*         em)
+{
+    const int R = cc.rebuildRows;
+    const int C = cc.rebuildCols;
+    if (R < 2 || C < 2 || R * C > 65535) { return; }
+
+    const GE::Components::Transform* tr =
+        em->TryGetTIComponent<GE::Components::Transform>(eid);
+    const glm::vec3 origin = (tr != nullptr) ? tr->m_worldPosition : glm::vec3{ 0.0f };
+
+    cc.rows     = R;
+    cc.cols     = C;
+    cc.cellSize = cc.rebuildCellSize;
+
+    // Reinitialise particles
+    cc.particles.clear();
+    cc.particles.reserve(static_cast<std::size_t>(R * C));
+    for (int r = 0; r < R; ++r) {
+        for (int c = 0; c < C; ++c) {
+            GE::Components::ClothParticle p;
+            p.position     = origin + glm::vec3(static_cast<float>(c) * cc.cellSize,
+                                                0.0f,
+                                                static_cast<float>(r) * cc.cellSize);
+            p.prevPosition = p.position;
+            p.pinned       = (r == 0);
+            cc.particles.push_back(p);
+        }
+    }
+
+    // Rebuild spring list — structural / shear / flexion
+    cc.springs.clear();
+    const float restStruct = cc.cellSize;
+    const float restShear  = cc.cellSize * 1.41421356f;
+    const float restFlex   = cc.cellSize * 2.0f;
+
+    for (int r = 0; r < R; ++r) {
+        for (int c = 0; c < C; ++c) {
+            if (c + 1 < C)
+                cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
+                                       static_cast<uint16_t>(r*C+c+1),
+                                       restStruct, cc.springK, true });
+            if (r + 1 < R)
+                cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
+                                       static_cast<uint16_t>((r+1)*C+c),
+                                       restStruct, cc.springK, true });
+        }
+    }
+    for (int r = 0; r < R-1; ++r) {
+        for (int c = 0; c < C-1; ++c) {
+            cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
+                                   static_cast<uint16_t>((r+1)*C+c+1),
+                                   restShear, cc.shearK, true, 0.0f,
+                                   GE::Components::SpringType::Shear });
+            cc.springs.push_back({ static_cast<uint16_t>(r*C+c+1),
+                                   static_cast<uint16_t>((r+1)*C+c),
+                                   restShear, cc.shearK, true, 0.0f,
+                                   GE::Components::SpringType::Shear });
+        }
+    }
+    for (int r = 0; r < R; ++r)
+        for (int c = 0; c < C-2; ++c)
+            cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
+                                   static_cast<uint16_t>(r*C+c+2),
+                                   restFlex, cc.flexionK, true, 0.0f,
+                                   GE::Components::SpringType::Flexion });
+    for (int r = 0; r < R-2; ++r)
+        for (int c = 0; c < C; ++c)
+            cc.springs.push_back({ static_cast<uint16_t>(r*C+c),
+                                   static_cast<uint16_t>((r+2)*C+c),
+                                   restFlex, cc.flexionK, true, 0.0f,
+                                   GE::Components::SpringType::Flexion });
+
+    // Reset burn sources — one default inactive source at cloth centre/bottom
+    cc.burnSources.clear();
+    {
+        GE::Components::BurnSource src;
+        src.center = {
+            origin.x + static_cast<float>(C - 1) * 0.5f * cc.cellSize,
+            origin.y - static_cast<float>(R - 1) * cc.cellSize,
+            origin.z + static_cast<float>(R - 1) * 0.5f * cc.cellSize
+        };
+        src.radius = 0.8f;
+        src.active = false;
+        cc.burnSources.push_back(src);
+    }
+
+    // Update render counts (indexOffset fixed at load time — never changes)
+    cc.vertexCount = static_cast<uint32_t>(R * C);
+    cc.indexCount  = static_cast<uint32_t>((R - 1) * (C - 1) * 6);
+
+    // Write initial vertex data (local space) into the persistently-mapped buffer
+    if (cc.mappedVertices != nullptr) {
+        auto* verts = static_cast<GE::Assets::Vertex*>(cc.mappedVertices);
+        const glm::vec3 coldColor = cc.useTextureMode ? glm::vec3{ 1.0f } : cc.color;
+        for (int r = 0; r < R; ++r) {
+            for (int c = 0; c < C; ++c) {
+                const int idx = r * C + c;
+                GE::Assets::Vertex& v = verts[idx];
+                v.position = cc.particles[idx].position - origin;
+                v.color    = coldColor;
+                v.texcoord = glm::vec2{ static_cast<float>(c) / static_cast<float>(C - 1),
+                                        static_cast<float>(r) / static_cast<float>(R - 1) };
+                v.normal   = glm::vec3{ 0.0f, 1.0f, 0.0f };
+                v.tangent  = glm::vec3{ 1.0f, 0.0f, 0.0f };
+            }
+        }
+    }
+
+    // Sync Mesh::indexCount (Mesh captures it by value at load time)
+    auto* mr = em->TryGetTIComponent<GE::Components::MeshRenderer>(eid);
+    if (mr != nullptr && !mr->subMeshes.empty() && mr->subMeshes[0].m_mesh != nullptr) {
+        mr->subMeshes[0].m_mesh->setIndexCount(cc.indexCount);
+    }
 }
 
 // Hash-based value noise — cheap substitute for Perlin, no external dependency.
@@ -172,6 +296,14 @@ void ClothSystem::OnUpdate(float dt) {
     const uint32_t clothCount = clothArr.GetCount();
     for (uint32_t ci = 0U; ci < clothCount; ++ci) {
         GE::Components::ClothComponent& cc = clothArr.Data()[ci];
+
+        // Geometry rebuild requested by render thread (ImGui).
+        // Processed here (physics thread) so particles.clear() never races with iteration.
+        if (cc.rebuildPending) {
+            cc.rebuildPending = false;
+            performGeometryRebuild(cc, clothArr.Index()[ci], em);
+        }
+
         const int R = cc.rows;
         const int C = cc.cols;
         if (R <= 0 || C <= 0 || cc.particles.empty()) { continue; }

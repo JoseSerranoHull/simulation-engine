@@ -309,7 +309,7 @@ sequenceDiagram
     participant vk as Vulkan Layer
     participant ecs as ECS Layer
     participant scene as Scene Layer
-    participant loop as run() / drawFrame()
+    participant runloop as run() / drawFrame()
 
     main->>orch: new EngineOrchestrator(1280, 720, title)
 
@@ -332,9 +332,9 @@ sequenceDiagram
     scene->>ecs: CreateEntity x N (from FlatBuffers .bin file)
 
     main->>orch: app.run()
-    orch->>loop: Spawn physics jthread (pinned to Core 4)
-    orch->>loop: Spawn networking jthread (pinned to Cores 2-3)
-    loop->>loop: Main thread (Core 1): glfwPollEvents → drawFrame() loop
+    orch->>runloop: Spawn physics jthread (pinned to Core 4)
+    orch->>runloop: Spawn networking jthread (pinned to Cores 2-3)
+    runloop->>runloop: Main thread (Core 1): glfwPollEvents → drawFrame() loop
 ```
 
 ### Key Observations

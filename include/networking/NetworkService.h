@@ -8,6 +8,7 @@
 #include <vector>
 /* parasoft-end-suppress ALL */
 
+#include "core/Common.h"
 #include "networking/Packets.h"
 
 // Forward-declare Winsock2 types so callers never need to include winsock2.h

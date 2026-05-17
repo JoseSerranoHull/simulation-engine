@@ -1,8 +1,4 @@
-﻿// Pull in only the Win32 threading API (SetThreadAffinityMask, GetCurrentThread).
-// NOGDI: prevents wingdi.h from #define-ing DEFAULT_PITCH, FIXED_PITCH etc.
-//        which would clash with Camera.h's static constexpr members.
-// NOMINMAX: prevents min/max macro conflicts with std::min / std::max.
-#ifndef WIN32_LEAN_AND_MEAN
+﻿#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #ifndef NOGDI
@@ -11,6 +7,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+
 /* parasoft-begin-suppress ALL */
 #include <windows.h>
 /* parasoft-end-suppress ALL */
@@ -97,7 +94,6 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
 
     // --- Stage 3.0: Networking Foundation ---
     // NetworkService is constructed here; Init() is deferred until after
-    // the user chooses a port in the ImGui "Network" menu.
     m_networkService = std::make_unique<GE::Networking::NetworkService>();
     m_networkBridge  = std::make_unique<GE::NetworkBridge>(
         m_networkService.get(), entityManager.get());
@@ -107,8 +103,6 @@ EngineOrchestrator::EngineOrchestrator(const uint32_t width, const uint32_t heig
     resources = std::make_unique<GpuResourceManager>();
     ServiceLocator::Provide(resources.get());
 
-    // AGNOSTIC FIX: EngineServiceRegistry is kept for logic, but Particle Recipes are REMOVED.
-    // The SceneLoader now builds ParticleSystems directly from .ini shader paths.
     systemFactory = std::make_unique<EngineServiceRegistry>();
     ServiceLocator::Provide(systemFactory.get());
 
@@ -184,9 +178,9 @@ void EngineOrchestrator::initVulkan() {
  * @brief Enters the multi-threaded execution loop.
  *
  * Thread map — spec uses 1-indexed cores; masks use 0-indexed bits:
- *   Core 1 (0x01, bit 0) — main thread:       GLFW poll + Vulkan render + ImGui
- *   Core 2–3 (0x06, bits 1–2) — networking:   UDP poll + NetworkBridge::ApplyReceivedState
- *   Core 4   (0x08, bit 3)    — simulation:    fixed-timestep accumulator + ECS physics
+ *   Core 1 (0x01, bit 0) — main thread: GLFW poll + Vulkan render + ImGui
+ *   Core 2–3 (0x06, bits 1–2) — networking: UDP poll + NetworkBridge::ApplyReceivedState
+ *   Core 4 (0x08, bit 3) — simulation: fixed-timestep accumulator + ECS physics
  */
 void EngineOrchestrator::run() {
     // --- Spawn physics thread (Core 4, affinity bit 3) ---
@@ -347,20 +341,16 @@ void EngineOrchestrator::drawFrame() {
     // --- Thread-safe ECS update ---
     // The physics thread owns CPU-stage ECS updates (via runPhysicsLoop).
     // The main thread holds m_simMutex here so that:
-    //   a) updateUniformBuffer reads Transform/LightComponent without racing
-    //      the physics thread which may concurrently write those same arrays.
-    //   b) We apply the latest physics snapshot to ECS Transform world matrices.
-    //   c) We run GPU-stage systems (particles) and record render commands while
-    //      the physics thread cannot concurrently modify the component arrays.
+    // a) updateUniformBuffer reads Transform/LightComponent without racing the physics thread which may concurrently write those same arrays.
+    // b) We apply the latest physics snapshot to ECS Transform world matrices.
+    // c) We run GPU-stage systems (particles) and record render commands while the physics thread cannot concurrently modify the component arrays.
     {
         std::lock_guard<std::mutex> lock(m_simMutex);
 
-        // a) UBO upload — must be inside the mutex because it reads ECS Transform
-        //    and LightComponent arrays that the physics thread may also be writing.
+        // a) UBO upload — must be inside the mutex because it reads ECS Transform and LightComponent arrays that the physics thread may also be writing.
         updateUniformBuffer(imageIndex);
 
-        // b) Apply the physics snapshot → ECS Transform (so the renderer reads
-        //    consistent world matrices produced by the last completed physics tick).
+        // b) Apply the physics snapshot → ECS Transform (so the renderer reads consistent world matrices produced by the last completed physics tick).
         {
             const int frontIdx = m_frontSimIdx.load(std::memory_order_acquire);
             std::lock_guard<std::mutex> snapLock(m_simBuffers[frontIdx].mutex);
@@ -435,7 +425,7 @@ void EngineOrchestrator::drawFrame() {
         uiManager->draw(cb);
 
         vkCmdEndRenderPass(cb);
-        static_cast<void>(vkEndCommandBuffer(cb)); // <--- BUFFER IS NOW CLOSED
+        static_cast<void>(vkEndCommandBuffer(cb));
     } // releases m_simMutex — physics thread may resume
 
     // --- Step 6: Submission & Presentation ---
@@ -607,8 +597,7 @@ void EngineOrchestrator::cleanup() {
         vkDeviceWaitIdle(context->device);
     }
 
-    // 2. Unload active scenario first — it may call disconnectNetwork() which
-    //    needs the NetworkBridge/Service to still be alive in the ServiceLocator.
+    // 2. Unload active scenario first — it may call disconnectNetwork() which needs the NetworkBridge/Service to still be alive in the ServiceLocator.
     if (activeScenario) {
         activeScenario->OnUnload();
     }
@@ -621,11 +610,9 @@ void EngineOrchestrator::cleanup() {
     m_networkBridge.reset();
     m_networkService.reset();
 
-    // NEW: Explicitly destroy the Skybox while the Context/Device is still alive!
     skybox.reset();
 
     // 3. Destroy ECS and Components
-    // This triggers ParticleSystem destructors
     entityManager.reset();
 
     // 4. Release orchestrators
@@ -714,12 +701,11 @@ void EngineOrchestrator::mouseCallback(GLFWwindow* pWindow, double xpos, double 
 /**
  * @brief Physics thread body — fixed-timestep accumulator.
  *
- * Runs on Core 4 (affinity set in run()).  Each tick:
- *   1. Holds m_simMutex to prevent concurrent ECS access from the render thread.
- *   2. Runs SpringSystem then all CPU-stage ECS systems (Animation, Physics, Transform, etc.).
- *   3. Copies resulting Transform world-matrices into the SimulationState back buffer.
- *   4. Atomically publishes the new front index so the render thread sees a
- *      complete, consistent snapshot next frame.
+ * Runs on Core 4 (affinity set in run()). Each tick:
+ * 1. Holds m_simMutex to prevent concurrent ECS access from the render thread.
+ * 2. Runs SpringSystem then all CPU-stage ECS systems (Animation, Physics, Transform, etc.).
+ * 3. Copies resulting Transform world-matrices into the SimulationState back buffer.
+ * 4. Atomically publishes the new front index so the render thread sees a complete, consistent snapshot next frame.
  */
 void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
     GE_LOG_INFO("PhysicsThread started, CPU " + std::to_string(GetCurrentProcessorNumber()));
@@ -760,15 +746,13 @@ void EngineOrchestrator::runPhysicsLoop(std::stop_token st) {
                 // 1. Spring forces must be accumulated before PhysicsSystem integrates.
                 m_springSystem->OnUpdate(fixedDt);
 
-                // 2. CPU-stage ECS systems: TransformSystem, AnimationSystem,
-                //    PhysicsSystem, SpawnerSystem, etc.
+                // 2. CPU-stage ECS systems: TransformSystem, AnimationSystem, PhysicsSystem, SpawnerSystem, etc.
                 em->UpdateCpuStages(fixedDt);
 
                 // 2b. Broadcast owned entity states to peers (throttled to ~60/sec).
                 if (m_networkBridge != nullptr) {
                     m_networkBridge->BroadcastOwnedStates();
-                    // 2c. Apply dead-reckoned positions to remote entities, overwriting
-                    //     whatever PhysicsSystem integrated for them this tick.
+                    // 2c. Apply dead-reckoned positions to remote entities, overwriting whatever PhysicsSystem integrated for them this tick.
                     m_networkBridge->UpdateRemoteEntities(fixedDt);
                 }
 

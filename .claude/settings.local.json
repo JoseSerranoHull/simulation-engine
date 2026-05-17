@@ -204,7 +204,12 @@
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" simulation-engine.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal 2>&1 | Select-Object -Last 20)",
       "Bash(git mv *)",
       "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /m /v:minimal 2>&1 | Select-Object -Last 40)",
-      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /m /v:minimal 2>&1 | Select-Object -Last 20)"
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /m /v:minimal 2>&1 | Select-Object -Last 20)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\include\\\\core\\\\Logger.h\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\source\\\\core\\\\Logger.cpp\" -Force)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal 2>&1 | Select-Object -Last 5)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"C:\\\\Users\\\\javie\\\\GitHub\\\\simulation-engine\\\\simulation-engine.sln\" /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal 2>&1 | Select-Object -Last 3)"
     ]
   }
 }

@@ -5,6 +5,8 @@
 #include <vector>
 /* parasoft-end-suppress ALL */
 
+#include "core/Common.h"
+
 namespace GE::Scene {
 
     /**

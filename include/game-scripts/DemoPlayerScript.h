@@ -33,7 +33,6 @@
 
 #include "scripts/GameScriptComponent.h"
 #include "components/ScriptComponent.h"   // for attachment via AddComponent<ScriptComponent>
-#include "core/Logger.h"
 
 /* parasoft-begin-suppress ALL */
 #include <GLFW/glfw3.h>

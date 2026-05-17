@@ -27,7 +27,6 @@
  */
 
 #include "scripts/GameScriptComponent.h"
-#include "core/Logger.h"
 
 class DemoTriggerScript : public GE::Scripts::GameScriptComponent {
 public:

@@ -2,9 +2,14 @@
 
 #include <cstdint>
 #include "core/Common.h"
-#include "core/Logger.h"
 
 namespace GE::ECS {
+
+    /**
+     * @enum ESystemStage
+     * @brief Ordered execution stages for ECS system dispatch within EntityManager::Update().
+     * Systems registered at the same stage run in registration order.
+     */
 	enum class ESystemStage {
 		EarlyUpdate = 0,
 		Transform,
@@ -12,32 +17,54 @@ namespace GE::ECS {
 		Physics,
 		SceneControl,
 		DayNight,
-		GameLogic, // For user scripts
+		GameLogic, ///< User scripts (ScriptSystem)
 		Camera,
 		GUI,
 		Particle,
 		Render,
 		LateUpdate,
-		Count // Number of stages
+		Count      ///< Sentinel — do not register systems at this stage.
 	};
 
 	using ISystemTypeID = uint32_t;
 
+	/** @brief Internal counter; use GetUniqueISystemTypeID<T>() from user code. */
 	ISystemTypeID GenerateISystemTypeID();
 
+    /**
+     * @struct IECSystem
+     * @brief Abstract base for all ECS systems. Do NOT subclass this directly —
+     * use ICpuSystem (CPU-only work) or IGpuSystem (GPU-dispatching work) instead.
+     *
+     * Each concrete system must set m_typeID, m_stage, and m_state in its constructor.
+     * EntityManager dispatches OnUpdate() in stage order every frame.
+     */
 	struct IECSystem {
 		virtual ~IECSystem();
+
+		/** @brief Called every frame by EntityManager; GPU systems receive a live command buffer. */
 		virtual void OnUpdate(float dt, VkCommandBuffer cb) = 0;
-		virtual ERROR_CODE Shutdown() = 0;
+
+		/** @brief Releases system resources; called by EntityManager::Shutdown() or UnregisterSystem(). */
+		virtual void Shutdown() = 0;
+
+		/** @brief Returns the unique type ID assigned to this system instance. Asserts if unset. */
 		ISystemTypeID GetID() const;
+
+		/** @brief Returns the stage this system is registered in. Asserts if unset. */
 		ESystemStage GetStage() const;
+
+		/**
+		 * @brief Returns a stable, per-type unique ID for TISystem (generated once via atomic counter).
+		 * @tparam TISystem A concrete system type that inherits from IECSystem.
+		 */
 		template <typename TSystem>
 		static ISystemTypeID GetUniqueISystemTypeID();
 
 	protected:
-		ISystemTypeID m_typeID = UINT32_MAX;
-		ESystemStage m_stage = ESystemStage::Count;
-		SystemState m_state = SystemState::Uninitialized;
+		ISystemTypeID m_typeID{UINT32_MAX};          ///< Set by the concrete system constructor.
+		ESystemStage  m_stage{ESystemStage::Count};  ///< Stage slot in EntityManager dispatch order.
+		SystemState   m_state{SystemState::Uninitialized};
 	};
 
 	inline ISystemTypeID IECSystem::GetID() const {
@@ -68,7 +95,6 @@ namespace GE::ECS {
 		return lastID.fetch_add(1, std::memory_order_relaxed);
 	}
 
-	// Provide a definition for the virtual destructor to satisfy the linker.
 	inline IECSystem::~IECSystem() = default;
 
 	/**

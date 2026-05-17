@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <array>
 #include <cstring>
-#include "core/Logger.h"
 /* parasoft-end-suppress ALL */
 
 namespace GE::Graphics {

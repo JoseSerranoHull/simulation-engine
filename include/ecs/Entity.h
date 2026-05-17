@@ -1,21 +1,31 @@
 #pragma once
 
-/* parasoft-begin-suppress ALL */
 #include <cstdint>
-/* parasoft-end-suppress ALL */
 
 namespace GE::ECS {
-	using EntityID = uint32_t;
 
-	constexpr uint32_t INVALID_ENTITY_ID = UINT32_MAX;
+    /** @brief Unsigned integer handle uniquely identifying an entity. */
+    using EntityID = uint32_t;
 
-	struct Entity {
-		Entity();
-		~Entity();
+    /** @brief Sentinel value indicating an unassigned or invalid entity. */
+    constexpr uint32_t INVALID_ENTITY_ID = UINT32_MAX;
 
-		bool Initialize(uint32_t);
-		void Shutdown();
+    /**
+     * @struct Entity
+     * @brief Lightweight handle carrying an entity's numeric ID.
+     * EntityManager is the authoritative source of truth for which IDs are live;
+     * Entity itself performs no lifetime management.
+     */
+    struct Entity {
+        Entity();
+        ~Entity();
 
-		uint32_t m_id;
-	};
+        /** @brief Assigns m_id; returns true on success. */
+        bool Initialize(uint32_t id);
+
+        /** @brief Resets m_id to INVALID_ENTITY_ID. */
+        void Shutdown();
+
+        uint32_t m_id{UINT32_MAX}; ///< Numeric entity handle; UINT32_MAX = unassigned.
+    };
 }

@@ -6,7 +6,7 @@
 #include <memory>
 #include <stack>
 #include <vector>
-/* parasoft - end - suppress ALL */
+/* parasoft-end-suppress ALL */
 
 #include "ecs/ComponentArray.h"
 #include "ecs/ComponentType.h"
@@ -14,6 +14,20 @@
 #include "ecs/IECSystem.h"
 
 namespace GE::ECS {
+
+    /**
+     * @class EntityManager
+     * @brief Central ECS authority: owns entity IDs, component arrays, and system dispatch.
+     *
+     * Layout: a flat index table [typeID * maxEntities + entityID] maps every
+     * (component type, entity) pair to a packed-array slot index. This gives O(1)
+     * lookup, add, and remove without hash maps.
+     *
+     * Threading: Initialize(), Shutdown(), and entity/component mutations are
+     * NOT thread-safe. UpdateCpuStages() is called from the physics jthread;
+     * UpdateGpuStages() is called from the main (graphics) thread. Do not mutate
+     * the entity set while either is running.
+     */
 	class EntityManager {
 	public:
 		EntityManager();
@@ -23,62 +37,87 @@ namespace GE::ECS {
 		EntityManager &operator=(EntityManager &&) = delete;
 		~EntityManager();
 
-		// Initialize with maximum number of entities and component types
-		ERROR_CODE Initialize(uint32_t maxEntities, uint32_t maxComponentTypes);
-		void Update(float dt, VkCommandBuffer cb);
-		ERROR_CODE Shutdown();
+		/** @brief Allocates the entity pool and component array table. Call once at startup. */
+		void Initialize(uint32_t maxEntities, uint32_t maxComponentTypes);
 
-		// Entity lifecycle
+		/** @brief Dispatches all registered systems in stage order. Legacy full-frame entry point. */
+		void Update(float dt, VkCommandBuffer cb);
+
+		/** @brief Shuts down all systems and clears component arrays. */
+		void Shutdown();
+
+		/** @brief Allocates a recycled entity ID; returns INVALID_ENTITY_ID if the pool is exhausted. */
 		EntityID CreateEntity();
-		ERROR_CODE DestroyEntity(EntityID id);
+
+		/** @brief Removes all components from the entity and returns its ID to the pool. */
+		void DestroyEntity(EntityID id);
+
+		/** @brief Resets the entity pool and clears all component arrays (scene reload). */
 		void ClearAllEntities();
 
-		// Component registration + access
+		/** @brief Registers a ComponentArray<TIComponent>; asserts if already registered. */
 		template <typename TIComponent>
-		ERROR_CODE RegisterComponent(uint32_t componentCount = 0);
+		void RegisterComponent(uint32_t componentCount = 0);
+
+		/** @brief Shuts down and removes the ComponentArray<TIComponent>. */
 		template <typename TIComponent>
-		ERROR_CODE UnregisterComponent();
+		void UnregisterComponent();
+
+		/** @brief Copies component into the array for entityID; asserts on duplicate or invalid ID. */
 		template <typename TIComponent>
-		ERROR_CODE AddComponent(const EntityID entityID, const TIComponent &component);
+		void AddComponent(const EntityID entityID, const TIComponent &component);
+
+		/** @brief Removes TIComponent from entityID via swap-and-pop. */
 		template <typename TIComponent>
-		ERROR_CODE RemoveComponent(const EntityID entityID);
+		void RemoveComponent(const EntityID entityID);
+
+		/** @brief Returns true if entityID currently has a TIComponent instance. */
 		template <typename TIComponent>
 		[[nodiscard]] bool HasComponent(const EntityID entityID) const;
+
+		/** @brief Returns a pointer to entityID's TIComponent; asserts if not present. */
 		template <typename TIComponent>
 		TIComponent *GetTIComponent(const EntityID entityID);
+
+		/** @brief Returns a pointer to entityID's TIComponent, or nullptr if not present. */
 		template <class TIComponent>
 		TIComponent *TryGetTIComponent(EntityID entityID);
+
+		/** @brief Convenience variadic getter; returns a tuple of pointers for each requested type. */
 		template <typename... TIComponents>
 		std::tuple<TIComponents *...> GetTIComponents(const EntityID entityID);
 
-		// System registration + update
-		ERROR_CODE RegisterSystem(IECSystem *system);
-		ERROR_CODE UnregisterSystem(const IECSystem *system);
-		ERROR_CODE UnregisterSystemByID(ISystemTypeID systemID);
+		/** @brief Appends system to its declared stage's dispatch list. Asserts on duplicate. */
+		void RegisterSystem(IECSystem *system);
 
-		/** @brief Runs only CPU-side system stages (EarlyUpdate through Camera).
-		 *  Safe to call from a background thread; passes VK_NULL_HANDLE as cb so
-		 *  any IGpuSystem that receives the call is a no-op or skips gracefully. */
+		/** @brief Removes system from its stage's dispatch list. Asserts if not found. */
+		void UnregisterSystem(const IECSystem *system);
+
+		/** @brief Removes and deletes the system with the given type ID (EntityManager owns it). */
+		void UnregisterSystemByID(ISystemTypeID systemID);
+
+		/** @brief Runs CPU stages (EarlyUpdate→Camera); safe to call from the physics jthread. */
 		void UpdateCpuStages(float dt);
 
-		/** @brief Runs only GPU-side system stages (Particle through LateUpdate).
-		 *  Must be called from the main thread with a live command buffer. */
+		/** @brief Runs GPU stages (Particle→LateUpdate); must be called from the main thread. */
 		void UpdateGpuStages(float dt, VkCommandBuffer cb);
 
+		/** @brief Returns the typed ComponentArray<T> for direct iteration in systems. */
 		template <class T>
 		ComponentArray<T> &GetCompArr();
 
 	private:
-		SystemState m_state = SystemState::Uninitialized;
-		uint32_t m_maxEntities{0};
-		uint32_t m_maxComponentTypes{0};
-		std::stack<EntityID> m_freeEntities; // recycled IDs
+		SystemState m_state{SystemState::Uninitialized};
+		uint32_t    m_maxEntities{0};
+		uint32_t    m_maxComponentTypes{0};
 
-		// flat mapping: [typeID * m_maxEntities + entityID] -> componentIndex or UINT32_MAX
+		std::stack<EntityID> m_freeEntities; ///< Recycled IDs available for CreateEntity().
+
+		/// Flat index: [typeID * m_maxEntities + entityID] → packed array slot, or UINT32_MAX.
 		std::vector<uint32_t>                         m_allComponentIndices;
-		std::vector<std::unique_ptr<IComponentArray>> m_componentArrays;
+		std::vector<std::unique_ptr<IComponentArray>> m_componentArrays; ///< One per registered component type.
 
-		// game systems (ordered by stage)
+		/// Systems grouped by stage; iterated in order 0..Count-1 each frame.
 		std::array<std::vector<IECSystem *>, static_cast<size_t>(ESystemStage::Count)> m_systems;
 	};
 
@@ -90,49 +129,45 @@ namespace GE::ECS {
 	}
 
 	template <typename TIComponent>
-	ERROR_CODE EntityManager::RegisterComponent(uint32_t componentCount) {
+	void EntityManager::RegisterComponent(uint32_t componentCount) {
 		const uint32_t typeID = ComponentType<TIComponent>::ID();
 		if (typeID >= m_maxComponentTypes) {
-			// TODO: Add reallocation of increased size of m_allComponentIndices
 			GE_LOG_ERROR("Too many component types. Consider increasing m_maxComponentTypes.");
-			return ERROR_CODE::MAX_COMPONENT_TYPES_REACHED;
+			return;
 		}
 
 		if (m_componentArrays[typeID]) {
 			GE_LOG_FATAL("Component is already registered!");
-			return ERROR_CODE::COMPONENT_ALREADY_REGISTERED;
+			return;
 		}
 
 		auto array = std::make_unique<ComponentArray<TIComponent>>();
 		array->Initialize(componentCount == 0 ? m_maxEntities : componentCount);
 		m_componentArrays[typeID] = std::move(array);
-
-		return ERROR_CODE::OK;
 	}
 
 	template <typename TIComponent>
-	ERROR_CODE EntityManager::UnregisterComponent() {
+	void EntityManager::UnregisterComponent() {
 		const uint32_t typeID = ComponentType<TIComponent>::ID();
 		if (typeID >= m_maxComponentTypes) {
 			GE_LOG_FATAL("Invalid component type");
-			return ERROR_CODE::INVALID_COMPONENT_TYPE;
+			return;
 		}
 
 		if (!m_componentArrays[typeID]) {
 			GE_LOG_FATAL("Component not registered");
-			return ERROR_CODE::COMPONENT_NOT_REGISTERED;
+			return;
 		}
 
 		m_componentArrays[typeID]->Shutdown();
 		m_componentArrays[typeID] = nullptr;
-		return ERROR_CODE::OK;
 	}
 
 	template <typename TIComponent>
-	ERROR_CODE EntityManager::AddComponent(EntityID entityID, const TIComponent &component) {
+	void EntityManager::AddComponent(EntityID entityID, const TIComponent &component) {
 		if (entityID >= m_maxEntities) {
 			GE_LOG_FATAL("Wrong entity ID.");
-			return ERROR_CODE::WRONG_ENTITY_ID;
+			return;
 		}
 
 		const uint32_t typeID = ComponentType<TIComponent>::ID();
@@ -140,15 +175,13 @@ namespace GE::ECS {
 		const uint32_t idx    = array.Add(entityID, &component);
 
 		m_allComponentIndices[typeID * m_maxEntities + entityID] = idx;
-
-		return ERROR_CODE::OK;
 	}
 
 	template <typename TIComponent>
-	ERROR_CODE EntityManager::RemoveComponent(const EntityID entityID) {
+	void EntityManager::RemoveComponent(const EntityID entityID) {
 		if (entityID >= m_maxEntities) {
 			GE_LOG_FATAL("Wrong entity ID.");
-			return ERROR_CODE::WRONG_ENTITY_ID;
+			return;
 		}
 
 		const uint32_t typeID = ComponentType<TIComponent>::ID();
@@ -156,7 +189,7 @@ namespace GE::ECS {
 
 		if (idx == UINT32_MAX) {
 			GE_LOG_WARN("Component ID is default value.");
-			return ERROR_CODE::COMPONENT_IS_IN_DEFAULT_STATE;
+			return;
 		}
 
 		const auto [movedSlot, newPackedIdx] = m_componentArrays[typeID]->Remove(idx);
@@ -171,8 +204,6 @@ namespace GE::ECS {
 		if (movedSlot != entityID) {
 			m_allComponentIndices[typeID * m_maxEntities + movedSlot] = movedSlot;
 		}
-
-		return ERROR_CODE::OK;
 	}
 
 	template <typename TIComponent>

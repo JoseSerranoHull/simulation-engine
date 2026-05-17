@@ -174,9 +174,6 @@
     <ClCompile Include="source\core\EngineOrchestrator.cpp">
       <Filter>Source Files\core</Filter>
     </ClCompile>
-    <ClCompile Include="source\core\Logger.cpp">
-      <Filter>Source Files\core</Filter>
-    </ClCompile>
     <ClCompile Include="source\core\stb_impl.cpp">
       <Filter>Source Files\core</Filter>
     </ClCompile>
@@ -672,9 +669,6 @@
       <Filter>Header Files\core</Filter>
     </ClInclude>
     <ClInclude Include="include\core\libs.h">
-      <Filter>Header Files\core</Filter>
-    </ClInclude>
-    <ClInclude Include="include\core\Logger.h">
       <Filter>Header Files\core</Filter>
     </ClInclude>
     <ClInclude Include="include\core\ServiceLocator.h">

@@ -17,7 +17,7 @@ namespace GE::Systems {
         ~AnimationSystem() override = default;
 
         void       OnUpdate(float dt) override;
-        ERROR_CODE Shutdown()         override;
+        void Shutdown() override;
     };
 
 } // namespace GE::Systems

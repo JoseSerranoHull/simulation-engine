@@ -16,7 +16,6 @@
 #include "assets/Mesh.h"
 #include "graphics/GraphicsPipeline.h"
 #include "assets/OBJLoader.h"
-#include "core/Logger.h"
 
 /**
  * @class AssetManager

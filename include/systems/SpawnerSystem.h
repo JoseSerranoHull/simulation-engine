@@ -22,7 +22,7 @@ namespace GE::Systems {
         ~SpawnerSystem() override = default;
 
         void       OnUpdate(float dt) override;
-        ERROR_CODE Shutdown()         override;
+        void Shutdown() override;
 
         /** @brief Manually fire one spawn from the spawner, bypassing the time check. */
         void ForceSpawnOne(GE::Components::SpawnerComponent& sc);

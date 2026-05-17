@@ -35,20 +35,19 @@ namespace GE {
      */
     class NetworkBridge {
     public:
-        NetworkBridge(Networking::NetworkService* service,
-                      GE::ECS::EntityManager*    entityManager)
+        NetworkBridge(Networking::NetworkService* service, GE::ECS::EntityManager* entityManager)
             : m_service(service), m_entityManager(entityManager)
         {}
 
         // Non-copyable
-        NetworkBridge(const NetworkBridge&)            = delete;
+        NetworkBridge(const NetworkBridge&) = delete;
         NetworkBridge& operator=(const NetworkBridge&) = delete;
 
         // --- State Sync ---
 
         /**
          * @brief Packs a StateUpdate for every entity owned by the local peer
-         *        and broadcasts it to all registered peers.
+         * and broadcasts it to all registered peers.
          *
          * Call site: physics thread, after each completed tick, throttled to
          * ~60 broadcasts/sec.
@@ -57,13 +56,12 @@ namespace GE {
 
         /**
          * @brief Deserialises an incoming datagram and dispatches it to the
-         *        appropriate handler (StateUpdate / SceneChange / SpawnObject / Discovery).
+         * appropriate handler (StateUpdate / SceneChange / SpawnObject / Discovery).
          *
          * Call site: networking thread poll callback.
          * senderAddr / senderPort are in network byte order (from recvfrom).
          */
-        void ApplyReceivedState(uint8_t senderId, const uint8_t* data, std::size_t size,
-                                uint32_t senderAddr = 0, uint16_t senderPort = 0);
+        void ApplyReceivedState(uint8_t senderId, const uint8_t* data, std::size_t size, uint32_t senderAddr = 0, uint16_t senderPort = 0);
 
         /**
          * @brief Packs and broadcasts a SceneChange packet (sent 3× for reliability).
@@ -73,15 +71,15 @@ namespace GE {
 
         /**
          * @brief Broadcasts a PeerLeave packet (sent 3× for reliability) so every
-         *        connected peer frees this slot before the local socket shuts down.
+         * connected peer frees this slot before the local socket shuts down.
          * Call site: disconnectNetwork(), BEFORE NetworkService::Shutdown().
          */
         void BroadcastPeerLeave();
 
         /**
          * @brief Broadcasts the current elapsed/reversed state for every
-         *        AnimatedObjectComponent so remote peers can snap their local
-         *        animation timers to match. Call once after connecting.
+         * AnimatedObjectComponent so remote peers can snap their local
+         * animation timers to match. Call once after connecting.
          */
         void BroadcastAnimationStates();
 
@@ -89,9 +87,14 @@ namespace GE {
          * @brief Packs and broadcasts a SpawnObject packet.
          * Call site: SpawnerSystem (owning peer, after local activation).
          */
-        void BroadcastSpawnObject(uint32_t entityId, uint8_t ownerPeerId, uint8_t shapeType,
-                                  const glm::vec3& position, const glm::vec3& scale,
-                                  const glm::vec3& linearVelocity, float mass);
+        void BroadcastSpawnObject(uint32_t entityId,
+            uint8_t ownerPeerId,
+            uint8_t shapeType,
+            const glm::vec3& position,
+            const glm::vec3& scale,
+            const glm::vec3& linearVelocity,
+            float mass
+        );
 
         /**
          * @brief Returns and clears any pending network-triggered scene path.
@@ -141,7 +144,7 @@ namespace GE {
          */
         void BeginAutoConnect(const std::string& hostIP = "");
 
-        AutoConnectState   GetAutoConnectState()  const { return m_autoConnectState.load(); }
+        AutoConnectState GetAutoConnectState() const { return m_autoConnectState.load(); }
         const std::string& GetAutoConnectStatus() const { return m_autoConnectStatus; }
 
         void ResetAutoConnect() {
@@ -182,8 +185,8 @@ namespace GE {
         /// A timestamped discovery event logged on every significant handshake step.
         /// Displayed in the ImGui Network → Diagnostics panel and echoed to the terminal.
         struct DiscoveryEvent {
-            std::string timestamp;  ///< "HH:MM:SS"
-            std::string text;       ///< human-readable description of the event
+            std::string timestamp; // < "HH:MM:SS"
+            std::string text; // < human-readable description of the event
         };
 
         /// Thread-safe snapshot of the last MAX_DISCOVERY_LOG events. Safe to call from ImGui.
@@ -198,22 +201,23 @@ namespace GE {
 
     private:
         // Dead reckoning state for each tracked remote entity.
-        // Lock ordering: physics thread acquires simMutex FIRST, then remoteStatesMutex.
-        //                networking thread acquires remoteStatesMutex ONLY (never simMutex).
+        // Lock ordering:
+        // physics thread acquires simMutex FIRST, then remoteStatesMutex.
+        // networking thread acquires remoteStatesMutex ONLY (never simMutex).
         struct RemoteEntityState {
-            glm::vec3  authPosition   { 0.0f };  // last received authoritative position
-            glm::vec3  authVelocity   { 0.0f };  // last received authoritative velocity
-            glm::vec3  renderPosition { 0.0f };  // current interpolated position applied to entity
-            double     authTimeSec    { 0.0 };   // wall-clock time when authPosition was received
-            float      blendTimer     { 0.0f };  // seconds remaining in blend (0 = pure dead reckoning)
+            glm::vec3 authPosition { 0.0f };  // last received authoritative position
+            glm::vec3 authVelocity { 0.0f };  // last received authoritative velocity
+            glm::vec3 renderPosition { 0.0f };  // current interpolated position applied to entity
+            double authTimeSec { 0.0 };   // wall-clock time when authPosition was received
+            float blendTimer { 0.0f };  // seconds remaining in blend (0 = pure dead reckoning)
             static constexpr float BLEND_DURATION = 0.12f; // 120 ms blend window
         };
 
         std::unordered_map<uint32_t, RemoteEntityState> m_remoteStates;
         std::mutex m_remoteStatesMutex;
 
-        Networking::NetworkService* m_service       { nullptr };
-        GE::ECS::EntityManager*     m_entityManager  { nullptr };
+        Networking::NetworkService* m_service { nullptr };
+        GE::ECS::EntityManager* m_entityManager { nullptr };
 
         /// Per-sender last accepted sequence number (peers 1-4 → indices 0-3).
         std::array<uint16_t, Networking::NetworkService::MAX_PEERS> m_lastSeenSequence {};
@@ -238,9 +242,9 @@ namespace GE {
 
         // Auto-connect state
         std::atomic<AutoConnectState> m_autoConnectState { AutoConnectState::Idle };
-        std::string                   m_autoConnectStatus { "Idle" };
-        std::jthread                  m_discoveryThread;
-        std::atomic<bool>             m_pendingPostConnectSync { false };
+        std::string m_autoConnectStatus { "Idle" };
+        std::jthread m_discoveryThread;
+        std::atomic<bool> m_pendingPostConnectSync { false };
 
         // --- Network diagnostics (private storage) ---
 
@@ -248,7 +252,7 @@ namespace GE {
         std::array<std::atomic<uint64_t>, Networking::NetworkService::MAX_PEERS> m_peerLastPacketMs {};
 
         /// Discovery event ring buffer (mutex-protected; written by jthread + networking thread).
-        mutable std::mutex         m_discoveryLogMutex;
+        mutable std::mutex m_discoveryLogMutex;
         std::deque<DiscoveryEvent> m_discoveryLog;
         static constexpr std::size_t MAX_DISCOVERY_LOG { 14U };
 
@@ -257,14 +261,13 @@ namespace GE {
         void logDiscovery(const std::string& text);
 
         // --- Per-type packet handlers (called by ApplyReceivedState) ---
-        void handleStateUpdate    (uint8_t senderId, const uint8_t* data, std::size_t size);
-        void handleSceneChange    (const uint8_t* data, std::size_t size);
-        void handleSpawnObject    (const uint8_t* data, std::size_t size);
-        void handleAnimationSync  (const uint8_t* data, std::size_t size);
-        void handleDiscoveryHello (uint32_t senderAddr, uint16_t senderPort,
-                                   const uint8_t* data, std::size_t size);
-        void handlePeerAnnounce   (uint8_t peerID, uint32_t senderAddr);
-        void handlePeerLeave      (uint8_t peerID);
+        void handleStateUpdate (uint8_t senderId, const uint8_t* data, std::size_t size);
+        void handleSceneChange (const uint8_t* data, std::size_t size);
+        void handleSpawnObject (const uint8_t* data, std::size_t size);
+        void handleAnimationSync (const uint8_t* data, std::size_t size);
+        void handleDiscoveryHello (uint32_t senderAddr, uint16_t senderPort, const uint8_t* data, std::size_t size);
+        void handlePeerAnnounce (uint8_t peerID, uint32_t senderAddr);
+        void handlePeerLeave (uint8_t peerID);
     };
 
 } // namespace GE

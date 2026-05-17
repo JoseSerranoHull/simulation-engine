@@ -17,9 +17,8 @@ namespace GE::Systems {
         m_state  = SystemState::Running;
     }
 
-    ERROR_CODE AnimationSystem::Shutdown() {
+    void AnimationSystem::Shutdown() {
         m_state = SystemState::ShuttingDown;
-        return ERROR_CODE::OK;
     }
 
     // -------------------------------------------------------------------------

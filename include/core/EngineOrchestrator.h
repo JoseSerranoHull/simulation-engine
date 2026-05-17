@@ -110,8 +110,8 @@ public:
     }
 
     // --- Thread Frequency Controls (read/written by ImGui on main thread) ---
-    float physicsHz  { 120.0f };  ///< Physics fixed-step rate (1–2000 Hz)
-    float graphicsHz {  60.0f };  ///< Graphics frame-cap (0 = uncapped)
+    float physicsHz  { 120.0f };  // < Physics fixed-step rate (1–2000 Hz)
+    float graphicsHz {  60.0f };  // < Graphics frame-cap (0 = uncapped)
 
 private:
     // --- Windowing & Core Infrastructure ---

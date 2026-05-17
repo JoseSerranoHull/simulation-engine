@@ -12,7 +12,6 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "networking/NetworkService.h"
-#include "core/Logger.h"
 
 /* parasoft-begin-suppress ALL */
 #include <cstring>

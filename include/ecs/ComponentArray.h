@@ -9,78 +9,108 @@
 
 #include "ecs/IComponentArray.h"
 #include "core/Common.h"
-#include "core/Logger.h"
 
 namespace GE::ECS
 {
     using ComponentArrayID = uint32_t;
+
+    /**
+     * @class ComponentArray
+     * @brief Packed SoA storage for a single component type; enables O(1) add/remove/lookup.
+     *
+     * Uses swap-and-pop removal to keep data contiguous. An indirect mapping pair
+     * (m_index, m_reverse) allows both forward (packed→entityID) and reverse
+     * (entityID→packed) lookups in O(1). EntityManager owns the RemovalInfo returned
+     * by Remove() and uses it to patch its flat index table.
+     *
+     * @tparam T Component struct type stored by this array.
+     */
     template <typename T>
     class ComponentArray : public IComponentArray
     {
     public:
         ComponentArray() = default;
         ~ComponentArray() override;
-        ERROR_CODE Initialize(uint32_t maxCount) override;
-        ERROR_CODE Shutdown() override;
 
+        /** @brief Reserves storage for up to maxCount instances. Must be called before Add(). */
+        void Initialize(uint32_t maxCount) override;
+
+        /** @brief Clears all storage and resets state. Safe to call more than once. */
+        void Shutdown() override;
+
+        /** @brief Copies componentData into the packed array for entityID; returns entityID. */
         uint32_t Add(uint32_t entityID, const void* componentData) override;
+
+        /** @brief Removes the component for entityID via swap-and-pop; returns side-effect info. */
         RemovalInfo Remove(const uint32_t entityID) override;
 
+        /** @brief Returns true if entityID has a live component instance. */
         [[nodiscard]] bool Has(uint32_t slot) const override;
 
-        // Access methods
-        T& Get(uint32_t slot);
-        const T& Get(uint32_t slot) const;
+        /** @brief Returns the component instance for entityID; asserts on invalid access. */
+        T& Get(uint32_t entityID);
+
+        /** @brief Const overload of Get(). */
+        const T& Get(uint32_t entityID) const;
+
+        /** @brief Grows m_reverse if entityID exceeds its current capacity. */
         void EnsureReverseCapacity(uint32_t entityID);
 
-        // Iterator over active packed data
-        std::vector<T>&                           Data() { return m_data; }
-        std::vector<uint32_t>&                    Index() { return m_index; }
-        std::vector<uint32_t>&                    Reverse() { return m_reverse; }
-        [[nodiscard]] const std::vector<uint32_t>&Index() const { return m_index; }
-        [[nodiscard]] uint32_t                    GetCount() const override { return m_size; }
-        void                                      Clear() override;
+        /** @brief Direct access to packed data vector for iteration (e.g., in system OnUpdate). */
+        std::vector<T>& Data() { return m_data; }
+
+        /** @brief Maps packed index → entity ID; parallel with m_data. */
+        std::vector<uint32_t>& Index() { return m_index; }
+
+        /** @brief Maps entity ID → packed index (UINT32_MAX = absent). */
+        std::vector<uint32_t>& Reverse() { return m_reverse; }
+
+        /** @brief Const Index() overload. */
+        [[nodiscard]] const std::vector<uint32_t>& Index() const { return m_index; }
+
+        /** @brief Returns the number of active component instances. */
+        [[nodiscard]] uint32_t GetCount() const override { return m_size; }
+
+        /** @brief Resets all instances to default-constructed T and clears the arrays. */
+        void Clear() override;
 
     private:
-        std::vector<T> m_data = std::vector<T>(); // packed component data
-        std::vector<uint32_t> m_index = std::vector<uint32_t>(); // maps packed-slot -> entityID
-        std::vector<uint32_t> m_reverse = std::vector<uint32_t>(); // maps entityID -> packed index, UINT32_MAX if none
-
-        SystemState m_state = SystemState::Uninitialized;
-        uint32_t m_size = 0;
+        std::vector<T>        m_data;                         ///< Packed component data in insertion order.
+        std::vector<uint32_t> m_index;                        ///< [packed index] → entity ID.
+        std::vector<uint32_t> m_reverse;                      ///< [entity ID] → packed index; UINT32_MAX = absent.
+        SystemState           m_state{SystemState::Uninitialized};
+        uint32_t              m_size{0};                      ///< Active element count.
     };
 
     template <typename T>
     ComponentArray<T>::~ComponentArray() = default;
 
     template <typename T>
-    ERROR_CODE ComponentArray<T>::Initialize(uint32_t maxCount)
+    void ComponentArray<T>::Initialize(uint32_t maxCount)
     {
-    	GE_CHECK_STATE_INIT(m_state, "ComponentArray is already initialized.");
-		m_state = SystemState::Initializing;
+        if (m_state != SystemState::Uninitialized) { GE_LOG_FATAL("ComponentArray is already initialized."); return; }
+        m_state = SystemState::Initializing;
         m_data.reserve(maxCount);
         m_index.reserve(maxCount);
         m_reverse.assign(maxCount, UINT32_MAX); // pre-fill as unknown
         m_size = 0;
 
         m_state = SystemState::Running;
-        return ERROR_CODE::OK;
     }
 
     template <typename T>
-    ERROR_CODE ComponentArray<T>::Shutdown()
+    void ComponentArray<T>::Shutdown()
     {
         if (m_state == SystemState::Uninitialized || m_state == SystemState::ShuttingDown)
-        	return ERROR_CODE::OK;
+            return;
 
-    	m_state = SystemState::ShuttingDown;
+        m_state = SystemState::ShuttingDown;
         m_data.clear();
         m_index.clear();
         m_reverse.clear();
         m_size = 0;
 
         m_state = SystemState::Uninitialized;
-        return ERROR_CODE::OK;
     }
 
     template <typename T>

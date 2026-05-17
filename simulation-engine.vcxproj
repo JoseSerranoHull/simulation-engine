@@ -157,7 +157,6 @@
     <ClCompile Include="source\services\Inspector.cpp" />
     <ClCompile Include="source\services\InputService.cpp" />
     <ClCompile Include="source\lighting\LightSource.cpp" />
-    <ClCompile Include="source\core\Logger.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\assets\Mesh.cpp" />
     <ClCompile Include="source\assets\Model.cpp" />
@@ -337,7 +336,6 @@
     <ClInclude Include="include\core\libs.h" />
     <ClInclude Include="include\lighting\LightSource.h" />
     <ClInclude Include="include\physics\Line.h" />
-    <ClInclude Include="include\core\Logger.h" />
     <ClInclude Include="include\assets\Material.h" />
     <ClInclude Include="include\memory\MemoryUtilities.h" />
     <ClInclude Include="include\assets\Mesh.h" />

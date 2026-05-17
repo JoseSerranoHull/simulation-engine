@@ -1,5 +1,5 @@
-﻿#pragma once
-#include "core/Logger.h"
+#pragma once
+#include "core/Common.h"
 
 namespace GE::Utilities {
 #pragma region SafeDeleters
@@ -13,20 +13,6 @@ void SafeShutdown(T *&ptr) {
 	}
 	GE_LOG_TRACE("Pointer is already null.");
 }
-
-template <typename T>
-GE::ERROR_CODE SafeShutdownReturnsErrorCode(T *&ptr) {
-	ERROR_CODE result = ERROR_CODE::NULL_POINTER;
-	if (ptr) {
-		result = ptr->Shutdown();
-		delete ptr;
-		ptr = nullptr;
-		return result;
-	}
-	GE_LOG_TRACE("Pointer is already null.");
-	return result;
-}
-
 
 template <typename T>
 void SafeDelete(T *&ptr) {

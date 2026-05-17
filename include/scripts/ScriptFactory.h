@@ -5,6 +5,8 @@
 #include <string>
 /* parasoft-end-suppress ALL */
 
+#include "core/Common.h"
+
 namespace GE::Scripts { class GameScriptComponent; }
 
 namespace GE::Scripts {

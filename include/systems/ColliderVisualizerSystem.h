@@ -36,10 +36,7 @@ public:
     /** @brief Destructor: Frees sphere and plane GPU buffers. */
     ~ColliderVisualizerSystem() override;
 
-    ERROR_CODE Shutdown() override {
-        m_state = SystemState::ShuttingDown;
-        return ERROR_CODE::OK;
-    }
+    void Shutdown() override { m_state = SystemState::ShuttingDown; }
 
     /** @brief No per-frame CPU work; all work happens in RecordPass(). */
     void OnUpdate(float) override {}

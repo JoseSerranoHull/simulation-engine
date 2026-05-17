@@ -11,7 +11,6 @@
 /* parasoft-end-suppress ALL */
 
 #include "core/NetworkBridge.h"
-#include "core/Logger.h"
 
 /* parasoft-begin-suppress ALL */
 #include <cstring>
@@ -131,11 +130,12 @@ void NetworkBridge::BroadcastOwnedStates() {
 // ApplyReceivedState — dispatch on packet type
 // ---------------------------------------------------------------------------
 
-void NetworkBridge::ApplyReceivedState(uint8_t senderId,
-                                       const uint8_t* data,
-                                       std::size_t    size,
-                                       uint32_t       senderAddr,
-                                       uint16_t       senderPort)
+void NetworkBridge::ApplyReceivedState(
+    uint8_t senderId,
+	const uint8_t* data,
+	std::size_t size,
+	uint32_t senderAddr,
+	uint16_t senderPort)
 {
     if (m_entityManager == nullptr) { return; }
     if (size < sizeof(Networking::Packets::Header)) { return; }
@@ -184,9 +184,10 @@ void NetworkBridge::ApplyReceivedState(uint8_t senderId,
 // handleStateUpdate (was the body of ApplyReceivedState)
 // ---------------------------------------------------------------------------
 
-void NetworkBridge::handleStateUpdate(uint8_t senderId,
-                                      const uint8_t* data,
-                                      std::size_t    size)
+void NetworkBridge::handleStateUpdate(
+    uint8_t senderId,
+    const uint8_t* data,
+    std::size_t size)
 {
     if (size < sizeof(Networking::Packets::StateUpdate)) { return; }
 
@@ -229,10 +230,12 @@ void NetworkBridge::handleStateUpdate(uint8_t senderId,
     }
     auto* tr = m_entityManager->TryGetTIComponent<GE::Components::Transform>(pkt.entityId);
     if (tr != nullptr) {
-        const glm::quat q(pkt.orientation[3],   // w
-                          pkt.orientation[0],   // x
-                          pkt.orientation[1],   // y
-                          pkt.orientation[2]);  // z
+        const glm::quat q(
+			pkt.orientation[3],   // w
+            pkt.orientation[0],   // x
+            pkt.orientation[1],   // y
+			pkt.orientation[2]
+        );  // z
         const glm::mat3 rotMat = glm::mat3_cast(q);
         const glm::vec3 scale  = tr->m_localScale;
         tr->m_worldMatrix = glm::mat4(
@@ -254,9 +257,7 @@ void NetworkBridge::UpdateRemoteEntities(float dt)
     if (m_service == nullptr) { return; }
 
     const uint8_t localId = m_service->GetLocalPeerId();
-    const auto localOwner = (localId >= 1 && localId <= 4)
-                             ? static_cast<GE::Components::OwnerType>(localId - 1U)
-                             : GE::Components::OwnerType::ONE;
+    const auto localOwner = (localId >= 1 && localId <= 4) ? static_cast<GE::Components::OwnerType>(localId - 1U) : GE::Components::OwnerType::ONE;
 
     const double nowSec = std::chrono::duration<double>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -292,10 +293,10 @@ void NetworkBridge::UpdateRemoteEntities(float dt)
         }
 
         // Apply to entity (overwrites whatever PhysicsSystem did this tick)
-        tr->m_localPosition   = rs.renderPosition;
-        tr->m_worldPosition   = rs.renderPosition;
-        rb->velocity          = rs.authVelocity;
-        tr->m_worldMatrix[3]  = glm::vec4(rs.renderPosition, 1.0f);
+        tr->m_localPosition = rs.renderPosition;
+        tr->m_worldPosition = rs.renderPosition;
+        rb->velocity = rs.authVelocity;
+        tr->m_worldMatrix[3] = glm::vec4(rs.renderPosition, 1.0f);
     }
 }
 
@@ -354,20 +355,19 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
     auto* rb = m_entityManager->TryGetTIComponent<GE::Components::RigidBody>(pkt.entityId);
 
     if ((tr == nullptr) || (rb == nullptr)) {
-        GE_LOG_WARN("NetworkBridge: SPAWN_OBJECT for unknown entity "
-                    + std::to_string(pkt.entityId) + " — ignored.");
+        GE_LOG_WARN("NetworkBridge: SPAWN_OBJECT for unknown entity " + std::to_string(pkt.entityId) + " — ignored.");
         return;
     }
 
     // Activate the entity: move it into the world and enable physics
     tr->m_localPosition = pkt.position;
     tr->m_worldPosition = pkt.position;
-    tr->m_localScale    = pkt.scale;
+    tr->m_localScale = pkt.scale;
     tr->m_worldMatrix = glm::mat4(
-        glm::vec4(pkt.scale.x, 0.0f,      0.0f,      0.0f),
-        glm::vec4(0.0f,      pkt.scale.y, 0.0f,      0.0f),
-        glm::vec4(0.0f,      0.0f,      pkt.scale.z, 0.0f),
-        glm::vec4(pkt.position,                       1.0f)
+        glm::vec4(pkt.scale.x,0.0f, 0.0f,0.0f),
+        glm::vec4(0.0f, pkt.scale.y, 0.0f,      0.0f),
+        glm::vec4(0.0f, 0.0f, pkt.scale.z,0.0f),
+        glm::vec4(pkt.position,1.0f)
     );
 
     rb->isStatic   = false;
@@ -384,7 +384,7 @@ void NetworkBridge::BroadcastSceneChange(const std::string& path)
     if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
 
     Networking::Packets::SceneChange pkt{};
-    pkt.header.type     = Networking::Packets::PacketType::SceneChange;
+    pkt.header.type = Networking::Packets::PacketType::SceneChange;
     pkt.header.senderId = m_service->GetLocalPeerId();
     pkt.header.sequence = m_outSequence++;
 
@@ -404,27 +404,28 @@ void NetworkBridge::BroadcastSceneChange(const std::string& path)
 // BroadcastSpawnObject
 // ---------------------------------------------------------------------------
 
-void NetworkBridge::BroadcastSpawnObject(uint32_t entityId, uint8_t ownerPeerId,
-                                         uint8_t shapeType,
-                                         const glm::vec3& position,
-                                         const glm::vec3& scale,
-                                         const glm::vec3& linearVelocity,
-                                         float mass)
+void NetworkBridge::BroadcastSpawnObject(
+    uint32_t entityId, 
+    uint8_t ownerPeerId,
+	uint8_t shapeType,
+	const glm::vec3& position,
+	const glm::vec3& scale,
+	const glm::vec3& linearVelocity,
+	float mass)
 {
     if ((m_service == nullptr) || !m_service->IsConnected()) { return; }
 
     Networking::Packets::SpawnObject pkt{};
-    pkt.header.type     = Networking::Packets::PacketType::SpawnObject;
+    pkt.header.type = Networking::Packets::PacketType::SpawnObject;
     pkt.header.senderId = m_service->GetLocalPeerId();
     pkt.header.sequence = m_outSequence++;
-    pkt.entityId        = entityId;
-    pkt.ownerPeerId     = ownerPeerId;
-    pkt.shapeType       = shapeType;
-    pkt.position        = position;
-    pkt.scale           = scale;
-    pkt.linearVelocity  = linearVelocity;
-    pkt.mass            = mass;
-
+    pkt.entityId = entityId;
+    pkt.ownerPeerId = ownerPeerId;
+    pkt.shapeType = shapeType;
+    pkt.position = position;
+    pkt.scale = scale;
+    pkt.linearVelocity = linearVelocity;
+    pkt.mass = mass;
     m_service->Broadcast(&pkt, sizeof(pkt));
 }
 
@@ -458,12 +459,12 @@ void NetworkBridge::BroadcastAnimationStates()
     for (uint32_t i = 0U; i < animArr.GetCount(); ++i) {
         const auto& ac = animArr.Data()[i];
         Networking::Packets::AnimationSync pkt{};
-        pkt.header.type     = Networking::Packets::PacketType::AnimationSync;
+        pkt.header.type = Networking::Packets::PacketType::AnimationSync;
         pkt.header.senderId = m_service->GetLocalPeerId();
         pkt.header.sequence = m_outSequence++;
-        pkt.entityId        = animArr.Index()[i];
-        pkt.elapsed         = ac.elapsed;
-        pkt.reversed        = ac.reversed ? 1U : 0U;
+        pkt.entityId = animArr.Index()[i];
+        pkt.elapsed = ac.elapsed;
+        pkt.reversed = ac.reversed ? 1U : 0U;
         for (uint8_t p = 0U; p < Networking::NetworkService::MAX_PEERS; ++p) {
             if ((mask >> p) & 1U) {
                 m_service->Send(p + 1U, &pkt, sizeof(pkt));
@@ -557,9 +558,9 @@ void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPor
     }
 
     Networking::Packets::DiscoveryResponse resp{};
-    resp.header.type     = Networking::Packets::PacketType::DiscoveryResponse;
+    resp.header.type = Networking::Packets::PacketType::DiscoveryResponse;
     resp.header.senderId = myId;
-    resp.peerID          = myId;
+    resp.peerID = myId;
     {
         std::lock_guard<std::mutex> lock(m_scenePathMutex);
         const std::size_t len = std::min(m_currentScenePath.size(),
@@ -584,10 +585,10 @@ void NetworkBridge::handleDiscoveryHello(uint32_t senderAddr, uint16_t senderPor
             if (peer.peerId == myId) { continue; }  // already sent our own above
 
             Networking::Packets::DiscoveryResponse relay{};
-            relay.header.type     = Networking::Packets::PacketType::DiscoveryResponse;
+            relay.header.type = Networking::Packets::PacketType::DiscoveryResponse;
             relay.header.senderId = peer.peerId;
-            relay.peerID          = peer.peerId;
-            relay.peerAddr        = peer.addr;   // real NBO IP of the relayed peer
+            relay.peerID = peer.peerId;
+            relay.peerAddr = peer.addr;   // real NBO IP of the relayed peer
             const std::size_t len = std::min(sceneCopy.size(), sizeof(relay.scenePath) - 1U);
             std::memcpy(relay.scenePath, sceneCopy.c_str(), len);
             relay.scenePath[len] = '\0';
@@ -618,8 +619,7 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
     m_service->AddPeer(peerID, ipBuf, peerPort);
     RegisterScenePeer(peerID);
 
-    GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID)
-                + " announced itself from " + ipBuf);
+    GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID) + " announced itself from " + ipBuf);
 
     // If this is a new peer, unicast our own PeerAnnounce back so they add us too.
     // This closes the loop for assume-host joiners that skipped discovery and only
@@ -631,9 +631,9 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
 
         // Reply to the new peer so they add us (existing bidirectional ack).
         Networking::Packets::PeerAnnounce reply{};
-        reply.header.type     = Networking::Packets::PacketType::PeerAnnounce;
+        reply.header.type = Networking::Packets::PacketType::PeerAnnounce;
         reply.header.senderId = myId;
-        reply.peerID          = myId;
+        reply.peerID = myId;
         m_service->Send(peerID, &reply, sizeof(reply));
         GE_LOG_INFO("NetworkBridge: sent PeerAnnounce reply to new peer "
                     + std::to_string(peerID));
@@ -936,13 +936,6 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         if (stopToken.stop_requested()) { return; }
 
         // ── "Assume Host" fallback ────────────────────────────────────────────
-        // When the user provided a hostIP but received no DiscoveryResponse
-        // (common when the host's Windows Firewall blocks inbound unicast on
-        // port 54000 while still allowing cross-machine broadcast), inject the
-        // host as Peer 1 so we take slot 2 rather than slot 1 (which would
-        // create a peer-ID conflict). The raw-broadcast PeerAnnounce below then
-        // notifies the host of our existence via broadcast (which the IT firewall
-        // fix permits), completing the connection from the host's side.
         bool assumedHost = false;
         if (!hostIP.empty() && discovered.empty()) {
             uint32_t assumedAddr = 0U;
@@ -1002,13 +995,6 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         }
 
         // --- UDP hole punch: Heartbeat from game socket to each discovered peer ---
-        // Windows Firewall is stateful for UDP: sending outbound from our game socket
-        // (A:54001 → B:54000) creates a temporary firewall rule allowing the reverse
-        // (B:54000 → A:54001) for ~30–120 s. This is how inbound StateUpdate packets
-        // from peers can reach a machine whose game port has no explicit inbound rule.
-        // Without this, the first BroadcastOwnedStates (up to 16 ms away) would do the
-        // same thing, but this immediate Heartbeat ensures the pinhole is open BEFORE
-        // any incoming PeerAnnounce reply or StateUpdate packet arrives.
         if (!discovered.empty()) {
             Networking::Packets::Heartbeat hb{};
             hb.header.type     = Networking::Packets::PacketType::Heartbeat;
@@ -1022,12 +1008,6 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         }
 
         // --- Announce ourselves: unicast to discovered peers + raw subnet broadcast ---
-        // Unicast via Broadcast() covers peers found normally via DiscoveryResponse.
-        // The raw 255.255.255.255 broadcast covers the firewall-blocked case: the host
-        // couldn't respond to our DiscoveryHello (unicast blocked inbound) but CAN
-        // receive cross-machine broadcast (enabled by Warren's IT firewall fix).
-        // This allows the host to learn our peer ID and port without us needing
-        // a direct unicast response.
         {
             Networking::Packets::PeerAnnounce announce{};
             announce.header.type     = Networking::Packets::PacketType::PeerAnnounce;

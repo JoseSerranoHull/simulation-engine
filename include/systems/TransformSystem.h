@@ -23,11 +23,8 @@ namespace GE::Systems {
         /** @brief CPU-only: resolves local and world matrices for the transform hierarchy. */
         void OnUpdate(float dt) override;
 
-        /** @brief Basic cleanup for the system. */
-        ERROR_CODE Shutdown() override {
-            m_state = SystemState::ShuttingDown;
-            return ERROR_CODE::OK;
-        }
+        /** @brief Marks the system as shut down. */
+        void Shutdown() override { m_state = SystemState::ShuttingDown; }
 
     private:
         /** @brief Helper to build the local matrix from TRS data. */

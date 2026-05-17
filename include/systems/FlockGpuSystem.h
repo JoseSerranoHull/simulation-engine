@@ -36,7 +36,7 @@ public:
     ~FlockGpuSystem() override = default;
 
     void OnUpdate(float dt, VkCommandBuffer cb) override;
-    ERROR_CODE Shutdown() override { return ERROR_CODE::OK; }
+    void Shutdown() override {}
 
     // Set by FlatBuffersScenario after creation — mirrors FlockingSystem::m_spawnOrigin/Radius.
     glm::vec3 m_spawnCenter { 0.0f };

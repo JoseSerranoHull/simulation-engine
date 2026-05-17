@@ -1,8 +1,16 @@
 ﻿#pragma once
 
+#include <cassert>
+
 /* parasoft-begin-suppress ALL */
 #include "core/libs.h"
 /* parasoft-end-suppress ALL */
+
+#define GE_LOG_FATAL(msg) do { std::cerr << "[FATAL] " << (msg) << "\n"; assert(false); } while(0)
+#define GE_LOG_ERROR(msg) (std::cerr << "[ERROR] " << (msg) << "\n")
+#define GE_LOG_WARN(msg)  (std::cerr << "[WARN] "  << (msg) << "\n")
+#define GE_LOG_INFO(msg)  (std::cout << "[INFO] "  << (msg) << "\n")
+#define GE_LOG_TRACE(msg) ((void)0)
 
 namespace GE
 {
@@ -11,57 +19,6 @@ namespace GE
 		Initializing,
 		Running,
 		ShuttingDown
-	};
-
-	enum class ERROR_CODE {
-		FATAL_START,
-		NOT_IMPLEMENTED,
-		WRONG_ENTITY_ID,
-		NULL_POINTER,
-		ALREADY_INITIALIZED,
-		NOT_INITIALIZED,
-		WINDOW_CREATION_FAILED,
-		RELEASING_OBJECT_REFCOUNT_ZERO,
-		ASSET_DATABASE_NOT_INITIALIZED,
-		INVALID_COMPONENT_TYPE,
-		SYSTEM_ALREADY_REGISTERED,
-		SYSTEM_NOT_REGISTERED,
-		SYSTEM_INVALID_STAGE,
-		COMPONENT_ALREADY_REGISTERED,
-		COMPONENT_NOT_REGISTERED,
-		INVALID_ARGUMENT,
-		INVALID_GRAPHICS_API,
-		GRAPHICS_API_ERROR,
-		VULKAN_DEVICE_CREATION_FAILED,
-		VULKAN_SWAPCHAIN_CREATION_FAILED,
-		VULKAN_COMMAND_CREATION_FAILED,
-		VULKAN_BUFFER_CREATION_FAILED,
-		VULKAN_PIPELINE_CREATION_FAILED,
-		VULKAN_SHADER_PIPELINE_FAILED,
-		VULKAN_SYNCOBJECTS_CREATION_FAILED,
-		VULKAN_SAMPLER_CREATION_FAILED,
-		VULKAN_MATERIAL_UPDATE_FAILED,
-		ERROR_START,
-		IO_ERROR_OCCURRED,
-		FILE_NOT_FOUND,
-		TEXTURE_CANT_CREATED,
-		UNSUPPORTED_TEXTURE_FILE_FORMAT,
-		INVALID_TEXTURE_SIZE,
-		INVALID_TEXTURE_DATA,
-		MAX_COMPONENT_TYPES_REACHED,
-		MAX_ENTITIES_REACHED,
-		ENTITY_HAS_COMPONENT,
-		ENTITY_HAS_NOT_COMPONENT,
-		SHADER_CANT_COMPILED,
-		SHADER_CANT_CREATED,
-		DATA_MISMATCH_FOUND,
-		WARN_START,
-		DEACTIVATED_ENTITY,
-		COMPONENT_IS_IN_DEFAULT_STATE,
-		DEBUG_START,
-		TRACE_START,
-		OK_START,
-		OK,
 	};
 }
 
@@ -87,13 +44,13 @@ namespace GE::Graphics
  */
 namespace GE::EngineConstants {
     // --- Global Simulation & Rendering ---
-    static constexpr uint32_t SHADOW_MAP_RES = 2048U;       /**< Resolution for the depth-pass texture. */
-    static constexpr uint32_t PARTICLE_POOL_SIZE = 20000U;  /**< Maximum number of active particles. */
-    static constexpr uint32_t MAX_SPARK_LIGHTS = 4U;        /**< Max dynamic emitters from particle system. */
+    static constexpr uint32_t SHADOW_MAP_RES = 2048U;	/**< Resolution for the depth-pass texture. */
+    static constexpr uint32_t PARTICLE_POOL_SIZE = 20000U;	/**< Maximum number of active particles. */
+    static constexpr uint32_t MAX_SPARK_LIGHTS = 4U;	/**< Max dynamic emitters from particle system. */
 
     // --- Logic Sanitization ---
-    static constexpr int32_t SHADER_FALSE = 0;             /**< Integer-based boolean for shaders. */
-    static constexpr int32_t SHADER_TRUE = 1;              /**< Integer-based boolean for shaders. */
+    static constexpr int32_t SHADER_FALSE = 0;	/**< Integer-based boolean for shaders. */
+    static constexpr int32_t SHADER_TRUE = 1;	/**< Integer-based boolean for shaders. */
 
     // --- Universal Audit Constants ---
     static constexpr uint32_t INDEX_ZERO = 0U;
@@ -107,11 +64,11 @@ namespace GE::EngineConstants {
 
     // --- Memory Pool Sizes ---
     // Rule: Explicit U suffixes used for unsigned arithmetic to satisfy MISRA.
-    static constexpr uint32_t VRAM_POOL_SIZE = 256U * 1024U * 1024U; /**< Total budget for custom allocator (256MB). */
+    static constexpr uint32_t VRAM_POOL_SIZE = 256U * 1024U * 1024U;	/**< Total budget for custom allocator (256MB). */
 
     // --- Descriptor Set Bindings ---
-    static constexpr uint32_t BINDING_UBO = 0U;            /**< Binding for Global UBO (Set 0). */
-    static constexpr uint32_t BINDING_SHADOW_SAMPLER = 1U; /**< Binding for Shadow Depth Sampler. */
+    static constexpr uint32_t BINDING_UBO = 0U;	/**< Binding for Global UBO (Set 0). */
+    static constexpr uint32_t BINDING_SHADOW_SAMPLER = 1U;	/**< Binding for Shadow Depth Sampler. */
 
     // --- Environmental & Orbital Parameters ---
     static const glm::vec3 COLOR_DAY{ 1.0f, 1.0f, 1.0f };

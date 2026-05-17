@@ -50,10 +50,7 @@ namespace GE::Systems {
 
         void OnUpdate(float dt) override;
 
-        ERROR_CODE Shutdown() override {
-            m_state = SystemState::ShuttingDown;
-            return ERROR_CODE::OK;
-        }
+        void Shutdown() override { m_state = SystemState::ShuttingDown; }
 
     private:
         PhysicsSystem* m_physicsSystem;   ///< Non-owning pointer; read for collision event data.

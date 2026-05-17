@@ -24,7 +24,6 @@
 #include "core/EngineOrchestrator.h"
 #include "graphics/VulkanContext.h"
 #include "core/NetworkBridge.h"
-#include "core/Logger.h"
 #include "services/InputService.h"
 #include "services/Camera.h"
 #include "ecs/EntityManager.h"

@@ -1,15 +1,13 @@
 ﻿#include "ecs/EntityManager.h"
 
-#include "memory/MemoryUtilities.h"
-
 namespace GE::ECS
 {
     EntityManager::EntityManager() {}
     EntityManager::~EntityManager() = default;
-    ERROR_CODE EntityManager::Initialize(uint32_t maxEntities, uint32_t maxComponentTypes)
+    void EntityManager::Initialize(uint32_t maxEntities, uint32_t maxComponentTypes)
     {
-    	GE_CHECK_STATE_INIT(m_state, "Entity manager is already initialized");
-		m_state = SystemState::Initializing;
+        if (m_state != SystemState::Uninitialized) { GE_LOG_FATAL("Entity manager is already initialized."); return; }
+        m_state = SystemState::Initializing;
 
         m_maxEntities       = maxEntities;
         m_maxComponentTypes = maxComponentTypes;
@@ -24,7 +22,6 @@ namespace GE::ECS
             m_freeEntities.push(maxEntities - 1 - i);
 
         m_state = SystemState::Running;
-        return ERROR_CODE::OK;
     }
 
 	// Dispatch updates to all registered systems in stage order
@@ -69,10 +66,10 @@ namespace GE::ECS
         }
     }
 
-    ERROR_CODE EntityManager::Shutdown()
+    void EntityManager::Shutdown()
     {
-    	if (m_state == SystemState::Uninitialized || m_state == SystemState::ShuttingDown) return ERROR_CODE::OK;
-		m_state = SystemState::ShuttingDown;
+        if (m_state == SystemState::Uninitialized || m_state == SystemState::ShuttingDown) return;
+        m_state = SystemState::ShuttingDown;
 
         for (auto const& stageVec : m_systems)
             for (const auto &sys : stageVec)
@@ -81,7 +78,6 @@ namespace GE::ECS
         m_allComponentIndices.clear();
         m_componentArrays.clear();
         m_state = SystemState::Uninitialized;
-        return ERROR_CODE::OK;
     }
 
     EntityID EntityManager::CreateEntity()
@@ -102,14 +98,13 @@ namespace GE::ECS
         return id;
     }
 
-    ERROR_CODE EntityManager::DestroyEntity(EntityID id)
+    void EntityManager::DestroyEntity(EntityID id)
     {
         if (id >= m_maxEntities)
         {
             GE_LOG_FATAL("Entity ID isn't correct.");
-            return ERROR_CODE::WRONG_ENTITY_ID;
+            return;
         }
-
 
         for (uint32_t typeID = 0; typeID < m_maxComponentTypes; ++typeID)
         {
@@ -122,7 +117,6 @@ namespace GE::ECS
         }
 
         m_freeEntities.push(id);
-        return ERROR_CODE::OK;
     }
 
 	void EntityManager::ClearAllEntities()
@@ -150,14 +144,14 @@ namespace GE::ECS
     	GE_LOG_INFO("EntityManager: All entities cleared.");
     }
 
-    ERROR_CODE EntityManager::RegisterSystem(IECSystem *system)
+    void EntityManager::RegisterSystem(IECSystem *system)
     {
         ESystemStage stage = system->GetStage();
 
         if (stage >= ESystemStage::Count)
         {
             GE_LOG_FATAL("Invalid system stage.");
-            return ERROR_CODE::SYSTEM_INVALID_STAGE;
+            return;
         }
 
         for (const auto &existing : m_systems[static_cast<size_t>(stage)])
@@ -165,22 +159,20 @@ namespace GE::ECS
             if (existing->GetID() == system->GetID())
             {
                 GE_LOG_FATAL("System already registered in this stage");
-                return ERROR_CODE::SYSTEM_ALREADY_REGISTERED;
+                return;
             }
         }
         m_systems[static_cast<size_t>(stage)].emplace_back(system);
-
-        return ERROR_CODE::OK;
     }
 
-    ERROR_CODE EntityManager::UnregisterSystem(const IECSystem *system)
+    void EntityManager::UnregisterSystem(const IECSystem *system)
     {
         ESystemStage stage = system->GetStage();
 
         if (stage >= ESystemStage::Count)
         {
             GE_LOG_FATAL("Invalid system stage.");
-            return ERROR_CODE::SYSTEM_INVALID_STAGE;
+            return;
         }
 
         for (auto it = m_systems[static_cast<size_t>(stage)].begin(); it != m_systems[static_cast<size_t>(stage)].end();
@@ -189,25 +181,23 @@ namespace GE::ECS
             if ((*it)->GetID() == system->GetID())
             {
                 m_systems[static_cast<size_t>(stage)].erase(it);
-                return ERROR_CODE::OK;
+                return;
             }
         }
 
         GE_LOG_FATAL("System not found in its stage");
-        return ERROR_CODE::SYSTEM_NOT_REGISTERED;
     }
 
-    ERROR_CODE EntityManager::UnregisterSystemByID(ISystemTypeID systemID) {
+    void EntityManager::UnregisterSystemByID(ISystemTypeID systemID) {
         for (auto& stageVector : m_systems) {
             for (auto it = stageVector.begin(); it != stageVector.end(); ++it) {
                 if ((*it)->GetID() == systemID) {
-                    // Optional: (*it)->Shutdown(); 
-                    delete* it; // Assumes the EntityManager owns the system pointer
+                    delete* it; // EntityManager owns the system pointer
                     stageVector.erase(it);
-                    return ERROR_CODE::OK;
+                    return;
                 }
             }
         }
-        return ERROR_CODE::SYSTEM_NOT_REGISTERED;
+        GE_LOG_WARN("UnregisterSystemByID: system ID not found.");
     }
 }

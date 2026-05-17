@@ -22,9 +22,8 @@ namespace GE::Systems {
         m_state  = SystemState::Running;
     }
 
-    ERROR_CODE SpawnerSystem::Shutdown() {
+    void SpawnerSystem::Shutdown() {
         m_state = SystemState::ShuttingDown;
-        return ERROR_CODE::OK;
     }
 
     // -------------------------------------------------------------------------

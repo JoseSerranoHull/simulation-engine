@@ -77,10 +77,10 @@ namespace GE::Systems {
             }
         }
 
-        /** @brief Satisfies the pure virtual requirement using the 'OK' code. */
-        GE::ERROR_CODE Shutdown() override {
+        /** @brief Destroys all backends and marks the system as shut down. */
+        void Shutdown() override {
+            m_backends.clear();
             m_state = SystemState::ShuttingDown;
-            return GE::ERROR_CODE::OK;
         }
 
     private:

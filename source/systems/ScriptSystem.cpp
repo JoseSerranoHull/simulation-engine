@@ -2,7 +2,6 @@
 #include "systems/PhysicsSystem.h"
 #include "components/ScriptComponent.h"
 #include "core/ServiceLocator.h"
-#include "core/Logger.h"
 
 /* parasoft-begin-suppress ALL */
 #include <algorithm>

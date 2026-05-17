@@ -28,7 +28,7 @@ public:
     ~ClothSystem() override = default;
 
     void       OnUpdate(float dt) override;
-    ERROR_CODE Shutdown()         override { return ERROR_CODE::OK; }
+    void Shutdown() override {}
 
 private:
     // Heat diffusion work buffer — resized lazily, reused each tick to avoid allocation.

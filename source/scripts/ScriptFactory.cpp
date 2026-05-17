@@ -1,6 +1,5 @@
 #include "scripts/ScriptFactory.h"
 #include "scripts/PlayerController.h"
-#include "core/Logger.h"
 
 namespace GE::Scripts {
 

@@ -13,7 +13,6 @@
 #include <commdlg.h>
 
 #include "scene/FlatBuffersLoader.h"
-#include "core/Logger.h"
 
 namespace GE::Scene {
 

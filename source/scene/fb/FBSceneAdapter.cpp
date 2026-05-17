@@ -31,7 +31,6 @@
 #include "graphics/GpuUploadContext.h"
 #include "graphics/VulkanUtils.h"
 #include "assets/Vertex.h"
-#include "core/Logger.h"
 #include "components/ScriptComponent.h"
 #include "scripts/ScriptFactory.h"
 

@@ -35,7 +35,7 @@ public:
     ~SpringSystem() override = default;
 
     void       OnUpdate(float dt) override;
-    ERROR_CODE Shutdown()         override { m_springs.clear(); return ERROR_CODE::OK; }
+    void Shutdown() override { m_springs.clear(); }
 
     void AddSpring(const SpringData& s)   { m_springs.push_back(s); }
     void ClearSprings()                   { m_springs.clear(); }

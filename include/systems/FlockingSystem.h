@@ -26,7 +26,7 @@ public:
     ~FlockingSystem() override = default;
 
     void       OnUpdate(float dt) override;
-    ERROR_CODE Shutdown()         override { return ERROR_CODE::OK; }
+    void Shutdown() override {}
 
     // Runtime-configurable (ImGui)
     FlockSpatialMode m_spatialMode  { FlockSpatialMode::BruteForce };

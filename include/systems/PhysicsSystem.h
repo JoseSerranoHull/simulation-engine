@@ -39,10 +39,7 @@ namespace GE::Systems {
         /** @brief CPU-only: orchestrates Newtonian integration then collision resolution. */
         void OnUpdate(float dt) override;
 
-        ERROR_CODE Shutdown() override {
-            m_state = SystemState::ShuttingDown;
-            return ERROR_CODE::OK;
-        }
+        void Shutdown() override { m_state = SystemState::ShuttingDown; }
 
         /** @brief Integration method selected at runtime via ImGui. Public for OnGUI access. */
         IntegrationMethod m_integrationMethod{ IntegrationMethod::SemiImplicit };

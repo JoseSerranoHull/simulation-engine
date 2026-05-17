@@ -64,7 +64,7 @@ void FlockGpuBackend::Init(std::vector<GpuBoid> initialBoids) {
     const VkDeviceSize boidBytes = static_cast<VkDeviceSize>(m_boidCount) * sizeof(GpuBoid);
     VulkanContext* ctx = ServiceLocator::GetContext();
 
-    VkBuffer       stagingBuf { VK_NULL_HANDLE };
+    VkBuffer stagingBuf { VK_NULL_HANDLE };
     VkDeviceMemory stagingMem { VK_NULL_HANDLE };
     VulkanUtils::createBuffer(ctx->device, ctx->physicalDevice, boidBytes,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -113,13 +113,13 @@ void FlockGpuBackend::Dispatch(VkCommandBuffer cb, const FlockUBO& params) {
     // Barrier: ensure compute writes to the output SSBO are visible to vertex input
     const VkBuffer outputBuf = (m_pingPong == 0U) ? m_ssboB : m_ssboA;
     VkBufferMemoryBarrier barrier{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-    barrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
-    barrier.dstAccessMask       = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.buffer              = outputBuf;
-    barrier.offset              = static_cast<VkDeviceSize>(GE::EngineConstants::OFFSET_ZERO);
-    barrier.size                = VK_WHOLE_SIZE;
+    barrier.buffer = outputBuf;
+    barrier.offset = static_cast<VkDeviceSize>(GE::EngineConstants::OFFSET_ZERO);
+    barrier.size = VK_WHOLE_SIZE;
 
     vkCmdPipelineBarrier(cb,
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
@@ -170,14 +170,14 @@ void FlockGpuBackend::Restart(glm::vec3 spawnCenter, float spawnRadius) {
 
         // Sample a unit-sphere direction for initial velocity; reject near-zero to avoid NaN.
         glm::vec3 dir;
-        float     dirLen;
+        float dirLen;
         do {
-            dir    = glm::vec3(axis(rng), axis(rng), axis(rng));
+            dir = glm::vec3(axis(rng), axis(rng), axis(rng));
             dirLen = glm::length(dir);
         } while (dirLen > 1.0f || dirLen < 1e-4f);
 
         b.posGroup = glm::vec4(spawnCenter + pos * spawnRadius, 0.0f);
-        b.vel      = glm::vec4((dir / dirLen) * speed(rng), 0.0f);
+        b.vel = glm::vec4((dir / dirLen) * speed(rng), 0.0f);
     }
 
     const VkDeviceSize boidBytes = static_cast<VkDeviceSize>(m_boidCount) * sizeof(GpuBoid);
@@ -251,14 +251,14 @@ void FlockGpuBackend::createComputeDescriptors() {
 
     // Descriptor set layout: binding 0 = UBO, 1 = SSBO A, 2 = SSBO B
     const std::array<VkDescriptorSetLayoutBinding, 3> bindings = {{
-        { BINDING_UBO,    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,  1U, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-        { BINDING_SSBO_A, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,  1U, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
-        { BINDING_SSBO_B, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,  1U, VK_SHADER_STAGE_COMPUTE_BIT, nullptr },
+        { BINDING_UBO, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,1U, VK_SHADER_STAGE_COMPUTE_BIT,nullptr },
+        { BINDING_SSBO_A, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,1U, VK_SHADER_STAGE_COMPUTE_BIT,nullptr },
+        { BINDING_SSBO_B, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,1U, VK_SHADER_STAGE_COMPUTE_BIT,nullptr },
     }};
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings    = bindings.data();
+    layoutInfo.pBindings = bindings.data();
     static_cast<void>(vkCreateDescriptorSetLayout(ctx->device, &layoutInfo, nullptr, &m_computeSetLayout));
 
     // Descriptor pool
@@ -269,15 +269,15 @@ void FlockGpuBackend::createComputeDescriptors() {
 
     VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes    = poolSizes.data();
-    poolInfo.maxSets       = 1U;
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = 1U;
     static_cast<void>(vkCreateDescriptorPool(ctx->device, &poolInfo, nullptr, &m_descriptorPool));
 
     // Allocate descriptor set
     VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-    allocInfo.descriptorPool     = m_descriptorPool;
+    allocInfo.descriptorPool = m_descriptorPool;
     allocInfo.descriptorSetCount = 1U;
-    allocInfo.pSetLayouts        = &m_computeSetLayout;
+    allocInfo.pSetLayouts = &m_computeSetLayout;
     static_cast<void>(vkAllocateDescriptorSets(ctx->device, &allocInfo, &m_descriptorSet));
 
     // Write descriptors
@@ -303,7 +303,7 @@ void FlockGpuBackend::createComputePipeline() {
 
     VkPipelineLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     layoutInfo.setLayoutCount = 1U;
-    layoutInfo.pSetLayouts    = &m_computeSetLayout;
+    layoutInfo.pSetLayouts = &m_computeSetLayout;
     static_cast<void>(vkCreatePipelineLayout(ctx->device, &layoutInfo, nullptr, &m_computePipeLayout));
 
     VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
@@ -329,15 +329,15 @@ void FlockGpuBackend::createGraphicsPipeline(VkRenderPass renderPass) {
     const std::array<VkDescriptorSetLayout, 1> layouts = { m_globalSetLayout };
     VkPipelineLayoutCreateInfo pipeLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     pipeLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
-    pipeLayoutInfo.pSetLayouts    = layouts.data();
+    pipeLayoutInfo.pSetLayouts = layouts.data();
     if (vkCreatePipelineLayout(ctx->device, &pipeLayoutInfo, nullptr, &m_gfxPipeLayout) != VK_SUCCESS) {
         throw std::runtime_error("FlockGpuBackend: Failed to create graphics pipeline layout!");
     }
 
     // Vertex input — reads directly from BoidState SSBO (stride = 32 bytes)
     VkVertexInputBindingDescription binding{};
-    binding.binding   = 0U;
-    binding.stride    = static_cast<uint32_t>(sizeof(GpuBoid));
+    binding.binding = 0U;
+    binding.stride = static_cast<uint32_t>(sizeof(GpuBoid));
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     const std::array<VkVertexInputAttributeDescription, 2> attrs = {{
@@ -346,43 +346,43 @@ void FlockGpuBackend::createGraphicsPipeline(VkRenderPass renderPass) {
     }};
 
     VkPipelineVertexInputStateCreateInfo vertexInput{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vertexInput.vertexBindingDescriptionCount   = 1U;
-    vertexInput.pVertexBindingDescriptions      = &binding;
+    vertexInput.vertexBindingDescriptionCount = 1U;
+    vertexInput.pVertexBindingDescriptions = &binding;
     vertexInput.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrs.size());
-    vertexInput.pVertexAttributeDescriptions    = attrs.data();
+    vertexInput.pVertexAttributeDescriptions  = attrs.data();
 
     // Point-list topology
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-    inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo viewportState{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
     viewportState.viewportCount = 1U;
-    viewportState.scissorCount  = 1U;
+    viewportState.scissorCount = 1U;
 
     const std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     const VkPipelineDynamicStateCreateInfo dynamicState = VulkanUtils::prepareDynamicState(dynamicStates);
 
-    const VkPipelineRasterizationStateCreateInfo rasterizer  = VulkanUtils::prepareRasterizer(VK_CULL_MODE_NONE);
-    const VkPipelineMultisampleStateCreateInfo   multisampling = VulkanUtils::prepareMultisampling(m_msaaSamples);
-    const VkPipelineDepthStencilStateCreateInfo  depthStencil  = VulkanUtils::prepareDepthStencil(VK_FALSE);
+    const VkPipelineRasterizationStateCreateInfo rasterizer = VulkanUtils::prepareRasterizer(VK_CULL_MODE_NONE);
+    const VkPipelineMultisampleStateCreateInfo multisampling = VulkanUtils::prepareMultisampling(m_msaaSamples);
+    const VkPipelineDepthStencilStateCreateInfo  depthStencil = VulkanUtils::prepareDepthStencil(VK_FALSE);
 
     // Alpha blending (same as particles)
     VkPipelineColorBlendAttachmentState blendAttachment{};
-    blendAttachment.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+    blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    blendAttachment.blendEnable         = VK_TRUE;
+    blendAttachment.blendEnable = VK_TRUE;
     blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    blendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+    blendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
     blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    blendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
+    blendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.attachmentCount = 1U;
-    colorBlending.pAttachments    = &blendAttachment;
+    colorBlending.pAttachments = &blendAttachment;
 
     const VkGraphicsPipelineCreateInfo pipelineInfo = VulkanUtils::preparePipelineCreateInfo(
         shaderStages, &vertexInput, &inputAssembly, &viewportState, &rasterizer,

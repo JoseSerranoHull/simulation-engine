@@ -32,8 +32,8 @@ void Renderer::recordFrame(
     const GraphicsPipeline* shadowPipeline,
     const glm::vec4& clearColor,
     const GraphicsPipeline* checkerboardPipeline,
-    const void*  checkerboardPushData,
-    uint32_t     checkerboardPushDataSize,
+    const void* checkerboardPushData,
+    uint32_t checkerboardPushDataSize,
     const GraphicsPipeline* wirePipeline,
     GE::Systems::ColliderVisualizerSystem* visualizer
 ) const {
@@ -157,8 +157,8 @@ void Renderer::recordOpaquePass(
     GE::ECS::EntityManager* const em,
     const glm::vec4& clearColor,
     const GraphicsPipeline* checkerboardPipeline,
-    const void*  checkerboardPushData,
-    uint32_t     checkerboardPushDataSize
+    const void* checkerboardPushData,
+    uint32_t checkerboardPushDataSize
 ) const {
     auto& meshRenderers = em->GetCompArr<GE::Components::MeshRenderer>();
 
@@ -210,9 +210,6 @@ void Renderer::recordOpaquePass(
                         checkerPush.data        = checkerboardPushData;
                         checkerPush.offset      = static_cast<uint32_t>(sizeof(glm::mat4));
                         checkerPush.size        = checkerboardPushDataSize;
-                        // The checkerboard pipeline layout declares ONE range [0,100) VERT|FRAG.
-                        // Every vkCmdPushConstants call that touches any byte in [0,100) must
-                        // include both stages (VUID-vkCmdPushConstants-offset-01796).
                         checkerPush.stages      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
                         checkerPush.modelStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
                         extraPushPtr = &checkerPush;

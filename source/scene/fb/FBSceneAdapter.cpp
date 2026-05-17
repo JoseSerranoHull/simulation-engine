@@ -1308,7 +1308,7 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
         }
 
         ctx.prefabRegistry[prefabName] = std::move(tmpl);
-        GE_LOG_INFO("FBSceneAdapter::adaptPrefabs: registered prefab '" + prefabName + "'.");
+        GE_LOG_INFO("[FBSceneAdapter] adaptPrefabs: registered prefab '" + prefabName + "'.");
     }
 }
 
@@ -1452,7 +1452,7 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
                 rec.prefabRef    = rec.prefabVariantRefs[rec.prefabVariantRefs.size() / 2];
                 rec.isSequential = true;
                 rec.ownerPeerId  = 1;
-                GE_LOG_INFO("FBSceneAdapter::adaptSpawners: synthesised " +
+                GE_LOG_INFO("[FBSceneAdapter] adaptSpawners: synthesised " +
                     std::to_string(rec.prefabVariantRefs.size()) +
                     " prefab variants for spawner '" + rec.name + "'.");
             }

@@ -223,7 +223,7 @@ void DebugOverlay::DrawMainMenuBar(InputService* const input, PointLightSource* 
                 if (ImGui::MenuItem("Reset Current Scenario", "F5")) {
                     std::string currentPath = experience->GetCurrentScenario()->GetConfigPath();
                     experience->requestScenarioChange(currentPath);
-                    GE_LOG_INFO("UI: Resetting scenario from " + currentPath);
+                    GE_LOG_INFO("[DebugOverlay] Resetting scenario from " + currentPath);
                 }
             }
 

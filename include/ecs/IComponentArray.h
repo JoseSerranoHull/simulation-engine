@@ -15,8 +15,8 @@ namespace GE::ECS
      */
     struct RemovalInfo
     {
-        uint32_t movedSlot;    ///< Entity ID that was in the last packed slot before removal.
-        uint32_t newPackedIdx; ///< Packed index where that entity's data now lives after the swap.
+        uint32_t movedSlot; // < Entity ID that was in the last packed slot before removal.
+        uint32_t newPackedIdx; // < Packed index where that entity's data now lives after the swap.
     };
 
     /**

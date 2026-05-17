@@ -54,11 +54,11 @@ public:
         const VkFramebuffer shadowFramebuffer,
         const std::vector<GraphicsPipeline*>& materialPipelines,
         const GraphicsPipeline* shadowPipeline,
-        const glm::vec4& clearColor                   = glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f },
+        const glm::vec4& clearColor = glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f },
         const GraphicsPipeline* checkerboardPipeline  = nullptr,
-        const void*  checkerboardPushData             = nullptr,
-        uint32_t     checkerboardPushDataSize         = 0U,
-        const GraphicsPipeline* wirePipeline          = nullptr,
+        const void* checkerboardPushData  = nullptr,
+        uint32_t checkerboardPushDataSize = 0U,
+        const GraphicsPipeline* wirePipeline = nullptr,
         GE::Systems::ColliderVisualizerSystem* visualizer = nullptr
     ) const;
 
@@ -86,8 +86,8 @@ private:
         GE::ECS::EntityManager* const em,
         const glm::vec4& clearColor,
         const GraphicsPipeline* checkerboardPipeline,
-        const void*  checkerboardPushData,
-        uint32_t     checkerboardPushDataSize
+        const void* checkerboardPushData,
+        uint32_t checkerboardPushDataSize
     ) const;
 
     /** @brief Records alpha-blended geometry and dispatches particles. */

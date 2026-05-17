@@ -81,12 +81,12 @@ public:
 
 private:
     // --- Internal State & Hardware Handles ---
-    VkSwapchainKHR swapChain;           /**< Hardware handle for the swapchain. */
-    VkFormat swapChainImageFormat;      /**< Presentation image format. */
-    VkExtent2D swapChainExtent;         /**< Current presentation resolution. */
+    VkSwapchainKHR swapChain; /**< Hardware handle for the swapchain. */
+    VkFormat swapChainImageFormat; /**< Presentation image format. */
+    VkExtent2D swapChainExtent; /**< Current presentation resolution. */
 
-    std::vector<VkImage> swapChainImages;           /**< Handles for the presentation images. */
-    std::vector<VkImageView> swapChainImageViews;   /**< Views required for rendering to the images. */
+    std::vector<VkImage> swapChainImages; /**< Handles for the presentation images. */
+    std::vector<VkImageView> swapChainImageViews; /**< Views required for rendering to the images. */
     std::vector<VkFramebuffer> swapChainFramebuffers; /**< Framebuffers linked to swapchain images. */
 };
 

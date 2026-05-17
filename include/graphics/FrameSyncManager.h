@@ -42,7 +42,7 @@ public:
 
     // --- Accessors ---
 
-/** @brief Returns the Command Buffer for a specific frame in flight. */
+	/** @brief Returns the Command Buffer for a specific frame in flight. */
     VkCommandBuffer getCommandBuffer(const uint32_t index) const {
         return commandBuffers.at(index);
     }

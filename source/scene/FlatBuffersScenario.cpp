@@ -125,7 +125,7 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
     // 3. Load and adapt the FlatBuffers binary
     GE::Scene::FB::FBSceneAdapter adapter;
     if (!adapter.load(m_configPath)) {
-        GE_LOG_ERROR("FlatBuffersScenario: Failed to load: " + m_configPath);
+        GE_LOG_ERROR("[FlatBuffersScenario] Failed to load: " + m_configPath);
         return;
     }
 
@@ -385,8 +385,8 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         }
     }
 
-    GE_LOG_INFO("FlatBuffersScenario: Loaded '" + m_sceneName + "' from " + m_configPath);
-    GE_LOG_INFO("FlatBuffersScenario: Network / Simulation / Display menus are only active when a .bin FlatBuffers scene is loaded.");
+    GE_LOG_INFO("[FlatBuffersScenario] Loaded '" + m_sceneName + "' from " + m_configPath);
+    GE_LOG_INFO("[FlatBuffersScenario] Network / Simulation / Display menus are only active when a .bin FlatBuffers scene is loaded.");
 }
 
 // ===========================================================================
@@ -940,7 +940,7 @@ void FlatBuffersScenario::OnGUI() {
                         m_netInitialised = svc->Init(static_cast<uint16_t>(m_localPort));
                         if (m_netInitialised) {
                             svc->SetLocalPeerId(static_cast<uint8_t>(m_localPeerId));
-                            GE_LOG_INFO("FlatBuffersScenario: NetworkService initialised on port "
+                            GE_LOG_INFO("[FlatBuffersScenario] NetworkService initialised on port "
                                         + std::to_string(m_localPort));
                         }
                     }
@@ -1600,7 +1600,7 @@ void FlatBuffersScenario::disconnectNetwork() {
         entry.connected = false;
     }
 
-    GE_LOG_INFO("FlatBuffersScenario: disconnected from network.");
+    GE_LOG_INFO("[FlatBuffersScenario] disconnected from network.");
 }
 
 void FlatBuffersScenario::scanSceneDirectory() {

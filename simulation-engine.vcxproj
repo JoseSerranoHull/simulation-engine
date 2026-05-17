@@ -337,7 +337,6 @@
     <ClInclude Include="include\lighting\LightSource.h" />
     <ClInclude Include="include\physics\Line.h" />
     <ClInclude Include="include\assets\Material.h" />
-    <ClInclude Include="include\memory\MemoryUtilities.h" />
     <ClInclude Include="include\assets\Mesh.h" />
     <ClInclude Include="include\assets\Model.h" />
     <ClInclude Include="include\assets\OBJLoader.h" />

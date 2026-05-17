@@ -956,9 +956,6 @@
     <ClInclude Include="include\memory\SimpleAllocator.h">
       <Filter>Header Files\memory</Filter>
     </ClInclude>
-    <ClInclude Include="include\memory\MemoryUtilities.h">
-      <Filter>Header Files\memory</Filter>
-    </ClInclude>
     <!-- script infrastructure headers -->
     <ClInclude Include="include\scripts\CollisionInfo.h">
       <Filter>Header Files\scripts</Filter>

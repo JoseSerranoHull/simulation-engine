@@ -134,9 +134,7 @@ void Skybox::createDescriptorResources() const {
     static_cast<void>(vkAllocateDescriptorSets(context->device, &allocInfo, &descriptorSet));
 
     // --- GUARD START ---
-    // We only perform the 'Update' if we actually have a texture pointer.
-    // If cubemapTexture is nullptr (initial state), we skip this.
-    // loadTextures() will call vkUpdateDescriptorSets later when the .ini is read.
+
     if (cubemapTexture != nullptr) {
         VkDescriptorImageInfo imageInfo{
             cubemapTexture->getSampler(),
@@ -247,11 +245,9 @@ void Skybox::loadTextures(const std::vector<std::string>& facePaths) {
     VulkanContext* context = ServiceLocator::GetContext();
 
     // Step 1: Create the new Cubemap object (This handles the GPU image/view creation)
-    // We replace the old unique_ptr, which automatically triggers the old Cubemap's destructor
     cubemapTexture = std::make_unique<Cubemap>(facePaths);
 
     // Step 2: Refresh the Descriptor Set
-    // We must tell the GPU to use the handles from the newly loaded texture
     VkDescriptorImageInfo imageInfo{
         cubemapTexture->getSampler(),
         cubemapTexture->getImageView(),
@@ -269,7 +265,7 @@ void Skybox::loadTextures(const std::vector<std::string>& facePaths) {
 
     m_texturesLoaded = true; // Set this after vkUpdateDescriptorSets
 
-    GE_LOG_INFO("Skybox: Successfully updated cubemap textures from Registry.");
+    GE_LOG_INFO("[Skybox] Successfully updated cubemap textures from Registry.");
 }
 
 } // namespace GE::Graphics

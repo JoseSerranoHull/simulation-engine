@@ -326,7 +326,7 @@ void NetworkBridge::handleSceneChange(const uint8_t* data, std::size_t size)
     const std::string path(pkt.scenePath);
     if (path.empty()) { return; }
 
-    GE_LOG_INFO("NetworkBridge: SCENE_CHANGE received → '" + path + "'");
+    GE_LOG_INFO("[NetworkBridge] SCENE_CHANGE received → '" + path + "'");
 
     std::lock_guard<std::mutex> lock(m_pendingNetworkSceneMutex);
     m_pendingNetworkScene = path;   // main thread picks this up via PollPendingSceneChange()
@@ -355,7 +355,7 @@ void NetworkBridge::handleSpawnObject(const uint8_t* data, std::size_t size)
     auto* rb = m_entityManager->TryGetTIComponent<GE::Components::RigidBody>(pkt.entityId);
 
     if ((tr == nullptr) || (rb == nullptr)) {
-        GE_LOG_WARN("NetworkBridge: SPAWN_OBJECT for unknown entity " + std::to_string(pkt.entityId) + " — ignored.");
+        GE_LOG_WARN("[NetworkBridge] SPAWN_OBJECT for unknown entity " + std::to_string(pkt.entityId) + " — ignored.");
         return;
     }
 
@@ -397,7 +397,7 @@ void NetworkBridge::BroadcastSceneChange(const std::string& path)
         m_service->Broadcast(&pkt, sizeof(pkt));
     }
 
-    GE_LOG_INFO("NetworkBridge: broadcasted SCENE_CHANGE → '" + path + "'");
+    GE_LOG_INFO("[NetworkBridge] broadcasted SCENE_CHANGE → '" + path + "'");
 }
 
 // ---------------------------------------------------------------------------
@@ -513,7 +513,7 @@ void NetworkBridge::RegisterScenePeer(uint8_t peerId)
     if (peerId < 1U || peerId > Networking::NetworkService::MAX_PEERS) { return; }
     m_acceptedPeerMask.fetch_or(
         static_cast<uint8_t>(1U << (peerId - 1U)), std::memory_order_relaxed);
-    GE_LOG_INFO("NetworkBridge: registered scene peer " + std::to_string(peerId));
+    GE_LOG_INFO("[NetworkBridge] registered scene peer " + std::to_string(peerId));
 }
 
 // ---------------------------------------------------------------------------
@@ -619,7 +619,7 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
     m_service->AddPeer(peerID, ipBuf, peerPort);
     RegisterScenePeer(peerID);
 
-    GE_LOG_INFO("NetworkBridge: peer " + std::to_string(peerID) + " announced itself from " + ipBuf);
+    GE_LOG_INFO("[NetworkBridge] peer " + std::to_string(peerID) + " announced itself from " + ipBuf);
 
     // If this is a new peer, unicast our own PeerAnnounce back so they add us too.
     // This closes the loop for assume-host joiners that skipped discovery and only
@@ -635,7 +635,7 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
         reply.header.senderId = myId;
         reply.peerID = myId;
         m_service->Send(peerID, &reply, sizeof(reply));
-        GE_LOG_INFO("NetworkBridge: sent PeerAnnounce reply to new peer "
+        GE_LOG_INFO("[NetworkBridge] sent PeerAnnounce reply to new peer "
                     + std::to_string(peerID));
 
         // Relay the new peer's PeerAnnounce to every OTHER registered peer via unicast.
@@ -664,7 +664,7 @@ void NetworkBridge::handlePeerAnnounce(uint8_t peerID, uint32_t senderAddr)
                 if (p == peerID || p == myId) { continue; }  // skip new peer and self
                 if (m_service->HasPeer(p)) {
                     m_service->Send(p, &forward, sizeof(forward));
-                    GE_LOG_INFO("NetworkBridge: relayed PeerAnnounce{" + std::to_string(peerID)
+                    GE_LOG_INFO("[NetworkBridge] relayed PeerAnnounce{" + std::to_string(peerID)
                                 + "} to Peer " + std::to_string(p)
                                 + " (assists inbound-blocked peers)");
                 }
@@ -693,7 +693,7 @@ void NetworkBridge::BroadcastPeerLeave()
     for (int i = 0; i < 3; ++i) {
         m_service->Broadcast(&pkt, sizeof(pkt));
     }
-    GE_LOG_INFO("NetworkBridge: broadcast PeerLeave (Peer " + std::to_string(myId) + ")");
+    GE_LOG_INFO("[NetworkBridge] broadcast PeerLeave (Peer " + std::to_string(myId) + ")");
 }
 
 // ---------------------------------------------------------------------------
@@ -710,7 +710,7 @@ void NetworkBridge::handlePeerLeave(uint8_t peerID)
     const uint8_t bit = static_cast<uint8_t>(1U << (peerID - 1U));
     m_acceptedPeerMask.fetch_and(static_cast<uint8_t>(~bit));
 
-    GE_LOG_INFO("NetworkBridge: Peer " + std::to_string(peerID)
+    GE_LOG_INFO("[NetworkBridge] Peer " + std::to_string(peerID)
                 + " left — slot freed, accepted mask cleared");
     logDiscovery("Peer " + std::to_string(peerID) + " disconnected gracefully");
 }
@@ -968,7 +968,7 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         while (slot <= 4U) {
             gamePort = static_cast<uint16_t>(BASE_PORT + slot - 1U);
             if (m_service->Init(gamePort)) { break; }
-            GE_LOG_INFO("NetworkBridge: port " + std::to_string(gamePort)
+            GE_LOG_INFO("[NetworkBridge] port " + std::to_string(gamePort)
                         + " in use, trying next slot");
             ++slot;
             // Skip slots already occupied by discovered same-scene peers
@@ -1047,7 +1047,7 @@ void NetworkBridge::BeginAutoConnect(const std::string& hostIP)
         logDiscovery("Connected as Peer " + std::to_string(slot)
                      + " on port " + std::to_string(gamePort)
                      + (assumedHost ? " [assume-host]" : " [full handshake]"));
-        GE_LOG_INFO("NetworkBridge: auto-connect complete — " + m_autoConnectStatus);
+        GE_LOG_INFO("[NetworkBridge] auto-connect complete — " + m_autoConnectStatus);
     });
 }
 

@@ -21,7 +21,7 @@ namespace GE {
         Scene::SceneLoader loader;
         // loader.load("./config/snow_globe.ini", em, am, scene, ...);
 
-        GE_LOG_INFO("SnowGlobeScenario: Assets Loaded Successfully.");
+        GE_LOG_INFO("[SnowGlobeScenario] Assets Loaded Successfully.");
     }
 
     void SnowGlobeScenario::OnUpdate(float dt, float totalTime) {
@@ -98,6 +98,6 @@ namespace GE {
     void SnowGlobeScenario::OnUnload() {
         // Clearing owned models triggers the AssetManager cleanup for this scene
         m_ownedModels.clear();
-        GE_LOG_INFO("SnowGlobeScenario: Unloaded.");
+        GE_LOG_INFO("[SnowGlobeScenario] Unloaded.");
     }
 }

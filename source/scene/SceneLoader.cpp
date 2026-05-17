@@ -40,7 +40,7 @@ namespace GE::Scene {
 
         std::ifstream file(path);
         if (!file.is_open()) {
-            std::cerr << "SceneLoader: Failed to open " << path << std::endl;
+            std::cerr << "[SceneLoader] Failed to open " << path << std::endl;
             return;
         }
 
@@ -75,7 +75,7 @@ namespace GE::Scene {
             if (it != handlers.end()) {
                 it->second(currentID, sectionProps);
             } else {
-                GE_LOG_WARN("SceneLoader: Unknown section '" + currentSection + "' — skipped.");
+                GE_LOG_WARN("[SceneLoader] Unknown section '" + currentSection + "' — skipped.");
             }
             sectionProps.clear();
         };
@@ -261,7 +261,7 @@ namespace GE::Scene {
                 outOwnedModels.push_back(std::move(dummyModel));
             }
             else {
-                GE_LOG_ERROR("SceneLoader: Failed to generate procedural shape: " + shape);
+                GE_LOG_ERROR("[SceneLoader] Failed to generate procedural shape: " + shape);
             }
         }
         // --- CASE B: Complex .obj Model with Material Mapping ---
@@ -318,7 +318,7 @@ namespace GE::Scene {
                 outOwnedModels.push_back(std::move(model));
             }
             else {
-                GE_LOG_ERROR("SceneLoader: Failed to load external mesh: " + props.at("Mesh"));
+                GE_LOG_ERROR("[SceneLoader] Failed to load external mesh: " + props.at("Mesh"));
             }
         }
 
@@ -470,7 +470,7 @@ namespace GE::Scene {
         // 1. Validate Mandatory Agnostic Data
         // We require all three shader paths to build a functional system
         if (!props.count("ComputeShader") || !props.count("VertexShader") || !props.count("FragmentShader")) {
-            GE_LOG_ERROR("SceneLoader: ParticleComponent missing mandatory shader paths. Skipping entity.");
+            GE_LOG_ERROR("[SceneLoader] ParticleComponent missing mandatory shader paths. Skipping entity.");
             return;
         }
 
@@ -516,7 +516,7 @@ namespace GE::Scene {
 
         // Metadata logging using the 'Type' key if present
         std::string logType = props.count("Type") ? props.at("Type") : "Generic";
-        GE_LOG_INFO("SceneLoader: Successfully built " + logType + " particle system.");
+        GE_LOG_INFO("[SceneLoader] Successfully built " + logType + " particle system.");
     }
 
     void SceneLoader::handleSkyboxComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {

@@ -21,9 +21,9 @@ namespace GE::Graphics {
 class Cubemap final {
 public:
     // --- Named Constants ---
-    static constexpr uint32_t FACE_COUNT = 6U;       /**< Standard cubemap faces (X+, X-, Y+, Y-, Z+, Z-). */
-    static constexpr uint32_t BYTES_PER_PIXEL = 4U;  /**< Assuming RGBA8 format. */
-    static constexpr uint32_t MIP_LEVEL_ONE = 1U;    /**< Base level for skybox textures. */
+    static constexpr uint32_t FACE_COUNT = 6U;  /**< Standard cubemap faces (X+, X-, Y+, Y-, Z+, Z-). */
+    static constexpr uint32_t BYTES_PER_PIXEL = 4U; /**< Assuming RGBA8 format. */
+    static constexpr uint32_t MIP_LEVEL_ONE = 1U;   /**< Base level for skybox textures. */
 
     // --- Lifecycle ---
 
@@ -50,10 +50,10 @@ public:
 
 private:
     // --- Internal State & GPU Handles ---
-    VkImage image;               /**< The 6-layered Vulkan image handle. */
-    VkImageView imageView;       /**< Access point for the shader to read the image. */
-    VkDeviceMemory memory;       /**< Backing VRAM allocation for the image. */
-    VkSampler sampler;           /**< Hardware configuration for texture filtering. */
+    VkImage image;  /**< The 6-layered Vulkan image handle. */
+    VkImageView imageView;  /**< Access point for the shader to read the image. */
+    VkDeviceMemory memory;  /**< Backing VRAM allocation for the image. */
+    VkSampler sampler;  /**< Hardware configuration for texture filtering. */
 };
 
 } // namespace GE::Graphics

@@ -37,8 +37,8 @@ public:
     static constexpr uint32_t PUSH_CONSTANT_OFFSET = 0U;
 
 private:
-    VkPipeline        pipeline{ VK_NULL_HANDLE };
-    VkPipelineLayout  pipelineLayout{ VK_NULL_HANDLE };
+    VkPipeline pipeline{ VK_NULL_HANDLE };
+    VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
     VkDescriptorSetLayout materialLayout{ VK_NULL_HANDLE };
 
 public:

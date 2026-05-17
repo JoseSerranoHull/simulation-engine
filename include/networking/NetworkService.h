@@ -18,9 +18,13 @@ namespace GE::Networking {
 
     /// Callback: (senderId, rawBytes, byteCount, senderAddr, senderPort)
     /// senderAddr and senderPort are in network byte order (from recvfrom).
-    using ReceiveCallback = std::function<void(uint8_t senderId, const uint8_t* data,
-                                               std::size_t size,
-                                               uint32_t senderAddr, uint16_t senderPort)>;
+    using ReceiveCallback = std::function<void(
+        uint8_t senderId,
+        const uint8_t* data,
+        std::size_t size,
+        uint32_t senderAddr,
+        uint16_t senderPort
+    )>;
 
     /**
      * @class NetworkService
@@ -37,7 +41,7 @@ namespace GE::Networking {
         ~NetworkService() = default;
 
         // Non-copyable — owns a socket handle
-        NetworkService(const NetworkService&)            = delete;
+        NetworkService(const NetworkService&) = delete;
         NetworkService& operator=(const NetworkService&) = delete;
 
         // --- Lifecycle ---
@@ -52,9 +56,9 @@ namespace GE::Networking {
 
         /**
          * @brief Registers a remote peer.
-         * @param peerId  1-based peer index (1–4).
-         * @param ip      IPv4 address string (e.g. "127.0.0.1").
-         * @param port    UDP port the peer is listening on.
+         * @param peerId 1-based peer index (1–4).
+         * @param ip IPv4 address string (e.g. "127.0.0.1").
+         * @param port UDP port the peer is listening on.
          */
         void AddPeer(uint8_t peerId, const std::string& ip, uint16_t port);
 
@@ -104,8 +108,8 @@ namespace GE::Networking {
         /** @brief Snapshot of active peers — used by NetworkBridge to relay peer lists. */
         struct ActivePeer {
             uint8_t  peerId { 0 };
-            uint32_t addr   { 0 };  ///< NBO
-            uint16_t port   { 0 };  ///< NBO
+            uint32_t addr { 0 };    // < NBO
+            uint16_t port { 0 };    // < NBO
         };
         std::vector<ActivePeer> GetActivePeers() const;
 
@@ -114,14 +118,14 @@ namespace GE::Networking {
         // INVALID_SOCKET == ~0ULL on 64-bit; we initialise to that sentinel.
         static constexpr uintptr_t INVALID_SOCK = ~static_cast<uintptr_t>(0);
 
-        uintptr_t m_socket     { INVALID_SOCK };
-        bool      m_initialised{ false };
-        uint8_t   m_localPeerId{ 1 };
+        uintptr_t m_socket { INVALID_SOCK };
+        bool m_initialised { false };
+        uint8_t m_localPeerId { 1 };
 
         struct PeerEntry {
-            bool     active { false };
-            uint32_t addr   { 0 };   ///< sin_addr.s_addr (network byte order)
-            uint16_t port   { 0 };   ///< sin_port       (network byte order)
+            bool active { false };
+            uint32_t addr { 0 };    // < sin_addr.s_addr (network byte order)
+            uint16_t port { 0 };    // < sin_port (network byte order)
         };
 
         // Indexed by (peerId - 1), i.e. peers 1–4 → indices 0–3

@@ -17,13 +17,13 @@ namespace GE::ECS {
 		Physics,
 		SceneControl,
 		DayNight,
-		GameLogic, ///< User scripts (ScriptSystem)
+		GameLogic, // < User scripts (ScriptSystem)
 		Camera,
 		GUI,
 		Particle,
 		Render,
 		LateUpdate,
-		Count      ///< Sentinel — do not register systems at this stage.
+		Count      // < Sentinel — do not register systems at this stage.
 	};
 
 	using ISystemTypeID = uint32_t;
@@ -63,8 +63,8 @@ namespace GE::ECS {
 
 	protected:
 		ISystemTypeID m_typeID{UINT32_MAX};          ///< Set by the concrete system constructor.
-		ESystemStage  m_stage{ESystemStage::Count};  ///< Stage slot in EntityManager dispatch order.
-		SystemState   m_state{SystemState::Uninitialized};
+		ESystemStage m_stage{ESystemStage::Count};  ///< Stage slot in EntityManager dispatch order.
+		SystemState m_state{SystemState::Uninitialized};
 	};
 
 	inline ISystemTypeID IECSystem::GetID() const {

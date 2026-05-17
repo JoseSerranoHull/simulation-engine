@@ -79,10 +79,10 @@ namespace GE {
                 );
             }
 
-            GE_LOG_INFO("GenericScenario: Scripts demo — DemoPlayerScript and DemoTriggerScript attached.");
+            GE_LOG_INFO("[GenericScenario] Scripts demo — DemoPlayerScript and DemoTriggerScript attached.");
         }
 
-        GE_LOG_INFO("GenericScenario: Scenario loaded from " + m_configPath);
+        GE_LOG_INFO("[GenericScenario] Scenario loaded from " + m_configPath);
     }
 
     void GenericScenario::OnUpdate(float dt, float totalTime) {
@@ -117,7 +117,7 @@ namespace GE {
             // top of the next drawFrame(), after vkDeviceWaitIdle — never mid-frame.
             auto doRestart = [&]() {
                 ServiceLocator::GetExperience()->requestScenarioChange(m_configPath);
-                GE_LOG_INFO("GenericScenario: Restarting simulation from " + m_configPath);
+                GE_LOG_INFO("[GenericScenario] Restarting simulation from " + m_configPath);
             };
 
             if (ImGui::MenuItem("Restart Simulation", "F5")) {
@@ -279,6 +279,6 @@ namespace GE {
         m_pipelines.clear();
         m_shaderModules.clear();
 
-        GE_LOG_INFO("GenericScenario: Unloaded " + m_configPath);
+        GE_LOG_INFO("[GenericScenario] Unloaded " + m_configPath);
     }
 }

@@ -191,7 +191,7 @@ namespace GE::ECS
         {
             size_t old = m_reverse.size();
             m_reverse.resize(entityID + 1, UINT32_MAX);
-            GE_LOG_INFO("Resized reverse from " + std::to_string(old) + " to " + std::to_string(m_reverse.size()));
+            GE_LOG_INFO("[ComponentArray] Resized reverse from " + std::to_string(old) + " to " + std::to_string(m_reverse.size()));
         }
     }
 

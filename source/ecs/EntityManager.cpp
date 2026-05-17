@@ -9,7 +9,7 @@ namespace GE::ECS
         if (m_state != SystemState::Uninitialized) { GE_LOG_FATAL("Entity manager is already initialized."); return; }
         m_state = SystemState::Initializing;
 
-        m_maxEntities       = maxEntities;
+        m_maxEntities = maxEntities;
         m_maxComponentTypes = maxComponentTypes;
 
         m_allComponentIndices.assign(maxEntities * maxComponentTypes, UINT32_MAX);
@@ -56,7 +56,7 @@ namespace GE::ECS
     {
         // Run stages Particle through LateUpdate — GPU-dispatching systems only.
         constexpr size_t kFirstGpuStage = static_cast<size_t>(ESystemStage::Particle);
-        constexpr size_t kStageCount    = static_cast<size_t>(ESystemStage::Count);
+        constexpr size_t kStageCount = static_cast<size_t>(ESystemStage::Count);
         for (size_t s = kFirstGpuStage; s < kStageCount; ++s) {
             for (auto* sys : m_systems[s]) {
                 if (sys != nullptr) {
@@ -102,7 +102,7 @@ namespace GE::ECS
     {
         if (id >= m_maxEntities)
         {
-            GE_LOG_FATAL("Entity ID isn't correct.");
+            GE_LOG_FATAL("EntityID isn't correct.");
             return;
         }
 
@@ -121,7 +121,7 @@ namespace GE::ECS
 
 	void EntityManager::ClearAllEntities()
     {
-    	GE_LOG_INFO("EntityManager: Clearing all entities and components...");
+    	GE_LOG_INFO("[EntityManager] Clearing all entities and components...");
 
     	for (uint32_t typeID = 0; typeID < m_maxComponentTypes; ++typeID)
     	{
@@ -141,7 +141,7 @@ namespace GE::ECS
     		m_freeEntities.push(m_maxEntities - 1 - i);
     	}
 
-    	GE_LOG_INFO("EntityManager: All entities cleared.");
+    	GE_LOG_INFO("[EntityManager] All entities cleared.");
     }
 
     void EntityManager::RegisterSystem(IECSystem *system)
@@ -185,7 +185,7 @@ namespace GE::ECS
             }
         }
 
-        GE_LOG_FATAL("System not found in its stage");
+        GE_LOG_FATAL("System not found in its stage.");
     }
 
     void EntityManager::UnregisterSystemByID(ISystemTypeID systemID) {

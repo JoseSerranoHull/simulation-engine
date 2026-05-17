@@ -48,10 +48,10 @@ public:
 
 private:
     // --- Internal State & GPU Handles ---
-    VkImage image;               /**< Raw hardware image handle. */
-    VkDeviceMemory imageMemory;  /**< Dedicated memory allocation for this image. */
-    VkImageView imageView;       /**< View handle for shader and framebuffer access. */
-    VkFormat format;             /**< The pixel layout format for this image. */
+    VkImage image;  /**< Raw hardware image handle. */
+    VkDeviceMemory imageMemory; /**< Dedicated memory allocation for this image. */
+    VkImageView imageView;  /**< View handle for shader and framebuffer access. */
+    VkFormat format;    /**< The pixel layout format for this image. */
 };
 
 } // namespace GE::Graphics

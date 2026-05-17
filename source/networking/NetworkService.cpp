@@ -31,14 +31,14 @@ namespace GE::Networking {
 bool NetworkService::Init(uint16_t localPort) {
     WSADATA wsa{};
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-        GE_LOG_ERROR("NetworkService: WSAStartup failed (" +
+        GE_LOG_ERROR("[NetworkService] WSAStartup failed (" +
                      std::to_string(WSAGetLastError()) + ")");
         return false;
     }
 
     const SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == INVALID_SOCKET) {
-        GE_LOG_ERROR("NetworkService: socket() failed (" +
+        GE_LOG_ERROR("[NetworkService] socket() failed (" +
                      std::to_string(WSAGetLastError()) + ")");
         WSACleanup();
         return false;
@@ -51,7 +51,7 @@ bool NetworkService::Init(uint16_t localPort) {
     local.sin_port        = htons(localPort);
 
     if (bind(sock, reinterpret_cast<sockaddr*>(&local), sizeof(local)) == SOCKET_ERROR) {
-        GE_LOG_ERROR("NetworkService: bind() failed on port " +
+        GE_LOG_ERROR("[NetworkService] bind() failed on port " +
                      std::to_string(localPort) + " (" +
                      std::to_string(WSAGetLastError()) + ")");
         closesocket(sock);
@@ -62,7 +62,7 @@ bool NetworkService::Init(uint16_t localPort) {
     // Set non-blocking mode
     u_long mode = 1;
     if (ioctlsocket(sock, FIONBIO, &mode) == SOCKET_ERROR) {
-        GE_LOG_ERROR("NetworkService: ioctlsocket(FIONBIO) failed (" +
+        GE_LOG_ERROR("[NetworkService] ioctlsocket(FIONBIO) failed (" +
                      std::to_string(WSAGetLastError()) + ")");
         closesocket(sock);
         WSACleanup();
@@ -71,7 +71,7 @@ bool NetworkService::Init(uint16_t localPort) {
 
     m_socket      = static_cast<uintptr_t>(sock);
     m_initialised = true;
-    GE_LOG_INFO("NetworkService: listening on UDP port " + std::to_string(localPort));
+    GE_LOG_INFO("[NetworkService] Listening on UDP port " + std::to_string(localPort));
     return true;
 }
 
@@ -83,7 +83,7 @@ void NetworkService::Shutdown() {
         WSACleanup();
         // Clear peer table so stale peers don't receive broadcasts after reconnect
         for (auto& peer : m_peers) { peer = PeerEntry{}; }
-        GE_LOG_INFO("NetworkService: shut down.");
+        GE_LOG_INFO("[NetworkService] shut down.");
     }
 }
 
@@ -93,7 +93,7 @@ void NetworkService::Shutdown() {
 
 void NetworkService::AddPeer(uint8_t peerId, const std::string& ip, uint16_t port) {
     if (peerId < 1 || peerId > MAX_PEERS) {
-        GE_LOG_ERROR("NetworkService: AddPeer invalid peerId " + std::to_string(peerId));
+        GE_LOG_ERROR("[NetworkService] AddPeer invalid peerId " + std::to_string(peerId));
         return;
     }
 
@@ -103,7 +103,7 @@ void NetworkService::AddPeer(uint8_t peerId, const std::string& ip, uint16_t por
     addr.sin_port   = htons(port);
 
     if (inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) != 1) {
-        GE_LOG_ERROR("NetworkService: AddPeer invalid IP '" + ip + "'");
+        GE_LOG_ERROR("[NetworkService] AddPeer invalid IP '" + ip + "'");
         return;
     }
 
@@ -111,14 +111,14 @@ void NetworkService::AddPeer(uint8_t peerId, const std::string& ip, uint16_t por
     m_peers[idx].addr   = addr.sin_addr.s_addr;
     m_peers[idx].port   = addr.sin_port;
 
-    GE_LOG_INFO("NetworkService: peer " + std::to_string(peerId) +
+    GE_LOG_INFO("[NetworkService] peer " + std::to_string(peerId) +
                 " = " + ip + ":" + std::to_string(port));
 }
 
 void NetworkService::RemovePeer(uint8_t peerId) {
     if (peerId < 1U || peerId > MAX_PEERS) { return; }
     m_peers[static_cast<std::size_t>(peerId - 1U)] = PeerEntry{};
-    GE_LOG_INFO("NetworkService: peer " + std::to_string(peerId) + " removed (slot now free)");
+    GE_LOG_INFO("[NetworkService] peer " + std::to_string(peerId) + " removed (slot now free)");
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ void NetworkService::Poll(const ReceiveCallback& cb) {
                 // yet.  Continue draining the error queue.
                 continue;
             }
-            GE_LOG_ERROR("NetworkService: recvfrom error (" + std::to_string(err) + ")");
+            GE_LOG_ERROR("[NetworkService] recvfrom error (" + std::to_string(err) + ")");
             break;
         }
 
@@ -225,7 +225,7 @@ bool NetworkService::EnableBroadcast() {
                                reinterpret_cast<const char*>(&yes),
                                static_cast<int>(sizeof(yes))) == 0;
     if (!ok) {
-        GE_LOG_ERROR("NetworkService: EnableBroadcast failed (" +
+        GE_LOG_ERROR("[NetworkService] EnableBroadcast failed (" +
                      std::to_string(WSAGetLastError()) + ")");
     }
     return ok;

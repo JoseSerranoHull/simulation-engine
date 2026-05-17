@@ -18,15 +18,6 @@ namespace GE::ECS {
     /**
      * @class EntityManager
      * @brief Central ECS authority: owns entity IDs, component arrays, and system dispatch.
-     *
-     * Layout: a flat index table [typeID * maxEntities + entityID] maps every
-     * (component type, entity) pair to a packed-array slot index. This gives O(1)
-     * lookup, add, and remove without hash maps.
-     *
-     * Threading: Initialize(), Shutdown(), and entity/component mutations are
-     * NOT thread-safe. UpdateCpuStages() is called from the physics jthread;
-     * UpdateGpuStages() is called from the main (graphics) thread. Do not mutate
-     * the entity set while either is running.
      */
 	class EntityManager {
 	public:
@@ -108,14 +99,14 @@ namespace GE::ECS {
 
 	private:
 		SystemState m_state{SystemState::Uninitialized};
-		uint32_t    m_maxEntities{0};
-		uint32_t    m_maxComponentTypes{0};
+		uint32_t m_maxEntities{0};
+		uint32_t m_maxComponentTypes{0};
 
 		std::stack<EntityID> m_freeEntities; ///< Recycled IDs available for CreateEntity().
 
 		/// Flat index: [typeID * m_maxEntities + entityID] → packed array slot, or UINT32_MAX.
-		std::vector<uint32_t>                         m_allComponentIndices;
-		std::vector<std::unique_ptr<IComponentArray>> m_componentArrays; ///< One per registered component type.
+		std::vector<uint32_t> m_allComponentIndices;
+		std::vector<std::unique_ptr<IComponentArray>> m_componentArrays; // < One per registered component type.
 
 		/// Systems grouped by stage; iterated in order 0..Count-1 each frame.
 		std::array<std::vector<IECSystem *>, static_cast<size_t>(ESystemStage::Count)> m_systems;
@@ -166,13 +157,13 @@ namespace GE::ECS {
 	template <typename TIComponent>
 	void EntityManager::AddComponent(EntityID entityID, const TIComponent &component) {
 		if (entityID >= m_maxEntities) {
-			GE_LOG_FATAL("Wrong entity ID.");
+			GE_LOG_FATAL("Wrong Entity ID.");
 			return;
 		}
 
 		const uint32_t typeID = ComponentType<TIComponent>::ID();
-		auto &         array  = static_cast<ComponentArray<TIComponent> &>(*m_componentArrays[typeID]);
-		const uint32_t idx    = array.Add(entityID, &component);
+		auto & array  = static_cast<ComponentArray<TIComponent> &>(*m_componentArrays[typeID]);
+		const uint32_t idx = array.Add(entityID, &component);
 
 		m_allComponentIndices[typeID * m_maxEntities + entityID] = idx;
 	}
@@ -180,12 +171,12 @@ namespace GE::ECS {
 	template <typename TIComponent>
 	void EntityManager::RemoveComponent(const EntityID entityID) {
 		if (entityID >= m_maxEntities) {
-			GE_LOG_FATAL("Wrong entity ID.");
+			GE_LOG_FATAL("Wrong Entity ID.");
 			return;
 		}
 
 		const uint32_t typeID = ComponentType<TIComponent>::ID();
-		const int32_t  idx    = m_allComponentIndices[typeID * m_maxEntities + entityID];
+		const int32_t idx = m_allComponentIndices[typeID * m_maxEntities + entityID];
 
 		if (idx == UINT32_MAX) {
 			GE_LOG_WARN("Component ID is default value.");
@@ -209,7 +200,7 @@ namespace GE::ECS {
 	template <typename TIComponent>
 	TIComponent *EntityManager::GetTIComponent(const EntityID entityID) {
 		if (entityID >= m_maxEntities) {
-			GE_LOG_FATAL("Wrong entity ID.");
+			GE_LOG_FATAL("Wrong Entity ID.");
 			return nullptr;
 		}
 

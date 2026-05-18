@@ -1,5 +1,6 @@
 ﻿#include "systems/PhysicsSystem.h"
 #include "core/ServiceLocator.h"
+#include "core/NetworkBridge.h"
 #include "components/PhysicsComponents.h"
 #include "components/AnimationComponent.h"
 #include "physics/Sphere.h"
@@ -100,12 +101,30 @@ void PhysicsSystem::Integrate(float dt) {
     auto* em = ServiceLocator::GetEntityManager();
     auto& rbArray = em->GetCompArr<GE::Components::RigidBody>();
 
+    const uint8_t localPeerId = []() -> uint8_t {
+        auto* nb = ServiceLocator::GetNetworkBridge();
+        return (nb != nullptr) ? nb->GetLocalPeerId() : 0U;
+    }();
+    const bool networkActive = (localPeerId >= 1U && localPeerId <= 4U);
+    const auto localOwner = networkActive
+        ? static_cast<GE::Components::OwnerType>(localPeerId - 1U)
+        : GE::Components::OwnerType::ONE;
+
     for (uint32_t i = 0; i < rbArray.GetCount(); ++i) {
         auto id = rbArray.Index()[i];
         auto& rb = rbArray.Data()[i];
         auto* trans = em->TryGetTIComponent<GE::Components::Transform>(id);
 
         if (!trans || rb.isStatic) continue;
+
+        if (networkActive) {
+            auto* oc = em->TryGetTIComponent<GE::Components::OwnerComponent>(id);
+            if (oc != nullptr && oc->owner != localOwner) {
+                rb.forceAccum  = glm::vec3(0.0f);
+                rb.torqueAccum = glm::vec3(0.0f);
+                continue;
+            }
+        }
 
         // --- 1. Force Accumulation ---
         // Fulfills Q3: accumulate gravity as a force (F = m * g), then derive

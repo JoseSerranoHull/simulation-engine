@@ -16,9 +16,9 @@ namespace GE::Systems {
      * Fulfills Simulation Lab 3 Q2 requirement for at least two methods.
      */
     enum class IntegrationMethod {
-        Euler,          ///< Explicit (Forward) Euler — position updated before velocity
-        SemiImplicit,   ///< Symplectic (Semi-Implicit) Euler — velocity updated first (default)
-        RK4             ///< 4th-order Runge-Kutta — highest accuracy, best for validation
+        Euler,  // < Explicit (Forward) Euler — position updated before velocity
+        SemiImplicit,   // < Symplectic (Semi-Implicit) Euler — velocity updated first (default)
+        RK4 // < 4th-order Runge-Kutta — highest accuracy, best for validation
     };
 
     /**
@@ -30,8 +30,8 @@ namespace GE::Systems {
     public:
         PhysicsSystem() {
             m_typeID = ECS::IECSystem::GetUniqueISystemTypeID<PhysicsSystem>();
-            m_stage  = ECS::ESystemStage::Physics;
-            m_state  = SystemState::Running;
+            m_stage = ECS::ESystemStage::Physics;
+            m_state = SystemState::Running;
         }
 
         ~PhysicsSystem() override = default;
@@ -64,22 +64,24 @@ namespace GE::Systems {
 
         /** Apply a force at a point relative to the centre of mass.
          *  Adds force to forceAccum (linear) and r×F to torqueAccum (angular). */
-        static void ApplyForceAtPoint(GE::Components::RigidBody& rb,
-                                       const glm::vec3& force,
-                                       const glm::vec3& pointRelCoM);
+        static void ApplyForceAtPoint(
+            GE::Components::RigidBody& rb,
+            const glm::vec3& force,
+            const glm::vec3& pointRelCoM
+        );
 
         // --- Collision event data (populated each frame by ResolveCollisions) ---
         // Read by ScriptSystem at ESystemStage::GameLogic to dispatch OnCollision*/OnTrigger* events.
         // Uses shared types from CollisionInfo.h (GE::Scripts::EntityPair / PairHash).
 
         /// Solid contact pairs this frame (neither collider is a trigger).
-        GE::Scripts::ContactSet     m_currentContacts;
+        GE::Scripts::ContactSet m_currentContacts;
 
         /// Full contact data keyed by canonical pair (from the first entity's perspective).
         GE::Scripts::ContactInfoMap m_currentContactInfos;
 
         /// Trigger overlap pairs this frame (at least one collider has isTrigger == true).
-        GE::Scripts::ContactSet     m_currentTriggers;
+        GE::Scripts::ContactSet m_currentTriggers;
 
     private:
         /** Cached dt from Integrate(); used by force-based impulse branch in ResolveCollisions(). */
@@ -94,14 +96,12 @@ namespace GE::Systems {
         void Integrate(float dt);
 
         /** @brief RK4 helper — integrates pos and vel over dt given constant acceleration. */
-        static void IntegrateRK4(glm::vec3& pos, glm::vec3& vel,
-                                  const glm::vec3& accel, float dt);
+        static void IntegrateRK4(glm::vec3& pos, glm::vec3& vel, const glm::vec3& accel, float dt);
 
         /** @brief Fulfills Q4: Detects and resolves sphere-plane and sphere-sphere intersections. */
         void ResolveCollisions();
 
         /** @brief Converts world-space position back to local-space after physics integration/correction. */
-        static void SyncWorldToLocal(GE::Components::Transform& trans,
-                                      GE::ECS::EntityManager* em);
+        static void SyncWorldToLocal(GE::Components::Transform& trans, GE::ECS::EntityManager* em);
     };
 }

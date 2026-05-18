@@ -23,12 +23,12 @@ uint32_t EntityFactory::s_instanceCounter = 0;
 
 GE::ECS::EntityID EntityFactory::InstantiatePrefab(
     const GE::Scene::FB::PrefabTemplate& tmpl,
-    const glm::vec3&        position,
-    const glm::vec3&        rotationDeg,
-    const glm::vec3&        linVel,
-    const glm::vec3&        angVelDeg,
-    uint8_t                 ownerPeerId,
-    uint8_t                 colorOwnerIdx,
+    const glm::vec3& position,
+    const glm::vec3& rotationDeg,
+    const glm::vec3& linVel,
+    const glm::vec3& angVelDeg,
+    uint8_t ownerPeerId,
+    uint8_t colorOwnerIdx,
     GE::ECS::EntityManager* em)
 {
     if (em == nullptr) return UINT32_MAX;
@@ -41,7 +41,7 @@ GE::ECS::EntityID EntityFactory::InstantiatePrefab(
     GE::Components::Transform tr;
     tr.m_localPosition = position;
     tr.m_localRotation = rotationDeg;
-    tr.m_localScale    = glm::vec3(1.0f);
+    tr.m_localScale = glm::vec3(1.0f);
 
     // Pre-compute matrices immediately so the entity is at the correct world position
     // even before TransformSystem runs. TransformSystem uses ESystemStage::Transform (=1),
@@ -53,8 +53,8 @@ GE::ECS::EntityID EntityFactory::InstantiatePrefab(
         m = glm::rotate(m, glm::radians(rotationDeg.y), { 0.0f, 1.0f, 0.0f });
         m = glm::rotate(m, glm::radians(rotationDeg.x), { 1.0f, 0.0f, 0.0f });
         m = glm::rotate(m, glm::radians(rotationDeg.z), { 0.0f, 0.0f, 1.0f });
-        tr.m_localMatrix  = m;
-        tr.m_worldMatrix  = m;       // root entity: world == local
+        tr.m_localMatrix = m;
+        tr.m_worldMatrix = m;       // root entity: world == local
         tr.m_worldPosition = position;
         tr.m_worldScale    = glm::vec3(1.0f);
         tr.m_state = GE::Components::Transform::TransformState::Clean;
@@ -95,13 +95,13 @@ GE::ECS::EntityID EntityFactory::InstantiatePrefab(
 
     // 5. RigidBody (active physics from birth)
     GE::Components::RigidBody rb;
-    rb.mass                 = (tmpl.mass > 0.0f) ? tmpl.mass : 1.0f;
-    rb.inverseMass          = 1.0f / rb.mass;
-    rb.restitution          = tmpl.restitution;
-    rb.isStatic             = false;
-    rb.useGravity           = true;
-    rb.velocity             = linVel;
-    rb.angularVelocity      = glm::radians(angVelDeg);
+    rb.mass = (tmpl.mass > 0.0f) ? tmpl.mass : 1.0f;
+    rb.inverseMass = 1.0f / rb.mass;
+    rb.restitution = tmpl.restitution;
+    rb.isStatic = false;
+    rb.useGravity = true;
+    rb.velocity = linVel;
+    rb.angularVelocity = glm::radians(angVelDeg);
     rb.invInertiaTensor     = tmpl.invInertia;
     rb.invInertiaTensorWorld = tmpl.invInertia;
     em->AddComponent(id, rb);
@@ -122,7 +122,7 @@ GE::ECS::EntityID EntityFactory::InstantiatePrefab(
         }
         if (meshToUse != nullptr) {
             GE::Components::SubMesh sm;
-            sm.m_mesh     = meshToUse;
+            sm.m_mesh = meshToUse;
             sm.m_material = meshToUse->getMaterial();
             GE::Components::MeshRenderer mr;
             mr.subMeshes.push_back(sm);

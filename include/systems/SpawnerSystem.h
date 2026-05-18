@@ -12,16 +12,16 @@ namespace GE::Systems {
     /**
      * @class SpawnerSystem
      * @brief ECS system that instantiates prefab entities at runtime.
-     *        Spawners reference PrefabTemplates built at scene load time;
-     *        EntityFactory::InstantiatePrefab() creates real ECS entities with all
-     *        components when each scheduled spawn event fires.
+     * Spawners reference PrefabTemplates built at scene load time;
+     * EntityFactory::InstantiatePrefab() creates real ECS entities with all
+     * components when each scheduled spawn event fires.
      */
     class SpawnerSystem final : public GE::ECS::ICpuSystem {
     public:
         SpawnerSystem();
         ~SpawnerSystem() override = default;
 
-        void       OnUpdate(float dt) override;
+        void OnUpdate(float dt) override;
         void Shutdown() override;
 
         /** @brief Manually fire one spawn from the spawner, bypassing the time check. */

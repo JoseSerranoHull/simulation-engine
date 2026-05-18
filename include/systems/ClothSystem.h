@@ -27,7 +27,7 @@ public:
     ClothSystem();
     ~ClothSystem() override = default;
 
-    void       OnUpdate(float dt) override;
+    void OnUpdate(float dt) override;
     void Shutdown() override {}
 
 private:

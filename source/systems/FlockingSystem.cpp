@@ -1,4 +1,4 @@
-/* parasoft-begin-suppress ALL */
+﻿/* parasoft-begin-suppress ALL */
 #include <chrono>
 #include <cmath>
 #include <random>
@@ -19,10 +19,10 @@
 
 namespace GE::Systems {
 
-static constexpr int   OCTREE_MAX_DEPTH     = 6;
-static constexpr int   OCTREE_MAX_LEAF_AGENTS = 8;
-static constexpr float MIN_DIST             = 1e-6f;
-static constexpr float OCTREE_HALF_WORLD    = 60.0f; // half-size of root node (world units)
+static constexpr int OCTREE_MAX_DEPTH = 6;
+static constexpr int OCTREE_MAX_LEAF_AGENTS = 8;
+static constexpr float MIN_DIST = 1e-6f;
+static constexpr float OCTREE_HALF_WORLD = 60.0f; // half-size of root node (world units)
 
 // ============================================================================
 // Constructor
@@ -30,8 +30,8 @@ static constexpr float OCTREE_HALF_WORLD    = 60.0f; // half-size of root node (
 
 FlockingSystem::FlockingSystem() {
     m_typeID = ECS::IECSystem::GetUniqueISystemTypeID<FlockingSystem>();
-    m_stage  = ECS::ESystemStage::GameLogic;
-    m_state  = SystemState::Running;
+    m_stage = ECS::ESystemStage::GameLogic;
+    m_state = SystemState::Running;
 }
 
 // ============================================================================
@@ -74,14 +74,14 @@ void FlockingSystem::OnUpdate(float dt) {
         const GE::Components::FlockingComponent& fk = fkArr.Data()[i];
 
         const GE::Components::Transform* tr = em->TryGetTIComponent<GE::Components::Transform>(eid);
-        const GE::Components::RigidBody*  rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
+        const GE::Components::RigidBody* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
         if (tr == nullptr || rb == nullptr) { continue; }
 
         AgentEntry entry;
-        entry.idx   = i;
-        entry.pos   = tr->m_worldPosition;
-        entry.vel   = rb->velocity;
-        entry.mass  = rb->mass;
+        entry.idx = i;
+        entry.pos = tr->m_worldPosition;
+        entry.vel = rb->velocity;
+        entry.mass = rb->mass;
         entry.group = fk.groupId;
         m_agents.push_back(entry);
     }
@@ -204,7 +204,7 @@ glm::vec3 FlockingSystem::computeSteering(const AgentEntry& self,
     glm::vec3 alignment{ 0.0f };
     if (alignCount > 0) {
         const glm::vec3 desired = avgVel / static_cast<float>(alignCount);
-        const glm::vec3 steer   = desired - self.vel;
+        const glm::vec3 steer = desired - self.vel;
         const float mag = glm::length(steer);
         if (mag > MIN_DIST) {
             alignment = (glm::normalize(steer)) * fk.maxForce;
@@ -240,7 +240,7 @@ glm::vec3 FlockingSystem::computeSteering(const AgentEntry& self,
     glm::vec3 avoidance{ 0.0f };
     {
         auto& sphereArr = em.GetCompArr<GE::Components::SphereCollider>();
-        auto& rbArr     = em.GetCompArr<GE::Components::RigidBody>();
+        auto& rbArr = em.GetCompArr<GE::Components::RigidBody>();
         const uint32_t sc = sphereArr.GetCount();
         for (uint32_t si = 0U; si < sc; ++si) {
             const GE::ECS::EntityID seid = sphereArr.Index()[si];
@@ -253,10 +253,10 @@ glm::vec3 FlockingSystem::computeSteering(const AgentEntry& self,
             const GE::Components::Transform* str = em.TryGetTIComponent<GE::Components::Transform>(seid);
             if (str == nullptr) { continue; }
 
-            const float obstacleR   = sphereArr.Data()[si].radius;
+            const float obstacleR = sphereArr.Data()[si].radius;
             const float avoidRadius = obstacleR + fk.separationRadius * 1.5f;
-            const glm::vec3 away    = self.pos - str->m_worldPosition;
-            const float dist        = glm::length(away);
+            const glm::vec3 away = self.pos - str->m_worldPosition;
+            const float dist = glm::length(away);
             if (dist < avoidRadius && dist > MIN_DIST) {
                 avoidance += glm::normalize(away) * fk.maxForce;
             }
@@ -268,8 +268,8 @@ glm::vec3 FlockingSystem::computeSteering(const AgentEntry& self,
     float remaining = fk.maxForce;
 
     auto addForce = [&](const glm::vec3& f, float w) -> bool {
-        const glm::vec3 wf  = f * w;
-        const float     mag = glm::length(wf);
+        const glm::vec3 wf = f * w;
+        const float mag = glm::length(wf);
         if (mag < MIN_DIST) { return true; }
         if (mag > remaining) {
             totalForce += glm::normalize(wf) * remaining;
@@ -277,13 +277,13 @@ glm::vec3 FlockingSystem::computeSteering(const AgentEntry& self,
             return false;
         }
         totalForce += wf;
-        remaining  -= mag;
+        remaining -= mag;
         return true;
     };
 
     if (!addForce(separation, fk.wSeparation)) { return totalForce; }
-    if (!addForce(avoidance,  fk.wAvoidance))  { return totalForce; }
-    if (!addForce(alignment,  fk.wAlignment))  { return totalForce; }
+    if (!addForce(avoidance, fk.wAvoidance)) { return totalForce; }
+    if (!addForce(alignment, fk.wAlignment)) { return totalForce; }
     addForce(cohesion, fk.wCohesion);
 
     return totalForce;
@@ -341,7 +341,7 @@ std::vector<uint32_t> FlockingSystem::queryUniformGrid(const glm::vec3& pos, flo
 
 void FlockingSystem::buildOctree() {
     m_octreeRoot = std::make_unique<OctreeNode>();
-    m_octreeRoot->center   = glm::vec3{ 0.0f };
+    m_octreeRoot->center = glm::vec3{ 0.0f };
     m_octreeRoot->halfSize = glm::vec3{ OCTREE_HALF_WORLD };
 
     for (std::size_t i = 0; i < m_agents.size(); ++i) {
@@ -365,7 +365,7 @@ void FlockingSystem::insertOctree(OctreeNode& node, uint32_t agentIdx, int depth
             node.children[c] = std::make_unique<OctreeNode>();
             const glm::vec3 half = node.halfSize * 0.5f;
             node.children[c]->halfSize = half;
-            node.children[c]->center  = node.center + glm::vec3{
+            node.children[c]->center = node.center + glm::vec3{
                 (c & 1) ? half.x : -half.x,
                 (c & 2) ? half.y : -half.y,
                 (c & 4) ? half.z : -half.z
@@ -441,8 +441,8 @@ void FlockingSystem::Restart(GE::ECS::EntityManager* em) {
 
         auto* tr = em->TryGetTIComponent<GE::Components::Transform>(eid);
         if (tr != nullptr) {
-            tr->m_localPosition  = newPos;
-            tr->m_worldPosition  = newPos;
+            tr->m_localPosition = newPos;
+            tr->m_worldPosition = newPos;
             // Patch matrix columns directly so TransformSystem produces the correct
             // worldMatrix without a full Dirty rebuild (same technique as SyncWorldToLocal)
             tr->m_localMatrix[3] = glm::vec4(newPos, 1.0f);
@@ -452,10 +452,10 @@ void FlockingSystem::Restart(GE::ECS::EntityManager* em) {
 
         auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(eid);
         if (rb != nullptr) {
-            rb->velocity        = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) } * 2.0f;
+            rb->velocity = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) } * 2.0f;
             rb->angularVelocity = glm::vec3(0.0f);
-            rb->forceAccum      = glm::vec3(0.0f);
-            rb->torqueAccum     = glm::vec3(0.0f);
+            rb->forceAccum = glm::vec3(0.0f);
+            rb->torqueAccum = glm::vec3(0.0f);
         }
     }
 

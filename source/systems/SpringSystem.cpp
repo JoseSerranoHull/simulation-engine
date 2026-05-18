@@ -1,4 +1,4 @@
-#include "systems/SpringSystem.h"
+﻿#include "systems/SpringSystem.h"
 #include "core/ServiceLocator.h"
 #include "components/PhysicsComponents.h"
 #include "components/Transform.h"
@@ -25,7 +25,7 @@ void SpringSystem::OnUpdate(float dt) {
             auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityA);
             if (!t) continue;
             posA = t->m_worldPosition;
-            rbA  = em->TryGetTIComponent<GE::Components::RigidBody>(s.entityA);
+            rbA = em->TryGetTIComponent<GE::Components::RigidBody>(s.entityA);
             if (rbA) velA = rbA->velocity;
         }
 
@@ -35,16 +35,16 @@ void SpringSystem::OnUpdate(float dt) {
             auto* t = em->TryGetTIComponent<GE::Components::Transform>(s.entityB);
             if (!t) continue;
             posB = t->m_worldPosition;
-            rbB  = em->TryGetTIComponent<GE::Components::RigidBody>(s.entityB);
+            rbB = em->TryGetTIComponent<GE::Components::RigidBody>(s.entityB);
             if (rbB) velB = rbB->velocity;
         }
 
         // --- Hooke's law: F = -k(L - L_rest) - b * v_rel_along_spring ---
         const glm::vec3 delta = posA - posB;
-        const float     L     = glm::length(delta);
+        const float L = glm::length(delta);
         if (L < 1e-6f) continue;
 
-        const glm::vec3 dir = delta / L;  // unit vector from B → A
+        const glm::vec3 dir = delta / L; // unit vector from B → A
 
         float forceMag = -s.springConstant * (L - s.restLength);
         if (s.dampingCoeff > 0.0f)

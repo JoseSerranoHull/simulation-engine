@@ -7,12 +7,12 @@
 /* parasoft-end-suppress ALL */
 
 #include "scene/Scenario.h"
-#include "scene/fb/FBSceneContext.h"      // for FBCameraRecord, PrefabTemplate
+#include "scene/fb/FBSceneContext.h"
 #include "physics/MaterialInteractionRegistry.h"
-#include "particles/FlockGpuBackend.h"    // full type needed for unique_ptr member
-#include "components/Components.h"        // MeshRenderer for flock agent visibility toggle
-#include "components/PhysicsComponents.h" // SphereCollider for flock agent visibility toggle
-#include "ecs/Entity.h"                   // EntityID typedef
+#include "particles/FlockGpuBackend.h"
+#include "components/Components.h"
+#include "components/PhysicsComponents.h"
+#include "ecs/Entity.h"
 
 namespace GE::Systems { class AnimationSystem; class PhysicsSystem; class SpawnerSystem; class ClothSystem; class FlockingSystem; class FlockGpuSystem; class ScriptSystem; class ColliderVisualizerSystem; }
 namespace GE::Components { struct ClothComponent; }
@@ -23,18 +23,18 @@ namespace GE {
     /**
      * @class FlatBuffersScenario
      * @brief Scenario that loads a scene from a FlatBuffers binary (.bin) file.
-     *        Uses FBSceneAdapter (Adapter pattern) to bridge the FlatBuffers API to ECS.
-     *        Supports named cameras, scene switching and owner-color display via ImGui.
+     * Uses FBSceneAdapter (Adapter pattern) to bridge the FlatBuffers API to ECS.
+     * Supports named cameras, scene switching and owner-color display via ImGui.
      */
     class FlatBuffersScenario final : public Scenario {
     public:
         explicit FlatBuffersScenario(std::string binaryPath, bool useOwnerColors = true);
         ~FlatBuffersScenario() override = default;
 
-        void OnLoad  (GE::Graphics::GpuUploadContext& ctx) override;
-        void OnUpdate(float dt, float totalTime)           override;
-        void OnUnload()                                    override;
-        void OnGUI   ()                                    override;
+        void OnLoad (GE::Graphics::GpuUploadContext& ctx) override;
+        void OnUpdate(float dt, float totalTime) override;
+        void OnUnload() override;
+        void OnGUI () override;
 
         const GE::Graphics::GraphicsPipeline* GetWirePipeline() const override {
             return (m_pipelines.size() > 7U) ? m_pipelines[7U].get() : nullptr;
@@ -50,42 +50,42 @@ namespace GE {
         // --- Per-scene camera state ---
         struct FBCameraState {
             std::string name;
-            glm::vec3   position  { 0.0f };
-            glm::vec3   direction { 0.0f, 0.0f, -1.0f };
-            float       fov       { 45.0f };
-            bool        isOrtho   { false };
-            float       orthoSize { 5.0f };
+            glm::vec3 position { 0.0f };
+            glm::vec3 direction { 0.0f, 0.0f, -1.0f };
+            float fov { 45.0f };
+            bool isOrtho { false };
+            float orthoSize { 5.0f };
         };
         std::vector<FBCameraState> m_cameras;
-        int                        m_activeCameraIndex { 0 };
+        int m_activeCameraIndex { 0 };
 
         // --- Scene switcher ---
         std::vector<std::string> m_availableScenes;  // .bin paths found in ./config/
 
         // --- Owned systems ---
         GE::Systems::AnimationSystem* m_animationSystem { nullptr };
-        GE::Systems::PhysicsSystem*   m_physicsSystem   { nullptr };
-        GE::Systems::SpawnerSystem*   m_spawnerSystem   { nullptr };
-        GE::Systems::ClothSystem*     m_clothSystem     { nullptr };
-        GE::Systems::FlockingSystem*  m_flockingSystem  { nullptr };
-        GE::Systems::FlockGpuSystem*  m_flockGpuSystem  { nullptr };
+        GE::Systems::PhysicsSystem* m_physicsSystem { nullptr };
+        GE::Systems::SpawnerSystem* m_spawnerSystem { nullptr };
+        GE::Systems::ClothSystem* m_clothSystem { nullptr };
+        GE::Systems::FlockingSystem* m_flockingSystem { nullptr };
+        GE::Systems::FlockGpuSystem* m_flockGpuSystem { nullptr };
 
         // --- GPU flock backend (optional — created only when flock agents exist) ---
         std::unique_ptr<GE::Particles::FlockGpuBackend> m_flockGpuBackend;
-        std::atomic<bool>                                m_useGpuFlock { false };
+        std::atomic<bool> m_useGpuFlock { false };
 
         // Flock agent entity IDs + their MeshRenderers, stored at OnLoad so we can
         // hide/show CPU spheres when toggling between GPU and CPU computation modes.
         struct FlockAgentRecord {
-            GE::ECS::EntityID              id;
-            GE::Components::MeshRenderer   meshRenderer;
+            GE::ECS::EntityID id;
+            GE::Components::MeshRenderer meshRenderer;
             GE::Components::SphereCollider sphereCollider;
-            bool                           hadSphereCollider { false };
+            bool hadSphereCollider { false };
         };
         std::vector<FlockAgentRecord> m_flockAgents; // non-empty ↔ CPU meshes currently hidden
 
-        GE::Systems::ScriptSystem*              m_scriptSystem      { nullptr };
-        GE::Systems::ColliderVisualizerSystem*  m_visualizerSystem  { nullptr };
+        GE::Systems::ScriptSystem* m_scriptSystem { nullptr };
+        GE::Systems::ColliderVisualizerSystem* m_visualizerSystem  { nullptr };
 
         // --- Cloth sphere spawner (scene 05 only; UINT32_MAX = not present) ---
         uint32_t  m_clothSpawnerEntityID { UINT32_MAX };
@@ -98,15 +98,15 @@ namespace GE {
 
         // --- Networking UI state (ImGui "Network" menu) ---
         struct PeerUIEntry {
-            char ip[64]    { "127.0.0.1" };
-            int  port      { 7001 };
-            int  peerId    { 2 };      ///< Explicit remote peer ID (1-4, != local)
+            char ip[64] { "127.0.0.1" };
+            int port { 7001 };
+            int peerId { 2 };      // < Explicit remote peer ID (1-4, != local)
             bool connected { false };
         };
-        int          m_localPeerId    { 1 };
-        int          m_localPort      { 7000 };
-        bool         m_netInitialised { false };
-        PeerUIEntry  m_peerEntries[3] {};   ///< Entries for peers 2, 3, 4 relative to local
+        int m_localPeerId { 1 };
+        int m_localPort { 7000 };
+        bool m_netInitialised { false };
+        PeerUIEntry m_peerEntries[3] {};   // < Entries for peers 2, 3, 4 relative to local
 
         enum class ConnectionMethod { None, Auto, Manual };
         ConnectionMethod m_connectionMethod { ConnectionMethod::None };
@@ -123,11 +123,11 @@ namespace GE {
         // The actual rebuild is triggered via ClothComponent::rebuildPending (set from OnGUI)
         // and executed by ClothSystem on the physics thread to avoid data races.
         struct ClothRebuildState {
-            int   density      { 1    };  // density multiplier (1 = original; min 1)
+            int density { 1 };  // density multiplier (1 = original; min 1)
             float origCellSize { 0.2f };  // load-time cellSize (for density calculation)
 
             // Snapshot of scene-file load-time values (for "Reset to Defaults")
-            int   origRows { 30 }, origCols { 30 };
+            int origRows { 30 }, origCols { 30 };
             float origSpringK { 100.0f }, origShearK { 50.0f }, origFlexionK { 25.0f };
             float origDamping { 0.1f };
             float origTearThreshold { 3.0f }, origTearRoughness { 0.04f };
@@ -135,7 +135,7 @@ namespace GE {
             float origBurnRate { 1.5f }, origCurlAmount { 0.05f };
             float origHeatConductivity { 0.4f }, origShrinkScale { 0.35f };
             float origDragCoeff { 1.2f }, origGustAmplitude { 0.3f }, origGustFrequency { 0.8f };
-            int   origConstraintIters { 2 };
+            int origConstraintIters { 2 };
             bool  origWindEnabled { false };
             float origWindX { 0.0f }, origWindZ { 0.0f };
         };

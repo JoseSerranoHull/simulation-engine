@@ -17,18 +17,16 @@ namespace GE::Systems {
     /**
      * @class ScriptSystem
      * @brief ECS system that drives the GameScriptComponent lifecycle.
-     *        Runs at ESystemStage::GameLogic (stage 6), after PhysicsSystem (stage 3),
-     *        so collision data from the current frame is ready when events are dispatched.
+     * Runs at ESystemStage::GameLogic (stage 6), after PhysicsSystem (stage 3),
+     * so collision data from the current frame is ready when events are dispatched.
      *
      * ## Per-frame execution order
      *
-     *   1. Awake loop     — fires Awake() the first time m_active becomes true for an entity.
-     *                       Start() is fired immediately after on the same frame.
-     *   2. FixedUpdate    — accumulator-driven; 0–MAX_FIXED_STEPS calls per frame at m_fixedTimestep.
-     *   3. Update loop    — Update(dt) for every active script.
-     *   4. LateUpdate     — LateUpdate(dt) for every active script.
-     *   5. Collision dispatch — set-diff against previous-frame contact/trigger sets
-     *                           → OnCollisionEnter/Exit, OnTriggerEnter/Exit.
+     *   1. Awake loop — fires Awake() the first time m_active becomes true for an entity. Start() is fired immediately after on the same frame.
+     *   2. FixedUpdate — accumulator-driven; 0–MAX_FIXED_STEPS calls per frame at m_fixedTimestep.
+     *   3. Update loop — Update(dt) for every active script.
+     *   4. LateUpdate — LateUpdate(dt) for every active script.
+     *   5. Collision dispatch — set-diff against previous-frame contact/trigger sets → OnCollisionEnter/Exit, OnTriggerEnter/Exit.
      *   6. OnDestroy loop — fires OnDestroy() for entities removed from the scene this frame.
      *
      * ## Registration

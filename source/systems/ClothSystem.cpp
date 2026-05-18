@@ -1,17 +1,17 @@
-/* parasoft-begin-suppress ALL */
+﻿/* parasoft-begin-suppress ALL */
 #include <cmath>
 /* parasoft-end-suppress ALL */
 
 #include "systems/ClothSystem.h"
 #include "components/ClothComponent.h"
 #include "components/PhysicsComponents.h"
-#include "components/Components.h"   // MeshRenderer / SubMesh for setIndexCount after rebuild
+#include "components/Components.h"
 #include "components/Transform.h"
 #include "ecs/ComponentArray.h"
 #include "core/ServiceLocator.h"
 #include "core/Common.h"
-#include "assets/Vertex.h"           // GE::Assets::Vertex — layout of the mapped vertex buffer
-#include "assets/Mesh.h"             // Mesh::setIndexCount()
+#include "assets/Vertex.h"
+#include "assets/Mesh.h"
 
 /* parasoft-begin-suppress ALL */
 #include <glm/glm.hpp>
@@ -22,15 +22,15 @@ namespace GE::Systems {
 
 ClothSystem::ClothSystem() {
     m_typeID = ECS::IECSystem::GetUniqueISystemTypeID<ClothSystem>();
-    m_stage  = ECS::ESystemStage::Physics;
-    m_state  = SystemState::Running;
+    m_stage = ECS::ESystemStage::Physics;
+    m_state = SystemState::Running;
 }
 
-static constexpr float GRAVITY           = -9.81f;
-static constexpr float MIN_LENGTH        = 1e-6f;
-static constexpr float CLOTH_RESTITUTION = 0.20f;   // fraction of normal velocity reflected by cloth
-static constexpr float CLOTH_FRICTION    = 0.70f;   // fraction of tangential velocity retained
-static constexpr float JAKOBSEN_REF_K   = 200.0f;   // kSpring value mapping to stiffness = 1.0
+static constexpr float GRAVITY = -9.81f;
+static constexpr float MIN_LENGTH = 1e-6f;
+static constexpr float CLOTH_RESTITUTION = 0.20f; // fraction of normal velocity reflected by cloth
+static constexpr float CLOTH_FRICTION = 0.70f; // fraction of tangential velocity retained
+static constexpr float JAKOBSEN_REF_K = 200.0f; // kSpring value mapping to stiffness = 1.0
 
 // Jakobsen positional distance constraint.
 // Directly moves A and B so that |A.pos - B.pos| approaches effectiveRestLen.
@@ -43,11 +43,11 @@ static void satisfyDistance(
     float stiffness,
     float shrinkScale)
 {
-    const float avgHeat       = 0.5f * (A.heat + B.heat);
+    const float avgHeat = 0.5f * (A.heat + B.heat);
     const float effectiveRest = restLen * glm::max(1.0f - avgHeat * shrinkScale, 0.1f);
 
     const glm::vec3 delta = B.position - A.position;
-    const float     len   = glm::length(delta);
+    const float len = glm::length(delta);
     if (len < MIN_LENGTH) { return; }
 
     const glm::vec3 move = delta * (0.5f * stiffness * (len - effectiveRest) / len);
@@ -60,8 +60,8 @@ static void satisfyDistance(
 static glm::vec3 closestPointOnSegment(
     const glm::vec3& A, const glm::vec3& B, const glm::vec3& P)
 {
-    const glm::vec3 AB    = B - A;
-    const float     denom = glm::dot(AB, AB);
+    const glm::vec3 AB = B - A;
+    const float denom = glm::dot(AB, AB);
     if (denom < 1e-12f) { return A; }
     return A + AB * glm::clamp(glm::dot(P - A, AB) / denom, 0.0f, 1.0f);
 }
@@ -71,8 +71,8 @@ static glm::vec3 closestPointOnSegment(
 // thread's vertex refresh loop never races with a particles.clear() call.
 static void performGeometryRebuild(
     GE::Components::ClothComponent& cc,
-    GE::ECS::EntityID               eid,
-    GE::ECS::EntityManager*         em)
+    GE::ECS::EntityID eid,
+    GE::ECS::EntityManager* em)
 {
     const int R = cc.rebuildRows;
     const int C = cc.rebuildCols;
@@ -82,8 +82,8 @@ static void performGeometryRebuild(
         em->TryGetTIComponent<GE::Components::Transform>(eid);
     const glm::vec3 origin = (tr != nullptr) ? tr->m_worldPosition : glm::vec3{ 0.0f };
 
-    cc.rows     = R;
-    cc.cols     = C;
+    cc.rows = R;
+    cc.cols = C;
     cc.cellSize = cc.rebuildCellSize;
 
     // Reinitialise particles
@@ -92,11 +92,13 @@ static void performGeometryRebuild(
     for (int r = 0; r < R; ++r) {
         for (int c = 0; c < C; ++c) {
             GE::Components::ClothParticle p;
-            p.position     = origin + glm::vec3(static_cast<float>(c) * cc.cellSize,
-                                                0.0f,
-                                                static_cast<float>(r) * cc.cellSize);
+            p.position = origin + glm::vec3(
+                static_cast<float>(c) * cc.cellSize,
+                0.0f,
+                static_cast<float>(r) * cc.cellSize
+            );
             p.prevPosition = p.position;
-            p.pinned       = (r == 0);
+            p.pinned = (r == 0);
             cc.particles.push_back(p);
         }
     }
@@ -104,8 +106,8 @@ static void performGeometryRebuild(
     // Rebuild spring list — structural / shear / flexion
     cc.springs.clear();
     const float restStruct = cc.cellSize;
-    const float restShear  = cc.cellSize * 1.41421356f;
-    const float restFlex   = cc.cellSize * 2.0f;
+    const float restShear = cc.cellSize * 1.41421356f;
+    const float restFlex = cc.cellSize * 2.0f;
 
     for (int r = 0; r < R; ++r) {
         for (int c = 0; c < C; ++c) {
@@ -160,7 +162,7 @@ static void performGeometryRebuild(
 
     // Update render counts (indexOffset fixed at load time — never changes)
     cc.vertexCount = static_cast<uint32_t>(R * C);
-    cc.indexCount  = static_cast<uint32_t>((R - 1) * (C - 1) * 6);
+    cc.indexCount = static_cast<uint32_t>((R - 1) * (C - 1) * 6);
 
     // Write initial vertex data (local space) into the persistently-mapped buffer
     if (cc.mappedVertices != nullptr) {
@@ -171,11 +173,11 @@ static void performGeometryRebuild(
                 const int idx = r * C + c;
                 GE::Assets::Vertex& v = verts[idx];
                 v.position = cc.particles[idx].position - origin;
-                v.color    = coldColor;
+                v.color = coldColor;
                 v.texcoord = glm::vec2{ static_cast<float>(c) / static_cast<float>(C - 1),
                                         static_cast<float>(r) / static_cast<float>(R - 1) };
-                v.normal   = glm::vec3{ 0.0f, 1.0f, 0.0f };
-                v.tangent  = glm::vec3{ 1.0f, 0.0f, 0.0f };
+                v.normal = glm::vec3{ 0.0f, 1.0f, 0.0f };
+                v.tangent = glm::vec3{ 1.0f, 0.0f, 0.0f };
             }
         }
     }
@@ -196,12 +198,12 @@ static float hashNoise(float x, float t) {
 // Per-triangle aerodynamic wind (panel method).
 //
 // For each triangle:
-//   - Compute the surface normal and area from edge cross product.
-//   - Estimate the triangle's velocity from Verlet position history.
-//   - Project relative wind velocity onto the normal (dot product).
-//   - Force = Cd * rho * area * (relVel · n) * n  (signed — both faces react).
-//   - Sinusoidal gust scales the base wind; per-centroid hash noise adds spatial turbulence.
-//   - Force distributed equally to the triangle's three particles.
+// - Compute the surface normal and area from edge cross product.
+// - Estimate the triangle's velocity from Verlet position history.
+// - Project relative wind velocity onto the normal (dot product).
+// - Force = Cd * rho * area * (relVel · n) * n (signed — both faces react).
+// - Sinusoidal gust scales the base wind; per-centroid hash noise adds spatial turbulence.
+// - Force distributed equally to the triangle's three particles.
 //
 // Replaces the old uniform-force approach (windX/Z * mass per particle), which was
 // equivalent to a body force independent of cloth orientation and surface area.
@@ -212,7 +214,7 @@ static void applyAerodynamicWind(
 {
     if (!cc.windEnabled) { return; }
 
-    static constexpr float AIR_DENSITY = 1.225f;   // kg/m³ at sea level
+    static constexpr float AIR_DENSITY = 1.225f; // kg/m³ at sea level
 
     // Sinusoidal gust: scales the entire wind vector ±gustAmplitude
     const float gustScale =
@@ -237,18 +239,18 @@ static void applyAerodynamicWind(
                 GE::Components::ClothParticle& pc = cc.particles[ic];
 
                 // Triangle normal — magnitude equals twice the triangle area.
-                const glm::vec3 e1          = pb.position - pa.position;
-                const glm::vec3 e2          = pc.position - pa.position;
+                const glm::vec3 e1 = pb.position - pa.position;
+                const glm::vec3 e2 = pc.position - pa.position;
                 const glm::vec3 normalScaled = glm::cross(e1, e2);
-                const float     area2       = glm::length(normalScaled);
+                const float area2 = glm::length(normalScaled);
                 if (area2 < 1e-6f) { return; }
                 const glm::vec3 normal = normalScaled / area2;
 
                 // Spatial turbulence: per-centroid hash noise perturbs wind direction.
                 const glm::vec3 centroid = (pa.position + pb.position + pc.position) / 3.0f;
-                const float     nx = (hashNoise(centroid.x, simTime * 1.1f) - 0.5f)
+                const float nx = (hashNoise(centroid.x, simTime * 1.1f) - 0.5f)
                                      * cc.gustAmplitude * baseWindMag * 0.4f;
-                const float     nz = (hashNoise(centroid.z, simTime * 0.9f) - 0.5f)
+                const float nz = (hashNoise(centroid.z, simTime * 0.9f) - 0.5f)
                                      * cc.gustAmplitude * baseWindMag * 0.4f;
                 const glm::vec3 effectiveWind = baseWind + glm::vec3{ nx, 0.0f, nz };
 
@@ -261,7 +263,7 @@ static void applyAerodynamicWind(
 
                 // Signed normal component — both faces react; signed drag correctly
                 // opposes cloth motion into the wind and aids motion away from it.
-                const float     normalComp = glm::dot(effectiveWind - triVel, normal);
+                const float normalComp = glm::dot(effectiveWind - triVel, normal);
                 const glm::vec3 F = cc.dragCoeff * AIR_DENSITY
                                   * (area2 * 0.5f) * normalComp * normal;
 
@@ -273,8 +275,8 @@ static void applyAerodynamicWind(
             };
 
             // Two triangles per quad — same winding order as the GPU index buffer.
-            applyTri(i00, i10, i01);   // top-left, bottom-left, top-right
-            applyTri(i01, i10, i11);   // top-right, bottom-left, bottom-right
+            applyTri(i00, i10, i01); // top-left, bottom-left, top-right
+            applyTri(i01, i10, i11); // top-right, bottom-left, bottom-right
         }
     }
 }
@@ -282,15 +284,15 @@ static void applyAerodynamicWind(
 void ClothSystem::OnUpdate(float dt) {
     if (dt <= 0.0f) { return; }
 
-    m_simTime += dt;   // drives sinusoidal gust oscillation
+    m_simTime += dt; // drives sinusoidal gust oscillation
 
     GE::ECS::EntityManager* em = ServiceLocator::GetEntityManager();
     if (em == nullptr) { return; }
 
-    auto& clothArr   = em->GetCompArr<GE::Components::ClothComponent>();
-    auto& sphereArr  = em->GetCompArr<GE::Components::SphereCollider>();
-    auto& planeArr   = em->GetCompArr<GE::Components::PlaneCollider>();
-    auto& boxArr     = em->GetCompArr<GE::Components::BoxCollider>();
+    auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
+    auto& sphereArr = em->GetCompArr<GE::Components::SphereCollider>();
+    auto& planeArr = em->GetCompArr<GE::Components::PlaneCollider>();
+    auto& boxArr = em->GetCompArr<GE::Components::BoxCollider>();
     auto& capsuleArr = em->GetCompArr<GE::Components::CapsuleCollider>();
 
     const uint32_t clothCount = clothArr.GetCount();
@@ -310,8 +312,8 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 1a. External forces: gravity (per-particle).
-        //     Spring forces are handled as positional constraints in step 3.
-        //     Wind forces are handled per-triangle in step 1b.
+        // Spring forces are handled as positional constraints in step 3.
+        // Wind forces are handled per-triangle in step 1b.
         // -------------------------------------------------------------------
         for (auto& p : cc.particles) {
             if (p.pinned) { p.force = glm::vec3{ 0.0f }; continue; }
@@ -321,35 +323,35 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 1b. Aerodynamic wind: per-triangle panel-method drag.
-        //     Replaces the old uniform (windX/Z * mass) body-force approach.
-        //     Force scales with surface area and the angle between the wind
-        //     and the triangle normal — cloth parallel to wind gets no force.
+        // Replaces the old uniform (windX/Z * mass) body-force approach.
+        // Force scales with surface area and the angle between the wind
+        // and the triangle normal — cloth parallel to wind gets no force.
         // -------------------------------------------------------------------
         applyAerodynamicWind(cc, dt, m_simTime);
 
         // -------------------------------------------------------------------
         // 2. Verlet integration — predicts new positions from external forces.
-        //    Spring stiffness is no longer coupled to dt here, eliminating the
-        //    k*dt^2 < 2m stability ceiling of the old force-accumulation approach.
+        // Spring stiffness is no longer coupled to dt here, eliminating the
+        // k*dt^2 < 2m stability ceiling of the old force-accumulation approach.
         // -------------------------------------------------------------------
         const float dampFactor = 1.0f - cc.damping * dt;
         for (auto& p : cc.particles) {
             if (p.pinned) { continue; }
-            const glm::vec3 acc    = p.force / cc.particleMass;
+            const glm::vec3 acc = p.force / cc.particleMass;
             const glm::vec3 newPos = p.position
                                    + (p.position - p.prevPosition) * dampFactor
                                    + acc * (dt * dt);
             p.prevPosition = p.position;
-            p.position     = newPos;
-            p.force        = glm::vec3{ 0.0f };
+            p.position = newPos;
+            p.force = glm::vec3{ 0.0f };
         }
 
         // -------------------------------------------------------------------
         // 3. Jakobsen constraint relaxation.
-        //    Each spring's kSpring is normalised to stiffness in [0,1] against
-        //    JAKOBSEN_REF_K (200). Structural (200) → 1.0, shear (100) → 0.5,
-        //    flexion (50) → 0.25. Multiple iterations improve convergence.
-        //    Shrink scale reduces effectiveRestLen with heat → wrinkling.
+        // Each spring's kSpring is normalised to stiffness in [0,1] against
+        // JAKOBSEN_REF_K (200). Structural (200) → 1.0, shear (100) → 0.5,
+        // flexion (50) → 0.25. Multiple iterations improve convergence.
+        // Shrink scale reduces effectiveRestLen with heat → wrinkling.
         // -------------------------------------------------------------------
         const int iters = glm::clamp(cc.constraintIters, 1, 8);
         for (int iter = 0; iter < iters; ++iter) {
@@ -365,10 +367,10 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 4. Tearing: deactivate springs exceeding the effective stretch threshold.
-        //    effectiveThreshold = tearThreshold - stressAccum, floored at 0.5 to
-        //    prevent zero-length tears.
-        //    On tear: stress transfer lowers neighbours' threshold (crack propagation);
-        //    jitter displaces particles at the edge to create a ragged visual.
+        // effectiveThreshold = tearThreshold - stressAccum, floored at 0.5 to
+        // prevent zero-length tears.
+        // On tear: stress transfer lowers neighbours' threshold (crack propagation);
+        // jitter displaces particles at the edge to create a ragged visual.
         // -------------------------------------------------------------------
         for (GE::Components::ClothSpring& s : cc.springs) {
             if (!s.active) { continue; }
@@ -384,8 +386,8 @@ void ClothSystem::OnUpdate(float dt) {
 
             // Stress transfer: distribute excess tension to springs sharing either endpoint.
             if (cc.stressTransferRate > 0.0f) {
-                const float stretchRatio  = curLen / glm::max(s.restLen, MIN_LENGTH);
-                const float excessStress  =
+                const float stretchRatio = curLen / glm::max(s.restLen, MIN_LENGTH);
+                const float excessStress =
                     (stretchRatio - cc.tearThreshold) / glm::max(cc.tearThreshold, 0.1f);
                 if (excessStress > 0.0f) {
                     const float delta = excessStress * cc.stressTransferRate;
@@ -404,14 +406,14 @@ void ClothSystem::OnUpdate(float dt) {
                     GE::Components::ClothParticle& p = cc.particles[idx];
                     if (p.pinned || p.burned) { return; }
                     const float fi = static_cast<float>(idx) * 7.13f
-                                   + static_cast<float>(s.b)  * 3.71f;
+                                   + static_cast<float>(s.b) * 3.71f;
                     const glm::vec3 j{
-                        (hashNoise(fi,        0.0f) - 0.5f) * cc.tearRoughness,
+                        (hashNoise(fi, 0.0f) - 0.5f) * cc.tearRoughness,
                         (hashNoise(fi + 1.0f, 0.0f) - 0.5f) * cc.tearRoughness * 0.3f,
                         (hashNoise(fi + 2.0f, 0.0f) - 0.5f) * cc.tearRoughness
                     };
-                    p.position     += j;
-                    p.prevPosition += j;  // preserve implicit Verlet velocity
+                    p.position += j;
+                    p.prevPosition += j; // preserve implicit Verlet velocity
                 };
                 applyJitter(s.a);
                 applyJitter(s.b);
@@ -420,28 +422,28 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 5. Sphere-cloth collision: push particles outside each sphere.
-        //    Accumulates normals across all colliding particles and applies
-        //    a reaction impulse to the sphere's RigidBody.
+        // Accumulates normals across all colliding particles and applies
+        // a reaction impulse to the sphere's RigidBody.
         // -------------------------------------------------------------------
         const uint32_t sphereCount = sphereArr.GetCount();
         for (uint32_t si = 0U; si < sphereCount; ++si) {
             const GE::Components::SphereCollider& sc = sphereArr.Data()[si];
-            const GE::ECS::EntityID seid             = sphereArr.Index()[si];
+            const GE::ECS::EntityID seid = sphereArr.Index()[si];
 
             GE::Components::Transform* tr =
                 em->TryGetTIComponent<GE::Components::Transform>(seid);
             if (tr == nullptr) { continue; }
 
             const glm::vec3 sphereCenter = tr->m_worldPosition;
-            const float     sphereRadius = sc.radius;
+            const float sphereRadius = sc.radius;
 
-            int       collisionCount = 0;
+            int collisionCount = 0;
             glm::vec3 totalNormal{ 0.0f };
 
             for (auto& p : cc.particles) {
                 if (p.pinned) { continue; }
                 const glm::vec3 diff = p.position - sphereCenter;
-                const float     dist = glm::length(diff);
+                const float dist = glm::length(diff);
                 if (dist < sphereRadius && dist > MIN_LENGTH) {
                     const glm::vec3 normal = diff / dist;
                     p.position = sphereCenter + normal * sphereRadius;
@@ -454,7 +456,7 @@ void ClothSystem::OnUpdate(float dt) {
                 auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(seid);
                 if (rb != nullptr && !rb->isStatic) {
                     const glm::vec3 avgNormal = glm::normalize(totalNormal);
-                    const float     vAlongN   = glm::dot(rb->velocity, avgNormal);
+                    const float vAlongN = glm::dot(rb->velocity, avgNormal);
                     if (vAlongN < 0.0f) {
                         const glm::vec3 vNorm = vAlongN * avgNormal;
                         const glm::vec3 vTang = rb->velocity - vNorm;
@@ -466,10 +468,10 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 5b. Plane-cloth collision.
-        //     signedDist = dot(normal, pos) - offset  (positive = above plane).
-        //     When negative the particle has penetrated; push it back to the surface
-        //     and kill the normal component of its implicit Verlet velocity (no bounce),
-        //     retaining CLOTH_FRICTION of the tangential component.
+        // signedDist = dot(normal, pos) - offset (positive = above plane).
+        // When negative the particle has penetrated; push it back to the surface
+        // and kill the normal component of its implicit Verlet velocity (no bounce),
+        // retaining CLOTH_FRICTION of the tangential component.
         // -------------------------------------------------------------------
         {
             const uint32_t planeCount = planeArr.GetCount();
@@ -482,10 +484,10 @@ void ClothSystem::OnUpdate(float dt) {
                     if (sd >= 0.0f) { continue; }
 
                     // Push particle back onto the plane surface.
-                    p.position -= sd * pc.normal;   // sd is negative, so this adds |sd|*n
+                    p.position -= sd * pc.normal; // sd is negative, so this adds |sd|*n
 
                     // Verlet friction: remove normal velocity, damp tangential.
-                    const glm::vec3 vel   = p.position - p.prevPosition;
+                    const glm::vec3 vel = p.position - p.prevPosition;
                     const glm::vec3 vNorm = glm::dot(vel, pc.normal) * pc.normal;
                     const glm::vec3 vTang = vel - vNorm;
                     p.prevPosition = p.position - vTang * CLOTH_FRICTION;
@@ -495,15 +497,15 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 5c. Capsule-cloth collision.
-        //     Model: sphere swept along the capsule spine (base → tip in local Y).
-        //     For each particle, find the closest point on the spine segment and
-        //     push the particle to the capsule surface — identical logic to sphere.
+        // Model: sphere swept along the capsule spine (base → tip in local Y).
+        // For each particle, find the closest point on the spine segment and
+        // push the particle to the capsule surface — identical logic to sphere.
         // -------------------------------------------------------------------
         {
             const uint32_t capCount = capsuleArr.GetCount();
             for (uint32_t ki = 0U; ki < capCount; ++ki) {
                 const GE::Components::CapsuleCollider& cap = capsuleArr.Data()[ki];
-                const GE::ECS::EntityID ceid               = capsuleArr.Index()[ki];
+                const GE::ECS::EntityID ceid = capsuleArr.Index()[ki];
 
                 const GE::Components::Transform* tr =
                     em->TryGetTIComponent<GE::Components::Transform>(ceid);
@@ -511,17 +513,17 @@ void ClothSystem::OnUpdate(float dt) {
 
                 // Spine endpoints in local space (cylindrical body only; hemispheres sit beyond).
                 const glm::vec3 localBase{ 0.0f, -cap.height * 0.5f, 0.0f };
-                const glm::vec3 localTip { 0.0f,  cap.height * 0.5f, 0.0f };
+                const glm::vec3 localTip { 0.0f, cap.height * 0.5f, 0.0f };
                 const glm::vec3 worldBase =
                     glm::vec3(tr->m_worldMatrix * glm::vec4(localBase, 1.0f));
-                const glm::vec3 worldTip  =
-                    glm::vec3(tr->m_worldMatrix * glm::vec4(localTip,  1.0f));
+                const glm::vec3 worldTip =
+                    glm::vec3(tr->m_worldMatrix * glm::vec4(localTip, 1.0f));
 
                 for (auto& p : cc.particles) {
                     if (p.pinned) { continue; }
                     const glm::vec3 closest = closestPointOnSegment(worldBase, worldTip, p.position);
-                    const glm::vec3 diff    = p.position - closest;
-                    const float     dist    = glm::length(diff);
+                    const glm::vec3 diff = p.position - closest;
+                    const float dist = glm::length(diff);
                     if (dist < cap.radius && dist > MIN_LENGTH) {
                         p.position = closest + (diff / dist) * cap.radius;
                     }
@@ -531,15 +533,15 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 5d. Box/OBB-cloth collision.
-        //     Particle is transformed into the box's local space (handles rotation).
-        //     Outside particles: no collision.
-        //     Inside particles: eject along the axis of minimum penetration depth.
+        // Particle is transformed into the box's local space (handles rotation).
+        // Outside particles: no collision.
+        // Inside particles: eject along the axis of minimum penetration depth.
         // -------------------------------------------------------------------
         {
             const uint32_t boxCount = boxArr.GetCount();
             for (uint32_t bi = 0U; bi < boxCount; ++bi) {
                 const GE::Components::BoxCollider& box = boxArr.Data()[bi];
-                const GE::ECS::EntityID beid           = boxArr.Index()[bi];
+                const GE::ECS::EntityID beid = boxArr.Index()[bi];
 
                 const GE::Components::Transform* tr =
                     em->TryGetTIComponent<GE::Components::Transform>(beid);
@@ -565,11 +567,11 @@ void ClothSystem::OnUpdate(float dt) {
 
                     // Minimum penetration axis ejection.
                     const glm::vec3 pen = half - glm::abs(lp);
-                    int   axis  = (pen.x < pen.y) ? 0 : 1;
+                    int axis = (pen.x < pen.y) ? 0 : 1;
                     if (pen.z < pen[axis]) { axis = 2; }
 
                     glm::vec3 corrLocal = lp;
-                    corrLocal[axis]     = (lp[axis] >= 0.0f ? 1.0f : -1.0f) * half[axis];
+                    corrLocal[axis] = (lp[axis] >= 0.0f ? 1.0f : -1.0f) * half[axis];
 
                     p.position = glm::vec3(tr->m_worldMatrix * glm::vec4(corrLocal, 1.0f));
                 }
@@ -578,8 +580,8 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 6. Burning: accumulate heat for particles within each active ignition source.
-        //    Burn-state transitions are deferred to step 7 so heat diffusion
-        //    can spread the ignition front before particles are freed.
+        // Burn-state transitions are deferred to step 7 so heat diffusion
+        // can spread the ignition front before particles are freed.
         // -------------------------------------------------------------------
         for (const GE::Components::BurnSource& src : cc.burnSources) {
             if (!src.active) { continue; }
@@ -593,10 +595,10 @@ void ClothSystem::OnUpdate(float dt) {
 
         // -------------------------------------------------------------------
         // 7. Heat diffusion along active spring graph (Laplacian, Dayong 2011).
-        //    flux = conductivity * (heat_B - heat_A) * dt per spring.
-        //    After applying deltas, particles that reach heat >= 1.0 are freed.
-        //    Vertex curl (Dayong 2011): a one-time hash-noise position warp is
-        //    applied at the exact tick a particle burns, simulating charring.
+        // flux = conductivity * (heat_B - heat_A) * dt per spring.
+        // After applying deltas, particles that reach heat >= 1.0 are freed.
+        // Vertex curl (Dayong 2011): a one-time hash-noise position warp is
+        // applied at the exact tick a particle burns, simulating charring.
         // -------------------------------------------------------------------
         const auto N = static_cast<uint32_t>(cc.particles.size());
 
@@ -611,11 +613,11 @@ void ClothSystem::OnUpdate(float dt) {
                 p.wasCurled = true;
                 const float fi = static_cast<float>(pi) * 7.13f;
                 const glm::vec3 curl{
-                    (hashNoise(fi,        m_simTime) - 0.5f) * cc.curlAmount,
+                    (hashNoise(fi, m_simTime) - 0.5f) * cc.curlAmount,
                     (hashNoise(fi + 1.0f, m_simTime) - 0.5f) * cc.curlAmount * 0.3f,
                     (hashNoise(fi + 2.0f, m_simTime) - 0.5f) * cc.curlAmount
                 };
-                p.position    += curl;
+                p.position += curl;
                 p.prevPosition = p.position; // zero out Verlet velocity at curl point
             }
 

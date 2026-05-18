@@ -16,14 +16,14 @@ void Inspector::Draw(const GE::ECS::EntityID entityID, GE::ECS::EntityManager* c
 
     ImGui::PushItemWidth(200.0f);
 
-    if (auto* t  = em->TryGetTIComponent<Transform>(entityID))         { DrawTransform(t); }
-    if (auto* rb = em->TryGetTIComponent<RigidBody>(entityID))         { DrawRigidBody(rb); }
-    if (auto* sc = em->TryGetTIComponent<SphereCollider>(entityID))    { DrawSphereCollider(sc); }
-    if (auto* pc = em->TryGetTIComponent<PlaneCollider>(entityID))     { DrawPlaneCollider(pc); }
-    if (auto* bc = em->TryGetTIComponent<BoxCollider>(entityID))       { DrawBoxCollider(bc); }
-    if (auto* cc = em->TryGetTIComponent<CapsuleCollider>(entityID))   { DrawCapsuleCollider(cc); }
-    if (auto* cy = em->TryGetTIComponent<CylinderCollider>(entityID))  { DrawCylinderCollider(cy); }
-    if (auto* s  = em->TryGetTIComponent<ScriptComponent>(entityID))   { DrawScriptComponent(s); }
+    if (auto* t  = em->TryGetTIComponent<Transform>(entityID)) { DrawTransform(t); }
+    if (auto* rb = em->TryGetTIComponent<RigidBody>(entityID)) { DrawRigidBody(rb); }
+    if (auto* sc = em->TryGetTIComponent<SphereCollider>(entityID)) { DrawSphereCollider(sc); }
+    if (auto* pc = em->TryGetTIComponent<PlaneCollider>(entityID)) { DrawPlaneCollider(pc); }
+    if (auto* bc = em->TryGetTIComponent<BoxCollider>(entityID)) { DrawBoxCollider(bc); }
+    if (auto* cc = em->TryGetTIComponent<CapsuleCollider>(entityID)) { DrawCapsuleCollider(cc); }
+    if (auto* cy = em->TryGetTIComponent<CylinderCollider>(entityID)) { DrawCylinderCollider(cy); }
+    if (auto* s  = em->TryGetTIComponent<ScriptComponent>(entityID)) { DrawScriptComponent(s); }
 
     ImGui::PopItemWidth();
 }
@@ -44,19 +44,19 @@ void Inspector::DrawTransform(GE::Components::Transform* const t) const {
     ImGui::BeginDisabled();
     ImGui::DragFloat3("Position##W", &t->m_worldPosition.x, 0.05f);
     ImGui::DragFloat3("Rotation##W", &t->m_worldRotation.x, 0.5f);
-    ImGui::DragFloat3("Scale##W",    &t->m_worldScale.x,    0.01f);
+    ImGui::DragFloat3("Scale##W", &t->m_worldScale.x, 0.01f);
     ImGui::EndDisabled();
 }
 
 void Inspector::DrawRigidBody(GE::Components::RigidBody* const rb) const {
     if (!ImGui::CollapsingHeader("Rigid Body", ImGuiTreeNodeFlags_DefaultOpen)) return;
 
-    ImGui::DragFloat3("Velocity",     &rb->velocity.x,     0.01f);
+    ImGui::DragFloat3("Velocity", &rb->velocity.x, 0.01f);
     ImGui::DragFloat3("Acceleration", &rb->acceleration.x, 0.01f);
 
     ImGui::Separator();
 
-    ImGui::Checkbox("Is Static",   &rb->isStatic);
+    ImGui::Checkbox("Is Static", &rb->isStatic);
     ImGui::Checkbox("Use Gravity", &rb->useGravity);
 
     ImGui::Separator();

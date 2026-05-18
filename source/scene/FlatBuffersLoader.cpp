@@ -33,15 +33,15 @@ std::string FlatBuffersLoader::openFileDialog(const std::string& initialDir) {
 
     OPENFILENAMEA ofn;
     ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize     = sizeof(ofn);
-    ofn.hwndOwner       = nullptr;
-    ofn.lpstrFile       = szFile;
-    ofn.nMaxFile        = sizeof(szFile);
-    ofn.lpstrFilter     = "FlatBuffers Binary Files\0*.bin\0All Files\0*.*\0";
-    ofn.nFilterIndex    = 1;
-    ofn.lpstrTitle      = "Select FlatBuffers Scene";
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = nullptr;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = "FlatBuffers Binary Files\0*.bin\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrTitle = "Select FlatBuffers Scene";
     ofn.lpstrInitialDir = absDir.empty() ? nullptr : absDir.c_str();
-    ofn.Flags           = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
 
     if (GetOpenFileNameA(&ofn) == TRUE) {
         return std::string(szFile);

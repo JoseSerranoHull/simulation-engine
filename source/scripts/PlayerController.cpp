@@ -43,10 +43,10 @@ void PlayerController::Update(float dt) {
     }
 
     // Step 4: Jump impulse — edge-triggered (fires once per press) + cooldown guard.
-    const bool jumpNow  = ReadJumpInput();
+    const bool jumpNow = ReadJumpInput();
     const bool jumpEdge = jumpNow && !m_prevJumpInput;
-    m_prevJumpInput     = jumpNow;
-    m_jumpCooldown      = glm::max(0.0f, m_jumpCooldown - dt);
+    m_prevJumpInput = jumpNow;
+    m_jumpCooldown = glm::max(0.0f, m_jumpCooldown - dt);
 
     if (jumpEdge && m_jumpCooldown <= 0.0f && glm::abs(rb->velocity.y) < 0.5f) {
         rb->velocity.y = m_jumpImpulse;
@@ -62,9 +62,9 @@ glm::vec2 PlayerController::ReadMovementInput() const {
     if (input == nullptr) { return { 0.0f, 0.0f }; }
 
     glm::vec2 v{ 0.0f };
-    if (input->IsKeyDown(GLFW_KEY_UP))    { v.y -= m_moveSpeed; }
-    if (input->IsKeyDown(GLFW_KEY_DOWN))  { v.y += m_moveSpeed; }
-    if (input->IsKeyDown(GLFW_KEY_LEFT))  { v.x -= m_moveSpeed; }
+    if (input->IsKeyDown(GLFW_KEY_UP)) { v.y -= m_moveSpeed; }
+    if (input->IsKeyDown(GLFW_KEY_DOWN)) { v.y += m_moveSpeed; }
+    if (input->IsKeyDown(GLFW_KEY_LEFT)) { v.x -= m_moveSpeed; }
     if (input->IsKeyDown(GLFW_KEY_RIGHT)) { v.x += m_moveSpeed; }
     return v;
 }
@@ -76,9 +76,9 @@ bool PlayerController::ReadJumpInput() const {
 
 void PlayerController::OnDrawInspector() {
     GameScriptComponent::OnDrawInspector();
-    DrawField("Move Speed",   m_moveSpeed);
+    DrawField("Move Speed", m_moveSpeed);
     DrawField("Jump Impulse", m_jumpImpulse);
-    DrawField("H Damping",    m_hDamping);
+    DrawField("H Damping", m_hDamping);
 }
 
 } // namespace GE::Scripts

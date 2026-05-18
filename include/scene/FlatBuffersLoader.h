@@ -12,18 +12,18 @@ namespace GE::Scene {
     /**
      * @class FlatBuffersLoader
      * @brief Static utility for loading FlatBuffers binary scene files.
-     *        Windows-only (GetOpenFileNameA).
+     *  Windows-only (GetOpenFileNameA).
      *
-     *        Workflow:
-     *          1. openFileDialog() — Windows native open-file dialog filtered to .bin
-     *          2. copyBin() copies the selected file to outDir
-     *          3. Caller receives the final .bin path and calls requestScenarioChange()
+     *  Workflow:
+     *      1. openFileDialog() — Windows native open-file dialog filtered to .bin
+     *      2. copyBin() copies the selected file to outDir
+     *      3. Caller receives the final .bin path and calls requestScenarioChange()
      */
     class FlatBuffersLoader {
     public:
         /**
          * @brief Opens a Windows file dialog, copies the selected .bin, and returns
-         *        the destination path in outDir.
+         * the destination path in outDir.
          * @param outDir Managed directory to receive the binary.
          * @return Full path of the ready-to-load .bin, or "" on cancel/error.
          */

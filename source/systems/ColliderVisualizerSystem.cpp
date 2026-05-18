@@ -1,4 +1,4 @@
-#include "systems/ColliderVisualizerSystem.h"
+﻿#include "systems/ColliderVisualizerSystem.h"
 #include "systems/SpringSystem.h"
 #include "assets/GeometryUtils.h"
 #include "graphics/VulkanUtils.h"
@@ -18,14 +18,14 @@ namespace GE::Systems {
 
 ColliderVisualizerSystem::ColliderVisualizerSystem(GE::Graphics::GpuUploadContext& ctx) {
     m_typeID = ECS::IECSystem::GetUniqueISystemTypeID<ColliderVisualizerSystem>();
-    m_stage  = ECS::ESystemStage::Render;
-    m_state  = SystemState::Running;
+    m_stage = ECS::ESystemStage::Render;
+    m_state = SystemState::Running;
 
     const auto sphereData = GE::Assets::GeometryUtils::generateWireSphere(32U, WIRE_COLOR);
-    const auto planeData  = GE::Assets::GeometryUtils::generateWirePlane(1.0f, WIRE_COLOR);
+    const auto planeData = GE::Assets::GeometryUtils::generateWirePlane(1.0f, WIRE_COLOR);
 
     m_sphereIdxCount = static_cast<uint32_t>(sphereData.indices.size());
-    m_planeIdxCount  = static_cast<uint32_t>(planeData.indices.size());
+    m_planeIdxCount = static_cast<uint32_t>(planeData.indices.size());
 
     uploadGeometry(ctx, sphereData.vertices, sphereData.indices,
         m_sphereVertBuf, m_sphereVertMem, m_sphereIdxBuf, m_sphereIdxMem);
@@ -82,40 +82,40 @@ ColliderVisualizerSystem::~ColliderVisualizerSystem() {
     if ((ctx == nullptr) || (ctx->device == VK_NULL_HANDLE)) { return; }
 
     vkDestroyBuffer(ctx->device, m_sphereVertBuf, nullptr);
-    vkFreeMemory   (ctx->device, m_sphereVertMem, nullptr);
-    vkDestroyBuffer(ctx->device, m_sphereIdxBuf,  nullptr);
-    vkFreeMemory   (ctx->device, m_sphereIdxMem,  nullptr);
+    vkFreeMemory(ctx->device, m_sphereVertMem, nullptr);
+    vkDestroyBuffer(ctx->device, m_sphereIdxBuf, nullptr);
+    vkFreeMemory(ctx->device, m_sphereIdxMem, nullptr);
 
-    vkDestroyBuffer(ctx->device, m_planeVertBuf,  nullptr);
-    vkFreeMemory   (ctx->device, m_planeVertMem,  nullptr);
-    vkDestroyBuffer(ctx->device, m_planeIdxBuf,   nullptr);
-    vkFreeMemory   (ctx->device, m_planeIdxMem,   nullptr);
+    vkDestroyBuffer(ctx->device, m_planeVertBuf, nullptr);
+    vkFreeMemory(ctx->device, m_planeVertMem, nullptr);
+    vkDestroyBuffer(ctx->device, m_planeIdxBuf, nullptr);
+    vkFreeMemory(ctx->device, m_planeIdxMem, nullptr);
 
-    vkDestroyBuffer(ctx->device, m_boxVertBuf,  nullptr);
-    vkFreeMemory   (ctx->device, m_boxVertMem,  nullptr);
-    vkDestroyBuffer(ctx->device, m_boxIdxBuf,   nullptr);
-    vkFreeMemory   (ctx->device, m_boxIdxMem,   nullptr);
+    vkDestroyBuffer(ctx->device, m_boxVertBuf, nullptr);
+    vkFreeMemory(ctx->device, m_boxVertMem, nullptr);
+    vkDestroyBuffer(ctx->device, m_boxIdxBuf, nullptr);
+    vkFreeMemory(ctx->device, m_boxIdxMem, nullptr);
 
-    vkDestroyBuffer(ctx->device, m_cylVertBuf,  nullptr);
-    vkFreeMemory   (ctx->device, m_cylVertMem,  nullptr);
-    vkDestroyBuffer(ctx->device, m_cylIdxBuf,   nullptr);
-    vkFreeMemory   (ctx->device, m_cylIdxMem,   nullptr);
+    vkDestroyBuffer(ctx->device, m_cylVertBuf, nullptr);
+    vkFreeMemory(ctx->device, m_cylVertMem, nullptr);
+    vkDestroyBuffer(ctx->device, m_cylIdxBuf, nullptr);
+    vkFreeMemory(ctx->device, m_cylIdxMem, nullptr);
 
     vkDestroyBuffer(ctx->device, m_hemiVertBuf, nullptr);
-    vkFreeMemory   (ctx->device, m_hemiVertMem, nullptr);
-    vkDestroyBuffer(ctx->device, m_hemiIdxBuf,  nullptr);
-    vkFreeMemory   (ctx->device, m_hemiIdxMem,  nullptr);
+    vkFreeMemory(ctx->device, m_hemiVertMem, nullptr);
+    vkDestroyBuffer(ctx->device, m_hemiIdxBuf, nullptr);
+    vkFreeMemory(ctx->device, m_hemiIdxMem, nullptr);
 
     if (m_springLineVertBuf != VK_NULL_HANDLE) {
-        vkUnmapMemory  (ctx->device, m_springLineVertMem);
+        vkUnmapMemory(ctx->device, m_springLineVertMem);
         vkDestroyBuffer(ctx->device, m_springLineVertBuf, nullptr);
-        vkFreeMemory   (ctx->device, m_springLineVertMem, nullptr);
+        vkFreeMemory(ctx->device, m_springLineVertMem, nullptr);
     }
 
     if (m_clothDebugBuf != VK_NULL_HANDLE) {
-        vkUnmapMemory  (ctx->device, m_clothDebugMem);
+        vkUnmapMemory(ctx->device, m_clothDebugMem);
         vkDestroyBuffer(ctx->device, m_clothDebugBuf, nullptr);
-        vkFreeMemory   (ctx->device, m_clothDebugMem, nullptr);
+        vkFreeMemory(ctx->device, m_clothDebugMem, nullptr);
     }
 }
 
@@ -128,17 +128,17 @@ void ColliderVisualizerSystem::uploadGeometry(
     const std::vector<GE::Assets::Vertex>& vertices,
     const std::vector<uint32_t>& indices,
     VkBuffer& outVertBuf, VkDeviceMemory& outVertMem,
-    VkBuffer& outIdxBuf,  VkDeviceMemory& outIdxMem)
+    VkBuffer& outIdxBuf, VkDeviceMemory& outIdxMem)
 {
     using namespace GE::Graphics;
-    VulkanContext* vkCtx         = ServiceLocator::GetContext();
-    const VkDevice device        = vkCtx->device;
+    VulkanContext* vkCtx = ServiceLocator::GetContext();
+    const VkDevice device = vkCtx->device;
     const VkPhysicalDevice phDev = vkCtx->physicalDevice;
 
     // --- Vertex buffer ---
     const VkDeviceSize vertSize = sizeof(GE::Assets::Vertex) * vertices.size();
 
-    VkBuffer       stagingVertBuf;
+    VkBuffer stagingVertBuf;
     VkDeviceMemory stagingVertMem;
     VulkanUtils::createBuffer(device, phDev, vertSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -164,7 +164,7 @@ void ColliderVisualizerSystem::uploadGeometry(
     // --- Index buffer ---
     const VkDeviceSize idxSize = sizeof(uint32_t) * indices.size();
 
-    VkBuffer       stagingIdxBuf;
+    VkBuffer stagingIdxBuf;
     VkDeviceMemory stagingIdxMem;
     VulkanUtils::createBuffer(device, phDev, idxSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -213,9 +213,9 @@ void ColliderVisualizerSystem::RecordPass(
         vkCmdBindIndexBuffer(cb, m_sphereIdxBuf, 0U, VK_INDEX_TYPE_UINT32);
 
         for (uint32_t i = 0U; i < sphereArr.GetCount(); ++i) {
-            const auto& sphereCol  = sphereArr.Data()[i];
+            const auto& sphereCol = sphereArr.Data()[i];
             const GE::ECS::EntityID id = sphereArr.Index()[i];
-            const auto* transform  = em->GetTIComponent<GE::Components::Transform>(id);
+            const auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
             if (transform == nullptr) { continue; }
 
             // Strip entity visual scale, apply collider radius.
@@ -246,14 +246,14 @@ void ColliderVisualizerSystem::RecordPass(
         vkCmdBindIndexBuffer(cb, m_planeIdxBuf, 0U, VK_INDEX_TYPE_UINT32);
 
         for (uint32_t i = 0U; i < planeArr.GetCount(); ++i) {
-            const auto& plane      = planeArr.Data()[i];
+            const auto& plane = planeArr.Data()[i];
             const GE::ECS::EntityID id = planeArr.Index()[i];
-            const auto* transform  = em->GetTIComponent<GE::Components::Transform>(id);
+            const auto* transform = em->GetTIComponent<GE::Components::Transform>(id);
             if (transform == nullptr) { continue; }
 
             // Build orientation matrix: align local +Y axis to the plane normal,
             // then translate to (entity world pos + normal * offset).
-            const glm::vec3 norm   = glm::normalize(plane.normal);
+            const glm::vec3 norm = glm::normalize(plane.normal);
             const glm::vec3 center = glm::vec3(transform->m_worldMatrix[3]) + norm * plane.offset;
 
             // Choose a reference up vector that is not parallel to the plane normal
@@ -261,7 +261,7 @@ void ColliderVisualizerSystem::RecordPass(
                 ? glm::vec3(1.0f, 0.0f, 0.0f)
                 : glm::vec3(0.0f, 1.0f, 0.0f);
 
-            const glm::vec3 right   = glm::normalize(glm::cross(worldUp, norm));
+            const glm::vec3 right = glm::normalize(glm::cross(worldUp, norm));
             const glm::vec3 forward = glm::normalize(glm::cross(norm, right));
 
             // When sizeX/sizeZ are set, show exact bounded extent; otherwise show large indicator.
@@ -269,10 +269,10 @@ void ColliderVisualizerSystem::RecordPass(
             const float halfZ = (plane.sizeZ > 0.0f) ? (plane.sizeZ * 0.5f) : WIRE_PLANE_HALF_SIZE;
 
             const glm::mat4 model(
-                glm::vec4(right   * halfX, 0.0f),
-                glm::vec4(norm,            0.0f),
+                glm::vec4(right * halfX, 0.0f),
+                glm::vec4(norm, 0.0f),
                 glm::vec4(forward * halfZ, 0.0f),
-                glm::vec4(center,          1.0f)
+                glm::vec4(center, 1.0f)
             );
 
             vkCmdPushConstants(cb, wirePipeline->getPipelineLayout(),
@@ -363,7 +363,7 @@ void ColliderVisualizerSystem::RecordPass(
             const glm::mat4 rot4 = glm::mat4(rotOnly);
 
             const float halfH = cap.height * 0.5f;
-            const float r     = cap.radius;
+            const float r = cap.radius;
 
             // Body: unit cylinder (y in [-1,+1]) → scale Y to halfH, XZ to radius
             {
@@ -419,8 +419,8 @@ void ColliderVisualizerSystem::RecordPass(
         auto& clothArr = em->GetCompArr<GE::Components::ClothComponent>();
 
         if (clothArr.GetCount() > 0U) {
-            auto*          verts    = static_cast<GE::Assets::Vertex*>(m_clothDebugMapped);
-            uint32_t       vc       = 0U;
+            auto* verts = static_cast<GE::Assets::Vertex*>(m_clothDebugMapped);
+            uint32_t vc = 0U;
             const uint32_t maxVerts = m_clothDebugMaxVerts;
 
             // Append one line segment to the buffer.
@@ -432,29 +432,29 @@ void ColliderVisualizerSystem::RecordPass(
             };
 
             // Colour palette for spring types and states.
-            static constexpr glm::vec3 COL_STRUCTURAL{ 1.0f, 1.0f, 1.0f };   // white
-            static constexpr glm::vec3 COL_SHEAR     { 0.0f, 0.8f, 1.0f };   // cyan
-            static constexpr glm::vec3 COL_FLEXION   { 1.0f, 0.9f, 0.0f };   // yellow
-            static constexpr glm::vec3 COL_TORN      { 1.0f, 0.15f, 0.15f }; // red
-            static constexpr glm::vec3 COL_HOT       { 1.0f, 0.40f, 0.0f };  // orange — burning endpoint
-            static constexpr glm::vec3 COL_NORMAL_VEC{ 0.1f, 1.0f, 0.2f };  // green
+            static constexpr glm::vec3 COL_STRUCTURAL{ 1.0f, 1.0f, 1.0f }; // white
+            static constexpr glm::vec3 COL_SHEAR { 0.0f, 0.8f, 1.0f }; // cyan
+            static constexpr glm::vec3 COL_FLEXION { 1.0f, 0.9f, 0.0f }; // yellow
+            static constexpr glm::vec3 COL_TORN { 1.0f, 0.15f, 0.15f }; // red
+            static constexpr glm::vec3 COL_HOT { 1.0f, 0.40f, 0.0f }; // orange — burning endpoint
+            static constexpr glm::vec3 COL_NORMAL_VEC{ 0.1f, 1.0f, 0.2f }; // green
 
-            static constexpr float NORMAL_LEN    = 0.06f; // world-unit length of normal arrow
+            static constexpr float NORMAL_LEN = 0.06f; // world-unit length of normal arrow
             static constexpr float PARTICLE_HALF = 0.04f; // half-size of the particle cross glyph
 
             // 4-stage heat colour (matches FlatBuffersScenario vertex colour gradient).
             auto heatCol = [](float heat, bool burned) -> glm::vec3 {
-                static constexpr glm::vec3 COLD   { 0.60f, 0.75f, 1.0f };
+                static constexpr glm::vec3 COLD { 0.60f, 0.75f, 1.0f };
                 static constexpr glm::vec3 YELLOW { 1.00f, 0.95f, 0.0f };
                 static constexpr glm::vec3 ORANGE { 1.00f, 0.40f, 0.0f };
-                static constexpr glm::vec3 RED    { 0.80f, 0.05f, 0.0f };
+                static constexpr glm::vec3 RED { 0.80f, 0.05f, 0.0f };
                 static constexpr glm::vec3 CHARRED{ 0.05f, 0.04f, 0.02f };
-                if (burned)       { return CHARRED; }
-                if (heat < 0.001f){ return COLD;    }
-                if (heat < 0.25f) { return glm::mix(COLD,   YELLOW, heat / 0.25f);              }
-                if (heat < 0.55f) { return glm::mix(YELLOW, ORANGE, (heat - 0.25f) / 0.30f);   }
-                if (heat < 0.80f) { return glm::mix(ORANGE, RED,    (heat - 0.55f) / 0.25f);   }
-                return               glm::mix(RED,    CHARRED,(heat - 0.80f) / 0.20f);
+                if (burned) { return CHARRED; }
+                if (heat < 0.001f){ return COLD; }
+                if (heat < 0.25f) { return glm::mix(COLD, YELLOW, heat / 0.25f); }
+                if (heat < 0.55f) { return glm::mix(YELLOW, ORANGE, (heat - 0.25f) / 0.30f); }
+                if (heat < 0.80f) { return glm::mix(ORANGE, RED, (heat - 0.55f) / 0.25f); }
+                return glm::mix(RED, CHARRED,(heat - 0.80f) / 0.20f);
             };
 
             for (uint32_t ci = 0U; ci < clothArr.GetCount(); ++ci) {
@@ -473,14 +473,14 @@ void ColliderVisualizerSystem::RecordPass(
                             continue;
                         }
                         if (s.type == ST::Structural && !m_showStructural) { continue; }
-                        if (s.type == ST::Shear      && !m_showShear)      { continue; }
-                        if (s.type == ST::Flexion    && !m_showFlexion)    { continue; }
+                        if (s.type == ST::Shear && !m_showShear) { continue; }
+                        if (s.type == ST::Flexion && !m_showFlexion) { continue; }
 
                         // Override colour if either endpoint is heating up.
                         const bool hotA = cc.particles[s.a].heat > 0.05f;
                         const bool hotB = cc.particles[s.b].heat > 0.05f;
                         glm::vec3 col = (hotA || hotB) ? COL_HOT :
-                                        (s.type == ST::Shear)   ? COL_SHEAR :
+                                        (s.type == ST::Shear) ? COL_SHEAR :
                                         (s.type == ST::Flexion) ? COL_FLEXION :
                                                                    COL_STRUCTURAL;
 
@@ -562,7 +562,7 @@ void ColliderVisualizerSystem::RecordPass(
                     posB = t->m_worldPosition;
                 }
 
-                verts[vertCount]     = GE::Assets::Vertex{ posA, SPRING_COLOR, {}, {} };
+                verts[vertCount] = GE::Assets::Vertex{ posA, SPRING_COLOR, {}, {} };
                 verts[vertCount + 1] = GE::Assets::Vertex{ posB, SPRING_COLOR, {}, {} };
                 vertCount += 2U;
             }

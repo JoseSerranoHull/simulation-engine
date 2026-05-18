@@ -17,13 +17,13 @@ namespace GE::ECS {
 		Physics,
 		SceneControl,
 		DayNight,
-		GameLogic, // < User scripts (ScriptSystem)
+		GameLogic,
 		Camera,
 		GUI,
 		Particle,
 		Render,
 		LateUpdate,
-		Count      // < Sentinel — do not register systems at this stage.
+		Count
 	};
 
 	using ISystemTypeID = uint32_t;
@@ -79,13 +79,13 @@ namespace GE::ECS {
 		if (m_stage != ESystemStage::Count)
 			return m_stage;
 
-		GE_LOG_FATAL("System stage is invalid");
+		GE_LOG_FATAL("System stage is invalid.");
 		return ESystemStage::Count;
 	}
 
 	template <typename TISystem>
 	ISystemTypeID IECSystem::GetUniqueISystemTypeID() {
-		static_assert(std::is_base_of_v<IECSystem, TISystem>, "TISystem must inherit from IECSystem");
+		static_assert(std::is_base_of_v<IECSystem, TISystem>, "TISystem must inherit from IECSystem.");
 		static const uint32_t typeID = GenerateISystemTypeID();
 		return typeID;
 	}

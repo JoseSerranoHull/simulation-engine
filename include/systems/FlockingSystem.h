@@ -15,9 +15,9 @@
 namespace GE::Systems {
 
 enum class FlockSpatialMode : uint8_t {
-    BruteForce  = 0,
+    BruteForce = 0,
     UniformGrid = 1,
-    Octree      = 2
+    Octree  = 2
 };
 
 class FlockingSystem : public GE::ECS::ICpuSystem {
@@ -25,12 +25,12 @@ public:
     FlockingSystem();
     ~FlockingSystem() override = default;
 
-    void       OnUpdate(float dt) override;
+    void OnUpdate(float dt) override;
     void Shutdown() override {}
 
     // Runtime-configurable (ImGui)
-    FlockSpatialMode m_spatialMode  { FlockSpatialMode::BruteForce };
-    float            m_gridCellSize { 6.0f }; // should match max neighbourhood radius
+    FlockSpatialMode m_spatialMode { FlockSpatialMode::BruteForce };
+    float m_gridCellSize { 6.0f }; // should match max neighbourhood radius
 
     // Performance counters (reset each frame, read by ImGui)
     uint64_t m_neighbourChecksLastFrame { 0 };
@@ -51,18 +51,20 @@ public:
 private:
     // ---- Agent cache (rebuilt each frame) ----
     struct AgentEntry {
-        uint32_t  idx;   // index into FlockingComponent array
+        uint32_t idx;  // index into FlockingComponent array
         glm::vec3 pos;
         glm::vec3 vel;
-        float     mass;
-        uint8_t   group;
+        float mass;
+        uint8_t group;
     };
     std::vector<AgentEntry> m_agents;
 
     // ---- Steering force computation ----
-    glm::vec3 computeSteering(const AgentEntry& self,
-                               const std::vector<uint32_t>& neighbourIndices,
-                               GE::ECS::EntityManager& em) const;
+    glm::vec3 computeSteering(
+        const AgentEntry& self,
+        const std::vector<uint32_t>& neighbourIndices,
+        GE::ECS::EntityManager& em
+    ) const;
 
     // ---- Spatial partitioning: Uniform Grid ----
     struct GridKey {
@@ -95,8 +97,12 @@ private:
 
     void buildOctree();
     void insertOctree(OctreeNode& node, uint32_t agentIdx, int depth);
-    void queryOctree(const OctreeNode& node, const glm::vec3& pos, float radius,
-                     std::vector<uint32_t>& out);
+    void queryOctree(
+        const OctreeNode& node,
+        const glm::vec3& pos,
+        float radius,
+        std::vector<uint32_t>& out
+    );
 };
 
 } // namespace GE::Systems

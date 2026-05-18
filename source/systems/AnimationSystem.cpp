@@ -1,4 +1,4 @@
-#include "systems/AnimationSystem.h"
+﻿#include "systems/AnimationSystem.h"
 #include "core/ServiceLocator.h"
 #include "ecs/EntityManager.h"
 #include "components/AnimationComponent.h"
@@ -6,15 +6,15 @@
 
 /* parasoft-begin-suppress ALL */
 #include <glm/glm.hpp>
-#include <cmath>   // std::fmod
+#include <cmath> // std::fmod
 /* parasoft-end-suppress ALL */
 
 namespace GE::Systems {
 
     AnimationSystem::AnimationSystem() {
         m_typeID = GE::ECS::IECSystem::GetUniqueISystemTypeID<AnimationSystem>();
-        m_stage  = GE::ECS::ESystemStage::Animation;
-        m_state  = SystemState::Running;
+        m_stage = GE::ECS::ESystemStage::Animation;
+        m_state = SystemState::Running;
     }
 
     void AnimationSystem::Shutdown() {
@@ -29,7 +29,7 @@ namespace GE::Systems {
         if (easing == GE::Components::EasingType::SMOOTHSTEP) {
             return t * t * (3.0f - 2.0f * t);
         }
-        return t;  // LINEAR
+        return t; // LINEAR
     }
 
     // -------------------------------------------------------------------------
@@ -42,8 +42,8 @@ namespace GE::Systems {
         auto& animArr = em->GetCompArr<GE::Components::AnimatedObjectComponent>();
 
         for (uint32_t i = 0; i < animArr.GetCount(); ++i) {
-            auto&                        ac = animArr.Data()[i];
-            const GE::ECS::EntityID      id = animArr.Index()[i];
+            auto& ac = animArr.Data()[i];
+            const GE::ECS::EntityID id = animArr.Index()[i];
             auto* const tr = em->TryGetTIComponent<GE::Components::Transform>(id);
 
             if (!tr || ac.waypoints.empty()) continue;
@@ -53,7 +53,7 @@ namespace GE::Systems {
 
             // 2. Advance elapsed time (reversed flag controls direction)
             if (!ac.reversed) { ac.elapsed += dt; }
-            else              { ac.elapsed -= dt; }
+            else { ac.elapsed -= dt; }
 
             // 3. PathMode enforcement
             switch (ac.pathMode) {
@@ -70,10 +70,10 @@ namespace GE::Systems {
 
             case GE::Components::PathMode::REVERSE:
                 if (!ac.reversed && ac.elapsed >= ac.totalDuration) {
-                    ac.elapsed  = ac.totalDuration;
+                    ac.elapsed = ac.totalDuration;
                     ac.reversed = true;
                 } else if (ac.reversed && ac.elapsed <= 0.0f) {
-                    ac.elapsed  = 0.0f;
+                    ac.elapsed = 0.0f;
                     ac.reversed = false;
                 }
                 break;
@@ -97,7 +97,7 @@ namespace GE::Systems {
                         t = glm::clamp(t, 0.0f, 1.0f);
                         t = applyEasing(t, ac.easing);
                         pos = glm::mix(wps.back().position, wps.front().position, t);
-                        rot = glm::mix(wps.back().rotDeg,   wps.front().rotDeg,   t);
+                        rot = glm::mix(wps.back().rotDeg, wps.front().rotDeg, t);
                     } else {
                         pos = wps.front().position;
                         rot = wps.front().rotDeg;
@@ -120,7 +120,7 @@ namespace GE::Systems {
                         t = glm::clamp(t, 0.0f, 1.0f);
                         t = applyEasing(t, ac.easing);
                         pos = glm::mix(wps[k].position, wps[k + 1].position, t);
-                        rot = glm::mix(wps[k].rotDeg,   wps[k + 1].rotDeg,   t);
+                        rot = glm::mix(wps[k].rotDeg, wps[k + 1].rotDeg, t);
                         break;
                     }
                 }
@@ -129,7 +129,7 @@ namespace GE::Systems {
             // 5. Write to Transform
             tr->m_localPosition = pos;
             tr->m_localRotation = rot;
-            tr->m_state         = GE::Components::Transform::TransformState::Dirty;
+            tr->m_state = GE::Components::Transform::TransformState::Dirty;
         }
     }
 

@@ -55,7 +55,6 @@ namespace GE::Physics {
         /**
          * @brief Sphere-Cylinder intersection (finite capped cylinder).
          * Tests the lateral body and both flat end caps.
-         * Ported from PhysicsLibrary/Sphere.h.
          */
         bool Intersects(const Cylinder& cyl) const {
             const glm::vec3 A  = cyl.GetStart();
@@ -106,7 +105,6 @@ namespace GE::Physics {
         /**
          * @brief Sphere-Capsule intersection (segment with rounded ends).
          * Finds closest point on the capsule axis segment and compares combined radii.
-         * Ported from PhysicsLibrary/Sphere.h.
          */
         bool Intersects(const Capsule& cap) const {
             const glm::vec3 A    = cap.GetStart();

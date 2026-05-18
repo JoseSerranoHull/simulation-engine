@@ -49,24 +49,24 @@ namespace GE::Scene {
 
         // Handler map: section name -> handler. Add new component types here without touching the parse loop.
         const std::unordered_map<std::string, SectionHandler> handlers = {
-            { "Texture",           [&](const std::string& id, const std::map<std::string, std::string>& p) { handleTexture(id, p, am); } },
-            { "Material",         [&](const std::string& id, const std::map<std::string, std::string>& p) { handleMaterial(id, p, am, pipelines); } },
-            { "Entity",           [&](const std::string&,    const std::map<std::string, std::string>&)   { handleEntity(em); } },
-            { "Transform",        [&](const std::string&,    const std::map<std::string, std::string>& p) { handleTransform(p, em); } },
-            { "MeshRenderer",     [&](const std::string&,    const std::map<std::string, std::string>& p) { handleMeshRenderer(p, em, am, ctx, outOwnedModels); } },
-            { "Tag",              [&](const std::string&,    const std::map<std::string, std::string>& p) { handleTag(p, em, scene); } },
-            { "LightComponent",   [&](const std::string&,    const std::map<std::string, std::string>& p) { handleLightComponent(p, em); } },
-            { "RigidBody",        [&](const std::string&,    const std::map<std::string, std::string>& p) { handleRigidBody(p, em); } },
-            { "SphereCollider",   [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSphereCollider(p, em); } },
-            { "PlaneCollider",    [&](const std::string&,    const std::map<std::string, std::string>& p) { handlePlaneCollider(p, em); } },
-            { "CylinderCollider", [&](const std::string&,    const std::map<std::string, std::string>& p) { handleCylinderCollider(p, em); } },
-            { "BoxCollider",      [&](const std::string&,    const std::map<std::string, std::string>& p) { handleBoxCollider(p, em); } },
-            { "ParticleComponent",[&](const std::string&,    const std::map<std::string, std::string>& p) { handleParticleComponent(p, em); } },
-            { "SkyboxComponent",  [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSkyboxComponent(p, em); } },
+            { "Texture", [&](const std::string& id, const std::map<std::string, std::string>& p) { handleTexture(id, p, am); } },
+            { "Material", [&](const std::string& id, const std::map<std::string, std::string>& p) { handleMaterial(id, p, am, pipelines); } },
+            { "Entity", [&](const std::string&, const std::map<std::string, std::string>&)   { handleEntity(em); } },
+            { "Transform", [&](const std::string&, const std::map<std::string, std::string>& p) { handleTransform(p, em); } },
+            { "MeshRenderer", [&](const std::string&, const std::map<std::string, std::string>& p) { handleMeshRenderer(p, em, am, ctx, outOwnedModels); } },
+            { "Tag", [&](const std::string&, const std::map<std::string, std::string>& p) { handleTag(p, em, scene); } },
+            { "LightComponent", [&](const std::string&, const std::map<std::string, std::string>& p) { handleLightComponent(p, em); } },
+            { "RigidBody", [&](const std::string&, const std::map<std::string, std::string>& p) { handleRigidBody(p, em); } },
+            { "SphereCollider", [&](const std::string&, const std::map<std::string, std::string>& p) { handleSphereCollider(p, em); } },
+            { "PlaneCollider", [&](const std::string&, const std::map<std::string, std::string>& p) { handlePlaneCollider(p, em); } },
+            { "CylinderCollider", [&](const std::string&, const std::map<std::string, std::string>& p) { handleCylinderCollider(p, em); } },
+            { "BoxCollider", [&](const std::string&, const std::map<std::string, std::string>& p) { handleBoxCollider(p, em); } },
+            { "ParticleComponent",[&](const std::string&, const std::map<std::string, std::string>& p) { handleParticleComponent(p, em); } },
+            { "SkyboxComponent", [&](const std::string&, const std::map<std::string, std::string>& p) { handleSkyboxComponent(p, em); } },
             // Lab 7: spring-based force generators
-            { "Spring",           [&](const std::string&,    const std::map<std::string, std::string>& p) { handleSpring(p); } },
-            { "Rope",             [&](const std::string&,    const std::map<std::string, std::string>& p) { handleRope(p, em, scene, ctx, outOwnedModels, m_materials); } },
-            { "Cloth",            [&](const std::string&,    const std::map<std::string, std::string>& p) { handleCloth(p, em, scene, ctx, outOwnedModels, m_materials); } },
+            { "Spring", [&](const std::string&, const std::map<std::string, std::string>& p) { handleSpring(p); } },
+            { "Rope", [&](const std::string&, const std::map<std::string, std::string>& p) { handleRope(p, em, scene, ctx, outOwnedModels, m_materials); } },
+            { "Cloth", [&](const std::string&, const std::map<std::string, std::string>& p) { handleCloth(p, em, scene, ctx, outOwnedModels, m_materials); } },
         };
 
         auto processSection = [&]() {
@@ -183,7 +183,7 @@ namespace GE::Scene {
         // Standard properties
         if (props.count("Position")) trans.m_localPosition = parseVec3(props.at("Position"));
         if (props.count("Rotation")) trans.m_localRotation = parseVec3(props.at("Rotation"));
-        if (props.count("Scale"))    trans.m_localScale    = parseVec3(props.at("Scale"));
+        if (props.count("Scale")) trans.m_localScale = parseVec3(props.at("Scale"));
 
         // NEW: Agnostic Hierarchy Linking
         if (props.count("Parent")) {
@@ -217,34 +217,34 @@ namespace GE::Scene {
                 data = GeometryUtils::generatePlane(parseFloat(props.at("Width")), parseFloat(props.at("Depth")));
             }
             else if (shape == "Sphere") {
-                uint32_t segs    = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 32U;
-                float    radius  = props.count("Radius")   ? std::stof(props.at("Radius"))   : 1.0f;
-                float    cutoffY = props.count("CutoffY")  ? std::stof(props.at("CutoffY"))  : -radius;
+                uint32_t segs = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 32U;
+                float radius = props.count("Radius") ? std::stof(props.at("Radius"))   : 1.0f;
+                float cutoffY = props.count("CutoffY") ? std::stof(props.at("CutoffY"))  : -radius;
                 data = GeometryUtils::generateSphere(segs, radius, cutoffY, glm::vec3(1.0f));
             }
             else if (shape == "Cylinder") {
-                uint32_t segs   = props.count("Segments")     ? static_cast<uint32_t>(std::stoi(props.at("Segments")))    : 32U;
-                float    botR   = props.count("BottomRadius") ? std::stof(props.at("BottomRadius")) : 1.0f;
-                float    topR   = props.count("TopRadius")    ? std::stof(props.at("TopRadius"))    : 1.0f;
-                float    height = props.count("Height")       ? std::stof(props.at("Height"))       : 2.0f;
-                bool     topCap = !props.count("TopCap")    || props.at("TopCap")    != "false";
-                bool     botCap = !props.count("BottomCap") || props.at("BottomCap") != "false";
+                uint32_t segs = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 32U;
+                float botR = props.count("BottomRadius") ? std::stof(props.at("BottomRadius")) : 1.0f;
+                float topR = props.count("TopRadius") ? std::stof(props.at("TopRadius")) : 1.0f;
+                float height = props.count("Height") ? std::stof(props.at("Height")) : 2.0f;
+                bool topCap = !props.count("TopCap") || props.at("TopCap")    != "false";
+                bool botCap = !props.count("BottomCap") || props.at("BottomCap") != "false";
                 data = GeometryUtils::generateCylinder(segs, botR, topR, height, glm::vec3(1.0f), topCap, botCap);
             }
             else if (shape == "Plug") {
-                uint32_t segs  = props.count("Segments")   ? static_cast<uint32_t>(std::stoi(props.at("Segments")))  : 64U;
-                float    rimR  = props.count("RimRadius")  ? std::stof(props.at("RimRadius"))  : 1.0f;
+                uint32_t segs  = props.count("Segments") ? static_cast<uint32_t>(std::stoi(props.at("Segments"))) : 64U;
+                float    rimR  = props.count("RimRadius") ? std::stof(props.at("RimRadius"))  : 1.0f;
                 float    bowlR = props.count("BowlRadius") ? std::stof(props.at("BowlRadius")) : 0.9f;
-                float    depth = props.count("Depth")      ? std::stof(props.at("Depth"))      : 0.5f;
+                float    depth = props.count("Depth") ? std::stof(props.at("Depth")) : 0.5f;
                 data = GeometryUtils::generatePlug(segs, rimR, bowlR, depth, glm::vec3(1.0f));
             }
             else if (shape == "Capsule") {
                 data = GeometryUtils::generateCapsule(parseFloat(props.at("Radius")), parseFloat(props.at("Height")), 32, 16);
             }
             else if (shape == "Box") {
-                const float bw = props.count("Width")  ? std::stof(props.at("Width"))  : 1.0f;
+                const float bw = props.count("Width") ? std::stof(props.at("Width")) : 1.0f;
                 const float bh = props.count("Height") ? std::stof(props.at("Height")) : 1.0f;
-                const float bd = props.count("Depth")  ? std::stof(props.at("Depth"))  : 1.0f;
+                const float bd = props.count("Depth") ? std::stof(props.at("Depth")) : 1.0f;
                 data = GeometryUtils::generateBox(bw, bh, bd, glm::vec3(1.0f));
             }
 
@@ -343,10 +343,10 @@ namespace GE::Scene {
 
     void SceneLoader::handleRigidBody(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em) {
         GE::Components::RigidBody rb;
-        if (props.count("Mass"))        rb.mass        = parseFloat(props.at("Mass"));
-        if (props.count("Static"))      rb.isStatic    = (props.at("Static") == "true");
-        if (props.count("Velocity"))    rb.velocity    = parseVec3(props.at("Velocity"));
-        if (props.count("UseGravity"))  rb.useGravity  = (props.at("UseGravity") == "true");
+        if (props.count("Mass")) rb.mass= parseFloat(props.at("Mass"));
+        if (props.count("Static")) rb.isStatic = (props.at("Static") == "true");
+        if (props.count("Velocity")) rb.velocity = parseVec3(props.at("Velocity"));
+        if (props.count("UseGravity")) rb.useGravity = (props.at("UseGravity") == "true");
         if (props.count("Restitution")) rb.restitution = parseFloat(props.at("Restitution"));
 
         // Lab 5 Q2: initial angular velocity (rad/s, world space)
@@ -422,14 +422,14 @@ namespace GE::Scene {
         // Ixz = (1/12)·m·(3r² + h²)    (transverse axes — higher inertia, slow rotation)
         if (auto* rb = em->TryGetTIComponent<GE::Components::RigidBody>(m_currentEntity)) {
             if (!rb->isStatic && rb->mass > 0.0f && cc.radius > 0.0f) {
-                const float r   = cc.radius;
-                const float h   = cc.height;
-                const float Iy  = 0.5f          * rb->mass * r * r;
+                const float r = cc.radius;
+                const float h = cc.height;
+                const float Iy = 0.5f * rb->mass * r * r;
                 const float Ixz = (1.0f / 12.0f) * rb->mass * (3.0f * r * r + h * h);
                 rb->invInertiaTensor = glm::mat3(
-                    1.0f / Ixz, 0.0f,      0.0f,
-                    0.0f,       1.0f / Iy, 0.0f,
-                    0.0f,       0.0f,      1.0f / Ixz
+                    1.0f / Ixz, 0.0f, 0.0f,
+                    0.0f, 1.0f / Iy, 0.0f,
+                    0.0f, 0.0f, 1.0f / Ixz
                 );
             }
         }
@@ -455,9 +455,9 @@ namespace GE::Scene {
                 const float Iy = (1.0f / 12.0f) * rb->mass * (a * a + c * c);
                 const float Iz = (1.0f / 12.0f) * rb->mass * (a * a + b * b);
                 rb->invInertiaTensor = glm::mat3(
-                    1.0f / Ix, 0.0f,      0.0f,
-                    0.0f,      1.0f / Iy, 0.0f,
-                    0.0f,      0.0f,      1.0f / Iz
+                    1.0f / Ix, 0.0f, 0.0f,
+                    0.0f, 1.0f / Iy, 0.0f,
+                    0.0f, 0.0f, 1.0f / Iz
                 );
             }
         }
@@ -566,13 +566,13 @@ namespace GE::Scene {
 
     void SceneLoader::handleSpring(const std::map<std::string, std::string>& props) {
         DeferredSpring ds;
-        if (props.count("A"))          ds.entityAName   = props.at("A");
-        if (props.count("B"))          ds.entityBName   = props.at("B");
-        if (props.count("AnchorA"))    ds.worldAnchorA  = parseVec3(props.at("AnchorA"));
-        if (props.count("AnchorB"))    ds.worldAnchorB  = parseVec3(props.at("AnchorB"));
-        if (props.count("RestLength")) ds.restLength    = parseFloat(props.at("RestLength"));
-        if (props.count("K"))          ds.springConstant= parseFloat(props.at("K"));
-        if (props.count("Damping"))    ds.dampingCoeff  = parseFloat(props.at("Damping"));
+        if (props.count("A")) ds.entityAName = props.at("A");
+        if (props.count("B")) ds.entityBName = props.at("B");
+        if (props.count("AnchorA")) ds.worldAnchorA = parseVec3(props.at("AnchorA"));
+        if (props.count("AnchorB")) ds.worldAnchorB = parseVec3(props.at("AnchorB"));
+        if (props.count("RestLength")) ds.restLength = parseFloat(props.at("RestLength"));
+        if (props.count("K")) ds.springConstant = parseFloat(props.at("K"));
+        if (props.count("Damping")) ds.dampingCoeff = parseFloat(props.at("Damping"));
         m_deferredSprings.push_back(ds);
     }
 
@@ -599,8 +599,8 @@ namespace GE::Scene {
 
         GE::Components::Transform tr;
         tr.m_localPosition = pos;
-        tr.m_localScale    = glm::vec3(1.0f);
-        tr.m_state    = GE::Components::Transform::TransformState::Dirty;
+        tr.m_localScale = glm::vec3(1.0f);
+        tr.m_state = GE::Components::Transform::TransformState::Dirty;
         em->AddComponent(id, tr);
 
         // Build sphere mesh using the same pattern as handleMeshRenderer
@@ -619,10 +619,10 @@ namespace GE::Scene {
         }
 
         GE::Components::RigidBody rb;
-        rb.mass         = mass;
-        rb.isStatic     = isStatic;
-        rb.useGravity   = true;
-        rb.inverseMass  = (isStatic || mass <= 0.0f) ? 0.0f : 1.0f / mass;
+        rb.mass = mass;
+        rb.isStatic = isStatic;
+        rb.useGravity = true;
+        rb.inverseMass = (isStatic || mass <= 0.0f) ? 0.0f : 1.0f / mass;
         rb.linearDamping= linearDamping;
         em->AddComponent(id, rb);
 
@@ -635,7 +635,7 @@ namespace GE::Scene {
             const float I = (2.0f / 5.0f) * mass * radius * radius;
             auto* rbPtr = em->TryGetTIComponent<GE::Components::RigidBody>(id);
             if (rbPtr) {
-                rbPtr->invInertiaTensor      = glm::mat3(1.0f / I);
+                rbPtr->invInertiaTensor = glm::mat3(1.0f / I);
                 rbPtr->invInertiaTensorWorld = rbPtr->invInertiaTensor;
             }
         }
@@ -649,16 +649,16 @@ namespace GE::Scene {
         std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels,
         const std::map<std::string, std::shared_ptr<GE::Assets::Material>>& materials)
     {
-        const glm::vec3 anchorPt  = props.count("AnchorPoint")      ? parseVec3(props.at("AnchorPoint"))          : glm::vec3(0.0f, 8.0f, 0.0f);
-        const int       N         = props.count("Segments")          ? static_cast<int>(parseFloat(props.at("Segments"))) : 8;
-        const float     segLen    = props.count("SegmentRestLength") ? parseFloat(props.at("SegmentRestLength"))   : 0.5f;
-        const float     structK   = props.count("StructuralK")       ? parseFloat(props.at("StructuralK"))         : 100.0f;
-        const float     flexK     = props.count("FlexionK")          ? parseFloat(props.at("FlexionK"))            : 25.0f;
-        const float     damp      = props.count("Damping")           ? parseFloat(props.at("Damping"))             : 1.0f;
-        const float     mass      = props.count("Mass")              ? parseFloat(props.at("Mass"))                : 0.2f;
-        const float     radius    = props.count("Radius")            ? parseFloat(props.at("Radius"))              : 0.1f;
-        const float     linDamp   = props.count("LinearDamping")     ? parseFloat(props.at("LinearDamping"))       : 0.98f;
-        const std::string prefix  = props.count("Prefix")            ? props.at("Prefix")                         : "Rope";
+        const glm::vec3 anchorPt = props.count("AnchorPoint") ? parseVec3(props.at("AnchorPoint")) : glm::vec3(0.0f, 8.0f, 0.0f);
+        const int N = props.count("Segments") ? static_cast<int>(parseFloat(props.at("Segments"))) : 8;
+        const float segLen = props.count("SegmentRestLength") ? parseFloat(props.at("SegmentRestLength")) : 0.5f;
+        const float structK = props.count("StructuralK") ? parseFloat(props.at("StructuralK")) : 100.0f;
+        const float flexK = props.count("FlexionK") ? parseFloat(props.at("FlexionK")) : 25.0f;
+        const float damp = props.count("Damping") ? parseFloat(props.at("Damping")) : 1.0f;
+        const float mass = props.count("Mass") ? parseFloat(props.at("Mass")) : 0.2f;
+        const float radius = props.count("Radius") ? parseFloat(props.at("Radius")) : 0.1f;
+        const float linDamp = props.count("LinearDamping") ? parseFloat(props.at("LinearDamping")) : 0.98f;
+        const std::string prefix = props.count("Prefix") ? props.at("Prefix") : "Rope";
 
         std::shared_ptr<GE::Assets::Material> mat;
         if (props.count("Material") && materials.count(props.at("Material")))
@@ -677,40 +677,40 @@ namespace GE::Scene {
         // Structural springs: world anchor → Node_0, Node_i → Node_{i+1}
         {
             DeferredSpring ds;
-            ds.worldAnchorA  = anchorPt;
-            ds.entityBName   = prefix + "_Node_0";
-            ds.restLength    = segLen;
-            ds.springConstant= structK;
-            ds.dampingCoeff  = damp;
+            ds.worldAnchorA = anchorPt;
+            ds.entityBName = prefix + "_Node_0";
+            ds.restLength = segLen;
+            ds.springConstant = structK;
+            ds.dampingCoeff = damp;
             m_deferredSprings.push_back(ds);
         }
         for (int i = 0; i < N - 1; ++i) {
             DeferredSpring ds;
-            ds.entityAName   = prefix + "_Node_" + std::to_string(i);
-            ds.entityBName   = prefix + "_Node_" + std::to_string(i + 1);
-            ds.restLength    = segLen;
-            ds.springConstant= structK;
-            ds.dampingCoeff  = damp;
+            ds.entityAName = prefix + "_Node_" + std::to_string(i);
+            ds.entityBName = prefix + "_Node_" + std::to_string(i + 1);
+            ds.restLength = segLen;
+            ds.springConstant = structK;
+            ds.dampingCoeff = damp;
             m_deferredSprings.push_back(ds);
         }
 
         // Flexion springs: world anchor → Node_1 (2×segLen), Node_i → Node_{i+2}
         if (flexK > 0.0f && N >= 2) {
             DeferredSpring ds;
-            ds.worldAnchorA  = anchorPt;
-            ds.entityBName   = prefix + "_Node_1";
-            ds.restLength    = segLen * 2.0f;
-            ds.springConstant= flexK;
-            ds.dampingCoeff  = damp * 0.5f;
+            ds.worldAnchorA = anchorPt;
+            ds.entityBName = prefix + "_Node_1";
+            ds.restLength = segLen * 2.0f;
+            ds.springConstant = flexK;
+            ds.dampingCoeff = damp * 0.5f;
             m_deferredSprings.push_back(ds);
 
             for (int i = 0; i < N - 2; ++i) {
                 DeferredSpring ds2;
-                ds2.entityAName   = prefix + "_Node_" + std::to_string(i);
-                ds2.entityBName   = prefix + "_Node_" + std::to_string(i + 2);
-                ds2.restLength    = segLen * 2.0f;
-                ds2.springConstant= flexK;
-                ds2.dampingCoeff  = damp * 0.5f;
+                ds2.entityAName = prefix + "_Node_" + std::to_string(i);
+                ds2.entityBName = prefix + "_Node_" + std::to_string(i + 2);
+                ds2.restLength = segLen * 2.0f;
+                ds2.springConstant = flexK;
+                ds2.dampingCoeff = damp * 0.5f;
                 m_deferredSprings.push_back(ds2);
             }
         }
@@ -724,19 +724,19 @@ namespace GE::Scene {
         std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels,
         const std::map<std::string, std::shared_ptr<GE::Assets::Material>>& materials)
     {
-        const glm::vec3 origin    = props.count("Position")     ? parseVec3(props.at("Position"))              : glm::vec3(-1.25f, 8.0f, -1.25f);
-        const int       rows      = props.count("Rows")          ? static_cast<int>(parseFloat(props.at("Rows")))   : 6;
-        const int       cols      = props.count("Cols")          ? static_cast<int>(parseFloat(props.at("Cols")))   : 6;
-        const float     cellSize  = props.count("CellSize")      ? parseFloat(props.at("CellSize"))             : 0.5f;
-        const float     structK   = props.count("StructuralK")   ? parseFloat(props.at("StructuralK"))          : 200.0f;
-        const float     shearK    = props.count("ShearK")        ? parseFloat(props.at("ShearK"))               : 120.0f;
-        const float     flexK     = props.count("FlexionK")      ? parseFloat(props.at("FlexionK"))             : 60.0f;
-        const float     damp      = props.count("Damping")       ? parseFloat(props.at("Damping"))              : 2.0f;
-        const float     mass      = props.count("Mass")          ? parseFloat(props.at("Mass"))                 : 0.08f;
-        const float     radius    = props.count("Radius")        ? parseFloat(props.at("Radius"))               : 0.055f;
-        const float     linDamp   = props.count("LinearDamping") ? parseFloat(props.at("LinearDamping"))        : 0.97f;
-        const int       fixedRow  = props.count("FixedRow")      ? static_cast<int>(parseFloat(props.at("FixedRow"))) : 0;
-        const std::string prefix  = props.count("Prefix")        ? props.at("Prefix")                          : "Cloth";
+        const glm::vec3 origin = props.count("Position") ? parseVec3(props.at("Position")) : glm::vec3(-1.25f, 8.0f, -1.25f);
+        const int rows = props.count("Rows") ? static_cast<int>(parseFloat(props.at("Rows"))) : 6;
+        const int cols = props.count("Cols") ? static_cast<int>(parseFloat(props.at("Cols"))) : 6;
+        const float cellSize = props.count("CellSize") ? parseFloat(props.at("CellSize")) : 0.5f;
+        const float structK = props.count("StructuralK") ? parseFloat(props.at("StructuralK")) : 200.0f;
+        const float shearK = props.count("ShearK") ? parseFloat(props.at("ShearK")) : 120.0f;
+        const float flexK = props.count("FlexionK") ? parseFloat(props.at("FlexionK")) : 60.0f;
+        const float damp = props.count("Damping") ? parseFloat(props.at("Damping")) : 2.0f;
+        const float mass = props.count("Mass") ? parseFloat(props.at("Mass")) : 0.08f;
+        const float radius = props.count("Radius") ? parseFloat(props.at("Radius")) : 0.055f;
+        const float linDamp = props.count("LinearDamping") ? parseFloat(props.at("LinearDamping")) : 0.97f;
+        const int fixedRow = props.count("FixedRow") ? static_cast<int>(parseFloat(props.at("FixedRow"))) : 0;
+        const std::string prefix = props.count("Prefix") ? props.at("Prefix") : "Cloth";
 
         std::shared_ptr<GE::Assets::Material> mat;
         if (props.count("Material") && materials.count(props.at("Material")))
@@ -758,11 +758,11 @@ namespace GE::Scene {
 
         auto addSpring = [&](const std::string& a, const std::string& b, float len, float k) {
             DeferredSpring ds;
-            ds.entityAName   = a;
-            ds.entityBName   = b;
-            ds.restLength    = len;
-            ds.springConstant= k;
-            ds.dampingCoeff  = damp;
+            ds.entityAName = a;
+            ds.entityBName = b;
+            ds.restLength = len;
+            ds.springConstant = k;
+            ds.dampingCoeff = damp;
             m_deferredSprings.push_back(ds);
         };
 
@@ -796,11 +796,11 @@ namespace GE::Scene {
 
         for (const auto& ds : m_deferredSprings) {
             GE::Systems::SpringSystem::SpringData sd;
-            sd.worldAnchorA  = ds.worldAnchorA;
-            sd.worldAnchorB  = ds.worldAnchorB;
-            sd.restLength    = ds.restLength;
-            sd.springConstant= ds.springConstant;
-            sd.dampingCoeff  = ds.dampingCoeff;
+            sd.worldAnchorA = ds.worldAnchorA;
+            sd.worldAnchorB = ds.worldAnchorB;
+            sd.restLength = ds.restLength;
+            sd.springConstant = ds.springConstant;
+            sd.dampingCoeff = ds.dampingCoeff;
 
             if (!ds.entityAName.empty()) {
                 const GE::ECS::EntityID id = scene->getEntityID(ds.entityAName);

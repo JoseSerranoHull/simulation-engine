@@ -26,12 +26,11 @@ namespace GE::Systems {
 class FlockGpuSystem : public GE::ECS::IGpuSystem {
 public:
     /**
-     * @param backend    Non-owning pointer — lifetime managed by FlatBuffersScenario.
-     * @param gpuMode    Reference to the atomic flag on FlatBuffersScenario that
-     *                   toggles GPU vs CPU mode from the ImGui combo.
+     * @param backend Non-owning pointer — lifetime managed by FlatBuffersScenario.
+     * @param gpuMode Reference to the atomic flag on FlatBuffersScenario that
+     * toggles GPU vs CPU mode from the ImGui combo.
      */
-    explicit FlockGpuSystem(GE::Particles::FlockGpuBackend* backend,
-                            std::atomic<bool>&              gpuMode);
+    explicit FlockGpuSystem(GE::Particles::FlockGpuBackend* backend, std::atomic<bool>& gpuMode);
 
     ~FlockGpuSystem() override = default;
 
@@ -40,14 +39,14 @@ public:
 
     // Set by FlatBuffersScenario after creation — mirrors FlockingSystem::m_spawnOrigin/Radius.
     glm::vec3 m_spawnCenter { 0.0f };
-    float     m_spawnRadius { 10.0f };
+    float m_spawnRadius { 10.0f };
 
     // Written by ImGui (main thread), read by OnUpdate (graphics thread via UpdateGpuStages).
     std::atomic<bool> m_frozen { false };
 
 private:
-    GE::Particles::FlockGpuBackend* m_backend; ///< Non-owning
-    std::atomic<bool>&              m_gpuMode;
+    GE::Particles::FlockGpuBackend* m_backend; // < Non-owning
+    std::atomic<bool>& m_gpuMode;
 };
 
 } // namespace GE::Systems

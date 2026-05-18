@@ -251,22 +251,22 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
         em->AddComponent(spawnerId, spawnTag);
 
         GE::Components::SpawnerComponent sc;
-        sc.startTime    = rec.startTime;
-        sc.isBurst      = rec.isBurst;
-        sc.burstCount   = rec.maxCount;
-        sc.maxCount     = rec.maxCount;
-        sc.interval     = rec.interval;
+        sc.startTime = rec.startTime;
+        sc.isBurst = rec.isBurst;
+        sc.burstCount = rec.maxCount;
+        sc.maxCount = rec.maxCount;
+        sc.interval = rec.interval;
         sc.locationType = rec.locationType;
-        sc.fixedPos     = rec.fixedPos;
-        sc.boxMin       = rec.boxMin;
-        sc.boxMax       = rec.boxMax;
+        sc.fixedPos = rec.fixedPos;
+        sc.boxMin = rec.boxMin;
+        sc.boxMax = rec.boxMax;
         sc.sphereCenter = rec.sphereCenter;
         sc.sphereRadius = rec.sphereRadius;
-        sc.linVelMin    = rec.linVelMin;
-        sc.linVelMax    = rec.linVelMax;
-        sc.angVelMin    = rec.angVelMin;
-        sc.angVelMax    = rec.angVelMax;
-        sc.ownerPeerId  = rec.ownerPeerId;
+        sc.linVelMin = rec.linVelMin;
+        sc.linVelMax = rec.linVelMax;
+        sc.angVelMin = rec.angVelMin;
+        sc.angVelMax = rec.angVelMax;
+        sc.ownerPeerId = rec.ownerPeerId;
         sc.isSequential = rec.isSequential;
 
         // Resolve prefab pointer from registry (stays valid until OnUnload clears m_prefabRegistry)
@@ -310,7 +310,7 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
                 sphereData, flatMat, ctx.cmd, ctx.stagingBuffers, ctx.stagingMemories);
 
             if (sphereMesh) {
-                GE::Assets::Mesh*     const rawMesh = sphereMesh.get();
+                GE::Assets::Mesh* const rawMesh = sphereMesh.get();
                 GE::Assets::Material* const rawMat  = flatMat.get();
 
                 auto dummyModel = std::make_unique<Model>();
@@ -361,25 +361,25 @@ void FlatBuffersScenario::OnLoad(GpuUploadContext& ctx) {
             ClothRebuildState s;
             s.origRows = cc.rows;
             s.origCols = cc.cols;
-            s.origSpringK            = cc.springK;
-            s.origShearK             = cc.shearK;
-            s.origFlexionK           = cc.flexionK;
-            s.origDamping            = cc.damping;
-            s.origTearThreshold      = cc.tearThreshold;
-            s.origTearRoughness      = cc.tearRoughness;
+            s.origSpringK = cc.springK;
+            s.origShearK = cc.shearK;
+            s.origFlexionK = cc.flexionK;
+            s.origDamping = cc.damping;
+            s.origTearThreshold = cc.tearThreshold;
+            s.origTearRoughness = cc.tearRoughness;
             s.origStressTransferRate = cc.stressTransferRate;
-            s.origBurnRate           = cc.burnRate;
-            s.origCurlAmount         = cc.curlAmount;
-            s.origHeatConductivity   = cc.heatConductivity;
-            s.origShrinkScale        = cc.shrinkScale;
-            s.origDragCoeff          = cc.dragCoeff;
-            s.origGustAmplitude      = cc.gustAmplitude;
-            s.origGustFrequency      = cc.gustFrequency;
-            s.origConstraintIters    = cc.constraintIters;
-            s.origWindEnabled        = cc.windEnabled;
-            s.origWindX              = cc.windX;
-            s.origWindZ              = cc.windZ;
-            s.density      = 1;
+            s.origBurnRate = cc.burnRate;
+            s.origCurlAmount = cc.curlAmount;
+            s.origHeatConductivity = cc.heatConductivity;
+            s.origShrinkScale = cc.shrinkScale;
+            s.origDragCoeff = cc.dragCoeff;
+            s.origGustAmplitude = cc.gustAmplitude;
+            s.origGustFrequency = cc.gustFrequency;
+            s.origConstraintIters = cc.constraintIters;
+            s.origWindEnabled = cc.windEnabled;
+            s.origWindX = cc.windX;
+            s.origWindZ = cc.windZ;
+            s.density = 1;
             s.origCellSize = cc.cellSize;
             m_clothStates.push_back(s);
         }
@@ -446,12 +446,12 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
             // Per-vertex normal: central-difference cross product of deformed neighbor positions.
             // At boundary vertices the missing neighbor is replaced by the current vertex (half step).
             const glm::vec3 right = (c < C-1) ? cc.particles[vi+1].position : center;
-            const glm::vec3 left  = (c > 0)   ? cc.particles[vi-1].position : center;
-            const glm::vec3 above = (r > 0)   ? cc.particles[vi-C].position : center;
+            const glm::vec3 left = (c > 0) ? cc.particles[vi-1].position : center;
+            const glm::vec3 above = (r > 0) ? cc.particles[vi-C].position : center;
             const glm::vec3 below = (r < R-1) ? cc.particles[vi+C].position : center;
             const glm::vec3 dX = right - left;
             const glm::vec3 dY = above - below;
-            const glm::vec3 n  = glm::cross(dX, dY);
+            const glm::vec3 n = glm::cross(dX, dY);
             verts[vi].normal = (glm::dot(n, n) > 1e-8f) ? glm::normalize(n) : glm::vec3(0.0f, 0.0f, 1.0f);
 
             // Per-vertex tangent: U direction (toward increasing column) for TBN normal mapping.
@@ -466,14 +466,12 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
             const float heat  = cc.particles[vi].heat;
             const bool  burned = cc.particles[vi].burned;
 
-            static constexpr glm::vec3 YELLOW  { 1.00f, 0.95f, 0.00f };
-            static constexpr glm::vec3 ORANGE  { 1.00f, 0.40f, 0.00f };
-            static constexpr glm::vec3 RED     { 0.80f, 0.05f, 0.00f };
+            static constexpr glm::vec3 YELLOW { 1.00f, 0.95f, 0.00f };
+            static constexpr glm::vec3 ORANGE { 1.00f, 0.40f, 0.00f };
+            static constexpr glm::vec3 RED { 0.80f, 0.05f, 0.00f };
             static constexpr glm::vec3 CHARRED { 0.05f, 0.04f, 0.02f };
 
-            const glm::vec3 coldColor = cc.useTextureMode
-                                        ? glm::vec3{ 1.0f, 1.0f, 1.0f }
-                                        : cc.color;
+            const glm::vec3 coldColor = cc.useTextureMode ? glm::vec3{ 1.0f, 1.0f, 1.0f } : cc.color;
             if (burned) {
                 verts[vi].color = CHARRED;
             } else if (heat <= 0.001f) {
@@ -481,11 +479,11 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
             } else if (heat < 0.25f) {
                 verts[vi].color = glm::mix(coldColor, YELLOW, heat / 0.25f);
             } else if (heat < 0.55f) {
-                verts[vi].color = glm::mix(YELLOW,  ORANGE,  (heat - 0.25f) / 0.30f);
+                verts[vi].color = glm::mix(YELLOW, ORANGE,  (heat - 0.25f) / 0.30f);
             } else if (heat < 0.80f) {
-                verts[vi].color = glm::mix(ORANGE,  RED,     (heat - 0.55f) / 0.25f);
+                verts[vi].color = glm::mix(ORANGE, RED, (heat - 0.55f) / 0.25f);
             } else {
-                verts[vi].color = glm::mix(RED,     CHARRED, (heat - 0.80f) / 0.20f);
+                verts[vi].color = glm::mix(RED, CHARRED, (heat - 0.80f) / 0.20f);
             }
         }
     }
@@ -510,8 +508,8 @@ void FlatBuffersScenario::OnUpdate(float dt, float /*totalTime*/) {
                 const uint32_t br  = bl + 1U;
 
                 const bool anyBurned =
-                    cc.particles[tl].burned  || cc.particles[tr_].burned ||
-                    cc.particles[bl].burned  || cc.particles[br].burned;
+                    cc.particles[tl].burned || cc.particles[tr_].burned ||
+                    cc.particles[bl].burned || cc.particles[br].burned;
 
                 if (anyBurned) {
                     idxPtr[w++]=0U; idxPtr[w++]=0U; idxPtr[w++]=0U;
@@ -1077,66 +1075,66 @@ void FlatBuffersScenario::OnGUI() {
                         ImGui::Text("Rows: %d", cc.rows);
                         ImGui::SameLine();
                         if (ImGui::Button("-##rows_dec")) {
-                            cc.rebuildRows     = glm::max(cc.rows - 1, 2);
-                            cc.rebuildCols     = cc.cols;
+                            cc.rebuildRows = glm::max(cc.rows - 1, 2);
+                            cc.rebuildCols = cc.cols;
                             cc.rebuildCellSize = cc.cellSize;
                             cc.rebuildPending  = true;
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("+##rows_inc")) {
-                            cc.rebuildRows     = glm::min(cc.rows + 1, MAX_CLOTH_DIM);
-                            cc.rebuildCols     = cc.cols;
+                            cc.rebuildRows = glm::min(cc.rows + 1, MAX_CLOTH_DIM);
+                            cc.rebuildCols = cc.cols;
                             cc.rebuildCellSize = cc.cellSize;
                             cc.rebuildPending  = true;
                         }
                         ImGui::Text("Cols: %d", cc.cols);
                         ImGui::SameLine();
                         if (ImGui::Button("-##cols_dec")) {
-                            cc.rebuildRows     = cc.rows;
-                            cc.rebuildCols     = glm::max(cc.cols - 1, 2);
+                            cc.rebuildRows = cc.rows;
+                            cc.rebuildCols = glm::max(cc.cols - 1, 2);
                             cc.rebuildCellSize = cc.cellSize;
-                            cc.rebuildPending  = true;
+                            cc.rebuildPending = true;
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("+##cols_inc")) {
-                            cc.rebuildRows     = cc.rows;
-                            cc.rebuildCols     = glm::min(cc.cols + 1, MAX_CLOTH_DIM);
+                            cc.rebuildRows = cc.rows;
+                            cc.rebuildCols = glm::min(cc.cols + 1, MAX_CLOTH_DIM);
                             cc.rebuildCellSize = cc.cellSize;
-                            cc.rebuildPending  = true;
+                            cc.rebuildPending = true;
                         }
                         ImGui::TextDisabled("Clears burn/tear state and re-pins top row.");
                         if (ImGui::Button("Regenerate Cloth")) {
-                            cc.rebuildRows     = cc.rows;
-                            cc.rebuildCols     = cc.cols;
+                            cc.rebuildRows = cc.rows;
+                            cc.rebuildCols = cc.cols;
                             cc.rebuildCellSize = cc.cellSize;
-                            cc.rebuildPending  = true;
+                            cc.rebuildPending = true;
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset to Defaults")) {
                             // Reset physics params (safe: POD scalar writes, same pattern as windEnabled)
-                            cc.springK            = state.origSpringK;
-                            cc.shearK             = state.origShearK;
-                            cc.flexionK           = state.origFlexionK;
-                            cc.damping            = state.origDamping;
-                            cc.tearThreshold      = state.origTearThreshold;
-                            cc.tearRoughness      = state.origTearRoughness;
+                            cc.springK = state.origSpringK;
+                            cc.shearK = state.origShearK;
+                            cc.flexionK = state.origFlexionK;
+                            cc.damping = state.origDamping;
+                            cc.tearThreshold = state.origTearThreshold;
+                            cc.tearRoughness = state.origTearRoughness;
                             cc.stressTransferRate = state.origStressTransferRate;
-                            cc.burnRate           = state.origBurnRate;
-                            cc.curlAmount         = state.origCurlAmount;
-                            cc.heatConductivity   = state.origHeatConductivity;
-                            cc.shrinkScale        = state.origShrinkScale;
-                            cc.dragCoeff          = state.origDragCoeff;
-                            cc.gustAmplitude      = state.origGustAmplitude;
-                            cc.gustFrequency      = state.origGustFrequency;
-                            cc.constraintIters    = state.origConstraintIters;
-                            cc.windEnabled        = state.origWindEnabled;
-                            cc.windX              = state.origWindX;
-                            cc.windZ              = state.origWindZ;
-                            state.density      = 1;
-                            cc.rebuildRows     = state.origRows;
-                            cc.rebuildCols     = state.origCols;
+                            cc.burnRate = state.origBurnRate;
+                            cc.curlAmount = state.origCurlAmount;
+                            cc.heatConductivity = state.origHeatConductivity;
+                            cc.shrinkScale = state.origShrinkScale;
+                            cc.dragCoeff = state.origDragCoeff;
+                            cc.gustAmplitude = state.origGustAmplitude;
+                            cc.gustFrequency = state.origGustFrequency;
+                            cc.constraintIters = state.origConstraintIters;
+                            cc.windEnabled = state.origWindEnabled;
+                            cc.windX = state.origWindX;
+                            cc.windZ = state.origWindZ;
+                            state.density = 1;
+                            cc.rebuildRows = state.origRows;
+                            cc.rebuildCols = state.origCols;
                             cc.rebuildCellSize = state.origCellSize;
-                            cc.rebuildPending  = true;
+                            cc.rebuildPending = true;
                         }
 
                         // Density: multiplies origRows/Cols, divides cellSize → physical size preserved
@@ -1148,8 +1146,8 @@ void FlatBuffersScenario::OnGUI() {
                         if (state.density <= 1) { ImGui::BeginDisabled(); }
                         if (ImGui::Button("-##dens_dec")) {
                             state.density--;
-                            cc.rebuildRows     = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
-                            cc.rebuildCols     = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildRows = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildCols = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
                             cc.rebuildCellSize = state.origCellSize / static_cast<float>(state.density);
                             cc.rebuildPending  = true;
                         }
@@ -1158,25 +1156,25 @@ void FlatBuffersScenario::OnGUI() {
                         if (state.density >= glm::max(maxDensity, 1)) { ImGui::BeginDisabled(); }
                         if (ImGui::Button("+##dens_inc")) {
                             state.density++;
-                            cc.rebuildRows     = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
-                            cc.rebuildCols     = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildRows = glm::clamp(state.origRows * state.density, 2, MAX_CLOTH_DIM);
+                            cc.rebuildCols = glm::clamp(state.origCols * state.density, 2, MAX_CLOTH_DIM);
                             cc.rebuildCellSize = state.origCellSize / static_cast<float>(state.density);
-                            cc.rebuildPending  = true;
+                            cc.rebuildPending = true;
                         }
                         if (state.density >= glm::max(maxDensity, 1)) { ImGui::EndDisabled(); }
                         ImGui::TextDisabled("1 = original; 2 = double resolution, same physical size. Max: %d", glm::max(maxDensity, 1));
                     }
                     ImGui::Separator();
 
-                    ImGui::SliderInt  ("Constraint Iters", &cc.constraintIters, 1,     8);
-                    ImGui::SliderFloat("Spring K",        &cc.springK,         1.0f,  1000.0f);
-                    ImGui::SliderFloat("Shear K",         &cc.shearK,          0.0f,   500.0f);
-                    ImGui::SliderFloat("Flexion K",       &cc.flexionK,        0.0f,   250.0f);
-                    ImGui::SliderFloat("Damping",          &cc.damping,          0.0f,  1.0f);
+                    ImGui::SliderInt  ("Constraint Iters", &cc.constraintIters, 1, 8);
+                    ImGui::SliderFloat("Spring K", &cc.springK, 1.0f,  1000.0f);
+                    ImGui::SliderFloat("Shear K", &cc.shearK, 0.0f, 500.0f);
+                    ImGui::SliderFloat("Flexion K", &cc.flexionK, 0.0f, 250.0f);
+                    ImGui::SliderFloat("Damping", &cc.damping, 0.0f, 1.0f);
                     ImGui::Separator();
                     ImGui::Text("Tearing");
-                    ImGui::SliderFloat("Tear Threshold",   &cc.tearThreshold,    1.0f, 10.0f);
-                    ImGui::SliderFloat("Tear Roughness",   &cc.tearRoughness,    0.0f,  0.2f);
+                    ImGui::SliderFloat("Tear Threshold", &cc.tearThreshold, 1.0f, 10.0f);
+                    ImGui::SliderFloat("Tear Roughness", &cc.tearRoughness, 0.0f, 0.2f);
                     ImGui::SliderFloat("Stress Transfer",  &cc.stressTransferRate, 0.0f, 1.0f);
                     if (ImGui::Button("Reset Cloth")) {
                         for (auto& s : cc.springs) { s.active = true; s.stressAccum = 0.0f; }
@@ -1187,19 +1185,19 @@ void FlatBuffersScenario::OnGUI() {
                     ImGui::Separator();
                     ImGui::Checkbox("Wind", &cc.windEnabled);
                     if (cc.windEnabled) {
-                        ImGui::SliderFloat("Wind X",     &cc.windX,         -10.0f, 10.0f);
-                        ImGui::SliderFloat("Wind Z",     &cc.windZ,         -10.0f, 10.0f);
-                        ImGui::SliderFloat("Drag Coeff", &cc.dragCoeff,       0.1f,  4.0f);
-                        ImGui::SliderFloat("Gust Amp",   &cc.gustAmplitude,   0.0f,  1.0f);
-                        ImGui::SliderFloat("Gust Freq",  &cc.gustFrequency,   0.1f,  3.0f);
+                        ImGui::SliderFloat("Wind X", &cc.windX, -10.0f, 10.0f);
+                        ImGui::SliderFloat("Wind Z", &cc.windZ, -10.0f, 10.0f);
+                        ImGui::SliderFloat("Drag Coeff", &cc.dragCoeff, 0.1f, 4.0f);
+                        ImGui::SliderFloat("Gust Amp", &cc.gustAmplitude, 0.0f, 1.0f);
+                        ImGui::SliderFloat("Gust Freq", &cc.gustFrequency, 0.1f, 3.0f);
                     }
 
                     ImGui::Separator();
                     ImGui::Text("Burning");
                     ImGui::SliderFloat("Heat Conduct.", &cc.heatConductivity, 0.0f, 2.0f);
-                    ImGui::SliderFloat("Shrink Scale",  &cc.shrinkScale,      0.0f, 0.8f);
-                    ImGui::SliderFloat("Curl Amount",   &cc.curlAmount,       0.0f, 0.15f);
-                    ImGui::SliderFloat("Burn Rate",     &cc.burnRate,         0.1f, 5.0f);
+                    ImGui::SliderFloat("Shrink Scale", &cc.shrinkScale, 0.0f, 0.8f);
+                    ImGui::SliderFloat("Curl Amount", &cc.curlAmount, 0.0f, 0.15f);
+                    ImGui::SliderFloat("Burn Rate", &cc.burnRate, 0.1f, 5.0f);
 
                     // Helper: compute average particle world position for "place at centre".
                     auto clothCentre = [&]() -> glm::vec3 {
@@ -1247,13 +1245,13 @@ void FlatBuffersScenario::OnGUI() {
                     if (m_visualizerSystem->m_showClothSprings) {
                         ImGui::Indent();
                         ImGui::Checkbox("Structural", &m_visualizerSystem->m_showStructural);
-                        ImGui::Checkbox("Shear",      &m_visualizerSystem->m_showShear);
-                        ImGui::Checkbox("Flexion",    &m_visualizerSystem->m_showFlexion);
-                        ImGui::Checkbox("Torn",       &m_visualizerSystem->m_showTornSprings);
+                        ImGui::Checkbox("Shear", &m_visualizerSystem->m_showShear);
+                        ImGui::Checkbox("Flexion", &m_visualizerSystem->m_showFlexion);
+                        ImGui::Checkbox("Torn", &m_visualizerSystem->m_showTornSprings);
                         ImGui::Unindent();
                     }
                     ImGui::Checkbox("Particles", &m_visualizerSystem->m_showParticles);
-                    ImGui::Checkbox("Normals",   &m_visualizerSystem->m_showNormals);
+                    ImGui::Checkbox("Normals", &m_visualizerSystem->m_showNormals);
                 }
 
                 ImGui::EndMenu();
@@ -1370,25 +1368,25 @@ void FlatBuffersScenario::OnGUI() {
                     ImGui::Separator();
                     ImGui::Text("Agent Parameters (all agents):");
 
-                    static float sepR   = 1.5f, alignR = 3.0f, cohR   = 5.0f;
-                    static float wSep   = 2.0f, wAlign = 1.0f, wCoh   = 1.0f;
-                    static float maxSpd = 6.0f, maxF   = 15.0f;
+                    static float sepR = 1.5f, alignR = 3.0f, cohR = 5.0f;
+                    static float wSep = 2.0f, wAlign = 1.0f, wCoh = 1.0f;
+                    static float maxSpd = 6.0f, maxF = 15.0f;
                     bool changed = false;
-                    changed |= ImGui::SliderFloat("Sep Radius",   &sepR,   0.1f,  5.0f);
+                    changed |= ImGui::SliderFloat("Sep Radius", &sepR, 0.1f, 5.0f);
                     changed |= ImGui::SliderFloat("Align Radius", &alignR, 0.5f, 10.0f);
-                    changed |= ImGui::SliderFloat("Coh Radius",   &cohR,   1.0f, 20.0f);
-                    changed |= ImGui::SliderFloat("W Separation", &wSep,   0.0f,  5.0f);
-                    changed |= ImGui::SliderFloat("W Alignment",  &wAlign, 0.0f,  5.0f);
-                    changed |= ImGui::SliderFloat("W Cohesion",   &wCoh,   0.0f,  5.0f);
-                    changed |= ImGui::SliderFloat("Max Speed",    &maxSpd, 1.0f, 20.0f);
-                    changed |= ImGui::SliderFloat("Max Force",    &maxF,   1.0f, 50.0f);
+                    changed |= ImGui::SliderFloat("Coh Radius", &cohR, 1.0f, 20.0f);
+                    changed |= ImGui::SliderFloat("W Separation", &wSep, 0.0f, 5.0f);
+                    changed |= ImGui::SliderFloat("W Alignment", &wAlign, 0.0f, 5.0f);
+                    changed |= ImGui::SliderFloat("W Cohesion", &wCoh, 0.0f, 5.0f);
+                    changed |= ImGui::SliderFloat("Max Speed", &maxSpd, 1.0f, 20.0f);
+                    changed |= ImGui::SliderFloat("Max Force", &maxF, 1.0f, 50.0f);
                     if (changed) {
                         for (uint32_t i = 0U; i < fkArr.GetCount(); ++i) {
                             auto& fk = fkArr.Data()[i];
                             fk.separationRadius = sepR;  fk.alignmentRadius = alignR;
-                            fk.cohesionRadius   = cohR;  fk.wSeparation     = wSep;
-                            fk.wAlignment       = wAlign; fk.wCohesion      = wCoh;
-                            fk.maxSpeed         = maxSpd; fk.maxForce       = maxF;
+                            fk.cohesionRadius = cohR;  fk.wSeparation = wSep;
+                            fk.wAlignment = wAlign; fk.wCohesion = wCoh;
+                            fk.maxSpeed = maxSpd; fk.maxForce = maxF;
                         }
                     }
                 }
@@ -1417,13 +1415,13 @@ void FlatBuffersScenario::OnGUI() {
                         ImGuiTableFlags_NoHostExtendX;
 
                     if (ImGui::BeginTable("spawners_tbl", 7, kTableFlags)) {
-                        ImGui::TableSetupColumn("#",        ImGuiTableColumnFlags_WidthFixed, 22.0f);
-                        ImGui::TableSetupColumn("Name",     ImGuiTableColumnFlags_WidthFixed, 130.0f);
-                        ImGui::TableSetupColumn("Prefab",   ImGuiTableColumnFlags_WidthFixed, 100.0f);
-                        ImGui::TableSetupColumn("Type",     ImGuiTableColumnFlags_WidthFixed, 62.0f);
+                        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 22.0f);
+                        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 130.0f);
+                        ImGui::TableSetupColumn("Prefab", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 62.0f);
                         ImGui::TableSetupColumn("Progress", ImGuiTableColumnFlags_WidthFixed, 110.0f);
-                        ImGui::TableSetupColumn("Status",   ImGuiTableColumnFlags_WidthFixed, 58.0f);
-                        ImGui::TableSetupColumn("Actions",  ImGuiTableColumnFlags_WidthFixed, 148.0f);
+                        ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 58.0f);
+                        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 148.0f);
                         ImGui::TableHeadersRow();
 
                         for (uint32_t i = 0; i < spawnerArr.GetCount(); ++i) {
@@ -1512,11 +1510,11 @@ void FlatBuffersScenario::OnGUI() {
 
                             // Reset (restart from scratch; old spawned entities become root nodes)
                             if (ImGui::SmallButton("Reset")) {
-                                sc.elapsed            = 0.0f;
+                                sc.elapsed = 0.0f;
                                 sc.timeSinceLastSpawn = 0.0f;
-                                sc.spawnedCount       = 0;
-                                sc.activated          = false;
-                                sc.paused             = false;
+                                sc.spawnedCount = 0;
+                                sc.activated = false;
+                                sc.paused = false;
                                 sc.spawnedEntityIds.clear();
                             }
 
@@ -1540,11 +1538,11 @@ void FlatBuffersScenario::buildCamerasFromContext(const GE::Scene::FB::FBSceneCo
     m_cameras.clear();
     for (const auto& rec : ctx.cameras) {
         FBCameraState state;
-        state.name      = rec.name;
-        state.position  = rec.position;
+        state.name = rec.name;
+        state.position = rec.position;
         state.direction = rec.direction;
-        state.fov       = rec.fov;
-        state.isOrtho   = rec.isOrtho;
+        state.fov = rec.fov;
+        state.isOrtho = rec.isOrtho;
         state.orthoSize = rec.orthoSize;
         m_cameras.push_back(state);
     }

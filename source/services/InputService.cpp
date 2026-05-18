@@ -192,9 +192,9 @@ void InputService::handleMouseEvent(const double xpos, const double ypos) {
 const char* InputService::getActiveCameraLabel() const {
     switch (static_cast<uint32_t>(activeCameraIndex)) {
     case CAM_IDX_FRONT: return "Frontal Perspective";
-    case CAM_IDX_BIRD:  return "High-Angle Overview";
+    case CAM_IDX_BIRD: return "High-Angle Overview";
     case CAM_IDX_GLOBE: return "Macro Interior";
-    default:            return "Unknown System";
+    default: return "Unknown System";
     }
 }
 

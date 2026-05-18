@@ -21,8 +21,8 @@ namespace GE::Physics {
     /**
      * @class MaterialInteractionRegistry
      * @brief Maps canonical (materialA, materialB) pairs to MaterialInteractionRecord.
-     *        Keys are normalised alphabetically so (A,B) and (B,A) hit the same entry.
-     *        Populated at scene-load time from the FlatBuffers MaterialInteraction table.
+     * Keys are normalised alphabetically so (A,B) and (B,A) hit the same entry.
+     * Populated at scene-load time from the FlatBuffers MaterialInteraction table.
      */
     class MaterialInteractionRegistry {
     public:

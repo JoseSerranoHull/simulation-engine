@@ -34,19 +34,19 @@ protected:
     virtual glm::vec2 ReadMovementInput() const;
 
     /** Returns true when a jump impulse should be applied. Override to disable (e.g. racing). */
-    virtual bool      ReadJumpInput()     const;
+    virtual bool ReadJumpInput() const;
 
     /** Called after movement is applied each frame. Override for shoot / boost / drift. */
-    virtual void      OnPostUpdate(float /*dt*/) {}
+    virtual void OnPostUpdate(float /*dt*/) {}
 
     // Tunables — children can change defaults in their own constructor.
-    float m_moveSpeed   { 5.0f  };
+    float m_moveSpeed { 5.0f  };
     float m_jumpImpulse { 6.0f  };
-    float m_hDamping    { 0.85f };
+    float m_hDamping { 0.85f };
 
 private:
     bool  m_prevJumpInput { false };
-    float m_jumpCooldown  { 0.0f  };
+    float m_jumpCooldown { 0.0f  };
 };
 
 } // namespace GE::Scripts

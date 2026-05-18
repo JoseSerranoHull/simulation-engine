@@ -13,8 +13,8 @@
 #include "components/SpawnerComponent.h"
 
 // Forward declarations to avoid pulling in heavy headers
-namespace GE::ECS    { class EntityManager; }
-namespace GE::Scene  { class Scene; }
+namespace GE::ECS { class EntityManager; }
+namespace GE::Scene { class Scene; }
 namespace GE::Graphics { struct GpuUploadContext; class GraphicsPipeline; }
 namespace GE::Assets { class Model; class Mesh; class Material; }
 class AssetManager;
@@ -24,15 +24,15 @@ namespace GE::Scene::FB {
     /** @brief Physics material record extracted from FlatBuffers Material table. */
     struct PhysicsMaterialRecord {
         std::string name;
-        float       density { 1.0f };
+        float density { 1.0f };
     };
 
     /** @brief Interaction parameters for a material pair, extracted from FlatBuffers MaterialInteraction table. */
     struct MaterialInteractionRecord {
         std::string materialA;
         std::string materialB;
-        float restitution     { 0.6f };
-        float staticFriction  { 0.0f };
+        float restitution { 0.6f };
+        float staticFriction { 0.0f };
         float dynamicFriction { 0.0f };
     };
 
@@ -45,22 +45,22 @@ namespace GE::Scene::FB {
 
     /**
      * @brief Pre-computed entity template built at scene load time by adaptPrefabs().
-     *        The shared GPU mesh is uploaded once and reused by all spawned instances.
-     *        Lifetime: owned by FlatBuffersScenario::m_prefabRegistry (valid until OnUnload).
+     * The shared GPU mesh is uploaded once and reused by all spawned instances.
+     * Lifetime: owned by FlatBuffersScenario::m_prefabRegistry (valid until OnUnload).
      */
     struct PrefabTemplate {
-        std::string         name;
-        PrefabShapeKind     shapeKind { PrefabShapeKind::Sphere };
+        std::string name;
+        PrefabShapeKind shapeKind { PrefabShapeKind::Sphere };
 
         // Shape parameters (used to build the collider at spawn time)
-        float     radius { 0.5f };   // sphere radius / capsule+cylinder radius
-        float     height { 1.0f };   // capsule / cylinder height
-        glm::vec3 size   { 1.0f };   // cuboid full extents (x, y, z)
+        float radius { 0.5f };  // sphere radius / capsule+cylinder radius
+        float height { 1.0f };  // capsule & cylinder height
+        glm::vec3 size { 1.0f };    // cuboid full extents (x, y, z)
 
         // Physics (computed from shape + material density at load time)
-        float     density     { 1.0f };
-        float     restitution { 0.6f };
-        float     mass        { 0.0f };
+        float density { 1.0f };
+        float restitution { 0.6f };
+        float mass  { 0.0f };
         glm::mat3 invInertia  { glm::mat3(0.0f) };
 
         // Owner-colored meshes — indices 0–3 = peer 1–4 (red/green/blue/yellow).
@@ -69,8 +69,8 @@ namespace GE::Scene::FB {
 
         // Material-appearance mesh — populated when useOwnerColors=false.
         // Textured (Phong pipeline) when texture_path specified; tinted flat-color otherwise.
-        GE::Assets::Mesh*                          materialMesh   { nullptr };
-        std::shared_ptr<GE::Assets::Material>      materialMatPtr;  // keeps Phong material alive
+        GE::Assets::Mesh* materialMesh { nullptr };
+        std::shared_ptr<GE::Assets::Material> materialMatPtr;  // keeps Phong material alive
 
         // Optional script type name (empty = no script attached on spawn)
         std::string scriptType;
@@ -86,18 +86,18 @@ namespace GE::Scene::FB {
      */
     struct SpawnerRecord {
         std::string name;
-        float    startTime  { 0.0f };
-        bool     isBurst    { true };
-        uint32_t maxCount   { 1 };
-        float    interval   { 1.0f };
+        float startTime { 0.0f };
+        bool isBurst { true };
+        uint32_t maxCount { 1 };
+        float interval { 1.0f };
 
         // Location
         GE::Components::SpawnLocType locationType { GE::Components::SpawnLocType::FIXED };
-        glm::vec3 fixedPos     { 0.0f };
-        glm::vec3 boxMin       { -1.0f };
-        glm::vec3 boxMax       {  1.0f };
+        glm::vec3 fixedPos { 0.0f };
+        glm::vec3 boxMin { -1.0f };
+        glm::vec3 boxMax {  1.0f };
         glm::vec3 sphereCenter {  0.0f };
-        float     sphereRadius { 1.0f };
+        float sphereRadius { 1.0f };
 
         // Velocity ranges
         glm::vec3 linVelMin { 0.0f }, linVelMax { 0.0f };
@@ -123,38 +123,38 @@ namespace GE::Scene::FB {
      */
     struct FBCameraRecord {
         std::string name;
-        glm::vec3   position  { 0.0f, 0.0f,  3.0f };
-        glm::vec3   direction { 0.0f, 0.0f, -1.0f };
-        float       fov       { 45.0f };
-        bool        isOrtho   { false };
-        float       orthoSize { 5.0f };
-        float       nearPlane { 0.1f };
-        float       farPlane  { 200.0f };
+        glm::vec3 position  { 0.0f, 0.0f,  3.0f };
+        glm::vec3 direction { 0.0f, 0.0f, -1.0f };
+        float fov { 45.0f };
+        bool isOrtho   { false };
+        float orthoSize { 5.0f };
+        float nearPlane { 0.1f };
+        float farPlane  { 200.0f };
     };
 
     /**
      * @struct FBSceneContext
      * @brief Mutable output context passed through all adapt*() calls in FBSceneAdapter.
-     *        Pattern: Adapter (Object Adapter) — this is the "target state" being populated.
-     *        All service pointers are non-owning (lifetime managed by EngineOrchestrator).
+     * Pattern: Adapter (Object Adapter) — this is the "target state" being populated.
+     * All service pointers are non-owning (lifetime managed by EngineOrchestrator).
      */
     struct FBSceneContext {
         // --- Input services (non-owning) ---
-        GE::ECS::EntityManager*                                             em        { nullptr };
-        AssetManager*                                                       am        { nullptr };
-        GE::Scene::Scene*                                                   scene     { nullptr };
-        GE::Graphics::GpuUploadContext*                                     uploadCtx { nullptr };
+        GE::ECS::EntityManager* em { nullptr };
+        AssetManager* am { nullptr };
+        GE::Scene::Scene* scene { nullptr };
+        GE::Graphics::GpuUploadContext* uploadCtx { nullptr };
         const std::vector<std::unique_ptr<GE::Graphics::GraphicsPipeline>>* pipelines { nullptr };
-        std::vector<std::unique_ptr<GE::Assets::Model>>*                    ownedModels { nullptr };
+        std::vector<std::unique_ptr<GE::Assets::Model>>* ownedModels { nullptr };
 
         // --- Config ---
         bool useOwnerColors { true };
 
         // --- Output collections (populated by adapt*() calls) ---
-        std::vector<PhysicsMaterialRecord>              physicsMaterials;
-        std::vector<FBCameraRecord>                     cameras;
-        std::vector<MaterialInteractionRecord>          interactions;
-        std::vector<SpawnerRecord>                      spawners;
+        std::vector<PhysicsMaterialRecord> physicsMaterials;
+        std::vector<FBCameraRecord> cameras;
+        std::vector<MaterialInteractionRecord> interactions;
+        std::vector<SpawnerRecord> spawners;
         std::unordered_map<std::string, PrefabTemplate> prefabRegistry;
 
         // Whether the scene enables gravity (mirrors Scene::gravity_on). Applied to PhysicsSystem after load.

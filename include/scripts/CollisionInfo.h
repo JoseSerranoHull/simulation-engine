@@ -20,9 +20,9 @@ namespace GE::Scripts {
      */
     struct CollisionInfo {
         GE::ECS::EntityID otherEntity  { GE::ECS::INVALID_ENTITY_ID };
-        glm::vec3         contactPoint { 0.0f };   ///< World-space midpoint of contact
-        glm::vec3         normal       { 0.0f };   ///< Points away from otherEntity
-        float             penetration  { 0.0f };   ///< Overlap depth in world units
+        glm::vec3 contactPoint { 0.0f };   ///< World-space midpoint of contact
+        glm::vec3 normal { 0.0f };   ///< Points away from otherEntity
+        float penetration { 0.0f };   ///< Overlap depth in world units
     };
 
     // -----------------------------------------------------------------------

@@ -79,10 +79,10 @@ namespace GE {
     protected:
         /** @brief Builds the fixed set of material pipelines for this scenario. */
         void createMaterialPipelines();
-        bool      m_isPaused      = false;
-        float     m_timeScale     = 1.0f;
-        float     m_fixedTimestep = 0.01667f; // ~60 Hz fixed step; editable via ImGui
-        glm::vec4 m_clearColor    { 0.05f, 0.05f, 0.1f, 1.0f }; // Default: dark navy
+        bool m_isPaused = false;
+        float m_timeScale = 1.0f;
+        float m_fixedTimestep = 0.01667f; // ~60 Hz fixed step; editable via ImGui
+        glm::vec4 m_clearColor { 0.05f, 0.05f, 0.1f, 1.0f }; // Default: dark navy
 
         /** @brief Registry of models unique to this scenario for cleanup. */
         std::vector<std::unique_ptr<GE::Assets::Model>> m_ownedModels;

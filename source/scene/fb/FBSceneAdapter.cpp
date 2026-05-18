@@ -6,7 +6,7 @@
 /* parasoft-end-suppress ALL */
 
 #include "scene/fb/FBSceneAdapter.h"
-#include "Scene_generated.h"        // flatc-generated from flatbuffers/Scene.fbs
+#include "Scene_generated.h"    // flatc-generated from flatbuffers/Scene.fbs
 
 /* parasoft-begin-suppress ALL */
 #include <glm/gtc/constants.hpp>   // glm::pi<float>()
@@ -35,18 +35,18 @@
 #include "scripts/ScriptFactory.h"
 
 // Pipeline indices within m_pipelines (see Scenario::createMaterialPipelines())
-static constexpr std::size_t PHONG_PIPELINE_INDEX      = 0U;   // phong.vert + phong.frag
-static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX  = 8U;   // flat vertex-color, no descriptor set
-static constexpr std::size_t CONTAINER_PIPELINE_INDEX  = 9U;   // flat vertex-color, front-face culling (hollow containers)
-static constexpr std::size_t CLOTH_PHONG_PIPELINE_INDEX = 10U; // phong shaders, culling OFF — double-sided cloth
+static constexpr std::size_t PHONG_PIPELINE_INDEX = 0U; // phong.vert + phong.frag
+static constexpr std::size_t FLATCOLOR_PIPELINE_INDEX = 8U; // flat vertex-color, no descriptor set
+static constexpr std::size_t CONTAINER_PIPELINE_INDEX = 9U; // flat vertex-color, front-face culling (hollow containers)
+static constexpr std::size_t CLOTH_PHONG_PIPELINE_INDEX = 10U;  // phong shaders, culling OFF — double-sided cloth
 
 // Cloth GPU buffer pre-allocation constants.
 // The combined vertex+index buffer is allocated for MAX_CLOTH_DIM² at load time so that
 // runtime grid resizes (FlatBuffersScenario::applyClothRebuild) never need reallocation.
 // cc.indexOffset is fixed at maxVertBytes; only cc.vertexCount/indexCount change on resize.
-static constexpr uint32_t MAX_CLOTH_DIM   = 80U;
-static constexpr uint32_t MAX_CLOTH_VERTS = MAX_CLOTH_DIM * MAX_CLOTH_DIM;                         // 6 400
-static constexpr uint32_t MAX_CLOTH_IDX   = (MAX_CLOTH_DIM - 1U) * (MAX_CLOTH_DIM - 1U) * 6U;    // 37 446
+static constexpr uint32_t MAX_CLOTH_DIM = 80U;
+static constexpr uint32_t MAX_CLOTH_VERTS = MAX_CLOTH_DIM * MAX_CLOTH_DIM;  // 6 400
+static constexpr uint32_t MAX_CLOTH_IDX = (MAX_CLOTH_DIM - 1U) * (MAX_CLOTH_DIM - 1U) * 6U; // 37 446
 
 namespace GE::Scene::FB {
 
@@ -60,13 +60,14 @@ static glm::vec3 toVec3(const Simulation::Vec3& v) {
 
 // Creates a host-visible, host-coherent VkBuffer of the given size and persistently maps it.
 // Returns false on failure. Caller owns cleanup (vkUnmapMemory, vkDestroyBuffer, vkFreeMemory).
-static bool createHostVisibleBuffer(VkDevice device,
-                                    VkPhysicalDevice physDevice,
-                                    VkDeviceSize size,
-                                    VkBufferUsageFlags usage,
-                                    VkBuffer& outBuffer,
-                                    VkDeviceMemory& outMemory,
-                                    void*& outMapped)
+static bool createHostVisibleBuffer(
+    VkDevice device,
+	VkPhysicalDevice physDevice,
+	VkDeviceSize size,
+	VkBufferUsageFlags usage,
+	VkBuffer& outBuffer,
+	VkDeviceMemory& outMemory,
+	void*& outMapped)
 {
     GE::Graphics::VulkanUtils::createBuffer(
         device, physDevice, size, usage,
@@ -128,12 +129,12 @@ void FBSceneAdapter::adaptToECS(FBSceneContext& ctx) {
     ctx.gravityEnabled = m_scene->gravity_on();
 
     // Order matters: materials before objects/prefabs; prefabs before spawners
-    if (m_scene->cameras()      != nullptr) { adaptCameras(ctx);      }
-    if (m_scene->materials()    != nullptr) { adaptMaterials(ctx);    }
+    if (m_scene->cameras() != nullptr) { adaptCameras(ctx);      }
+    if (m_scene->materials() != nullptr) { adaptMaterials(ctx);    }
     if (m_scene->interactions() != nullptr) { adaptInteractions(ctx); }
-    if (m_scene->prefabs()      != nullptr) { adaptPrefabs(ctx);      }
-    if (m_scene->objects()      != nullptr) { adaptObjects(ctx);      }
-    if (m_scene->objects()      != nullptr) { adaptParentLinks(ctx);  }
+    if (m_scene->prefabs() != nullptr) { adaptPrefabs(ctx);      }
+    if (m_scene->objects() != nullptr) { adaptObjects(ctx);      }
+    if (m_scene->objects() != nullptr) { adaptParentLinks(ctx);  }
     if (m_scene->spawners()     != nullptr &&
         m_scene->spawners_type() != nullptr) { adaptSpawners(ctx);    }
 }
@@ -170,14 +171,14 @@ void FBSceneAdapter::adaptCamera(const Simulation::Camera* cam, FBSceneContext& 
     // Projection parameters
     if (cam->camera_type_type() == Simulation::CameraType::PerspectiveCamera) {
         const auto* pc = cam->camera_type_as_PerspectiveCamera();
-        rec.isOrtho   = false;
-        rec.fov       = (pc != nullptr && pc->fov()  > 0.0f) ? pc->fov()  : 45.0f;
+        rec.isOrtho = false;
+        rec.fov = (pc != nullptr && pc->fov()  > 0.0f) ? pc->fov()  : 45.0f;
         rec.nearPlane = (pc != nullptr && pc->near() > 0.0f) ? pc->near() : 0.1f;
         rec.farPlane  = (pc != nullptr && pc->far()  > 0.0f) ? pc->far()  : 200.0f;
     }
     else if (cam->camera_type_type() == Simulation::CameraType::OrthographicCamera) {
         const auto* oc = cam->camera_type_as_OrthographicCamera();
-        rec.isOrtho   = true;
+        rec.isOrtho = true;
         rec.orthoSize = (oc != nullptr && oc->size() > 0.0f) ? oc->size() : 5.0f;
         rec.nearPlane = (oc != nullptr && oc->near() > 0.0f) ? oc->near() : 0.1f;
         rec.farPlane  = (oc != nullptr && oc->far()  > 0.0f) ? oc->far()  : 200.0f;
@@ -198,7 +199,7 @@ void FBSceneAdapter::adaptMaterials(FBSceneContext& ctx) const {
 
 void FBSceneAdapter::adaptMaterial(const Simulation::Material* mat, FBSceneContext& ctx) const {
     PhysicsMaterialRecord rec;
-    rec.name    = (mat->name() != nullptr) ? mat->name()->str() : "material";
+    rec.name = (mat->name() != nullptr) ? mat->name()->str() : "material";
     rec.density = mat->density();
     ctx.physicsMaterials.push_back(rec);
 
@@ -250,9 +251,11 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
     if (obj->transform() != nullptr) {
         const auto* t = obj->transform();
         transform.m_localPosition = toVec3(t->position());
-        transform.m_localRotation = glm::vec3{ t->orientation().yaw(),
-                                               t->orientation().pitch(),
-                                               t->orientation().roll() };
+        transform.m_localRotation = glm::vec3{
+        	t->orientation().yaw(),
+			t->orientation().pitch(),
+        	t->orientation().roll()
+        };
         transform.m_localScale    = toVec3(t->scale());
     }
     ctx.em->AddComponent(id, transform);
@@ -411,9 +414,12 @@ void FBSceneAdapter::adaptObject(const Simulation::Object* obj, FBSceneContext& 
 // SECTION 6: adaptShape()
 // ===========================================================================
 
-void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID id,
-                                const glm::vec3& color, bool isContainer,
-                                FBSceneContext& ctx) const
+void FBSceneAdapter::adaptShape(
+    const Simulation::Object* obj,
+    GE::ECS::EntityID id,
+    const glm::vec3& color,
+    bool isContainer,
+	FBSceneContext& ctx) const
 {
     if (ctx.pipelines == nullptr || ctx.pipelines->size() <= FLATCOLOR_PIPELINE_INDEX) {
         GE_LOG_ERROR("FBSceneAdapter: Flat-color pipeline (index 8) not available.");
@@ -486,7 +492,7 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         break;
     }
     default:
-        GE_LOG_ERROR("FBSceneAdapter: Unknown shape type on object, skipping mesh.");
+        GE_LOG_ERROR("[FBSceneAdapter] Unknown shape type on object, skipping mesh.");
         return;
     }
 
@@ -508,7 +514,7 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
         ctx.ownedModels->push_back(std::move(dummyModel));
     }
     else {
-        GE_LOG_ERROR("FBSceneAdapter: processMeshData failed for object.");
+        GE_LOG_ERROR("[FBSceneAdapter] processMeshData failed for object.");
     }
 }
 
@@ -516,16 +522,18 @@ void FBSceneAdapter::adaptShape(const Simulation::Object* obj, GE::ECS::EntityID
 // SECTION 7: adaptBehaviour()
 // ===========================================================================
 
-void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::EntityID id,
-                                    FBSceneContext& ctx) const
+void FBSceneAdapter::adaptBehaviour(
+    const Simulation::Object* obj,
+    GE::ECS::EntityID id,
+    FBSceneContext& ctx) const
 {
     switch (obj->behaviour_type()) {
     case Simulation::Behaviour::StaticObject: {
         GE::Components::RigidBody rb;
-        rb.isStatic    = true;
-        rb.useGravity  = false;
+        rb.isStatic = true;
+        rb.useGravity = false;
         rb.inverseMass = 0.0f;
-        rb.mass        = 0.0f;
+        rb.mass = 0.0f;
         ctx.em->AddComponent(id, rb);
         break;
     }
@@ -546,13 +554,13 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         // Planes are always treated as static (infinite mass).
         const bool isPlane = (obj->shape_type() == Simulation::Shape::Plane);
         if (isPlane) {
-            rb.isStatic    = true;
-            rb.useGravity  = false;
-            rb.mass        = 0.0f;
+            rb.isStatic = true;
+            rb.useGravity = false;
+            rb.mass = 0.0f;
             rb.inverseMass = 0.0f;
             rb.invInertiaTensor = glm::mat3(0.0f);
         } else {
-            rb.isStatic   = false;
+            rb.isStatic = false;
             rb.useGravity = true;
             float mass = 1.0f;
             glm::mat3 invI = glm::mat3(1.0f);
@@ -626,14 +634,14 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
                 break;
             }
 
-            rb.mass        = mass;
+            rb.mass = mass;
             rb.inverseMass = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
             rb.invInertiaTensor = invI;
         }
 
         if (sim != nullptr && sim->initial_state() != nullptr) {
             const auto* ps = sim->initial_state();
-            rb.velocity        = toVec3(ps->linear_velocity());
+            rb.velocity = toVec3(ps->linear_velocity());
             rb.angularVelocity = glm::radians(toVec3(ps->angular_velocity()));
         }
 
@@ -654,9 +662,9 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
 
         GE::Components::AnimatedObjectComponent ac;
         ac.totalDuration = anim->total_duration();
-        ac.easing        = static_cast<GE::Components::EasingType>(
+        ac.easing = static_cast<GE::Components::EasingType>(
                                static_cast<uint8_t>(anim->easing()));
-        ac.pathMode      = static_cast<GE::Components::PathMode>(
+        ac.pathMode = static_cast<GE::Components::PathMode>(
                                static_cast<uint8_t>(anim->path_mode()));
 
         if (anim->waypoints() != nullptr) {
@@ -665,9 +673,10 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
                 GE::Components::FBWaypoint waypoint;
                 waypoint.position = (wp->position() != nullptr) ? toVec3(*wp->position()) : glm::vec3{ 0.0f };
                 if (wp->rotation() != nullptr) {
-                    waypoint.rotDeg = glm::vec3{ wp->rotation()->yaw(),
-                                                  wp->rotation()->pitch(),
-                                                  wp->rotation()->roll() };
+                    waypoint.rotDeg = glm::vec3{
+                    	wp->rotation()->yaw(),
+                    	wp->rotation()->pitch(),
+                    	wp->rotation()->roll() };
                 }
                 waypoint.time     = wp->time();
                 ac.waypoints.push_back(waypoint);
@@ -690,19 +699,18 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         const auto* cloth = obj->behaviour_as_ClothObject();
 
         GE::Components::ClothComponent cc;
-        cc.rows         = (cloth != nullptr) ? cloth->rows()          : 10;
-        cc.cols         = (cloth != nullptr) ? cloth->cols()          : 10;
-        cc.cellSize     = (cloth != nullptr) ? cloth->cell_size()     : 0.2f;
-        cc.springK      = (cloth != nullptr) ? cloth->spring_k()      : 100.0f;
-        cc.shearK       = (cloth != nullptr) ? cloth->shear_k()       : 50.0f;
-        cc.flexionK     = (cloth != nullptr) ? cloth->flexion_k()     : 25.0f;
-        cc.damping      = (cloth != nullptr) ? cloth->damping()       : 0.1f;
+        cc.rows = (cloth != nullptr) ? cloth->rows() : 10;
+        cc.cols = (cloth != nullptr) ? cloth->cols() : 10;
+        cc.cellSize = (cloth != nullptr) ? cloth->cell_size() : 0.2f;
+        cc.springK = (cloth != nullptr) ? cloth->spring_k() : 100.0f;
+        cc.shearK = (cloth != nullptr) ? cloth->shear_k() : 50.0f;
+        cc.flexionK = (cloth != nullptr) ? cloth->flexion_k() : 25.0f;
+        cc.damping = (cloth != nullptr) ? cloth->damping() : 0.1f;
         cc.particleMass = (cloth != nullptr) ? cloth->particle_mass() : 0.1f;
         const bool pinTop = (cloth != nullptr) ? cloth->pin_top_edge() : true;
 
         // Get the entity's world position from its Transform
-        const GE::Components::Transform* tr =
-            ctx.em->GetTIComponent<GE::Components::Transform>(id);
+        const GE::Components::Transform* tr = ctx.em->GetTIComponent<GE::Components::Transform>(id);
         const glm::vec3 origin = (tr != nullptr) ? tr->m_localPosition : glm::vec3{ 0.0f };
 
         // Initialise particle flat grid
@@ -711,10 +719,11 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             for (int c = 0; c < cc.cols; ++c) {
                 const int     idx = r * cc.cols + c;
                 const glm::vec3 pos = origin + glm::vec3{
-                    c * cc.cellSize, 0.0f, r * cc.cellSize };
-                cc.particles[idx].position     = pos;
+                    c * cc.cellSize, 0.0f, r * cc.cellSize
+                };
+                cc.particles[idx].position = pos;
                 cc.particles[idx].prevPosition = pos;
-                cc.particles[idx].pinned       = (pinTop && r == 0);
+                cc.particles[idx].pinned = (pinTop && r == 0);
             }
         }
 
@@ -814,16 +823,18 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         // Use textured Phong when texture_path is set and in material-color mode; flat-color otherwise.
         std::shared_ptr<GE::Assets::Material> clothMat;
 
-        const bool clothHasTexture = (!ctx.useOwnerColors &&
-                                      obj->texture_path() != nullptr &&
-                                      !obj->texture_path()->str().empty() &&
-                                      ctx.pipelines != nullptr &&
-                                      ctx.pipelines->size() > CLOTH_PHONG_PIPELINE_INDEX);
+        const bool clothHasTexture = (
+            !ctx.useOwnerColors &&
+            obj->texture_path() != nullptr &&
+            !obj->texture_path()->str().empty() &&
+            ctx.pipelines != nullptr &&
+            ctx.pipelines->size() > CLOTH_PHONG_PIPELINE_INDEX
+            );
         if (clothHasTexture) {
-            auto whiteTex       = ctx.am->loadTexture("textures/white.png");
-            auto blackTex       = ctx.am->loadTexture("textures/black.png");
-            auto flatNormalTex  = ctx.am->loadTexture("textures/flat_normal.png");
-            auto albedo         = ctx.am->loadTexture(obj->texture_path()->str());
+            auto whiteTex = ctx.am->loadTexture("textures/white.png");
+            auto blackTex = ctx.am->loadTexture("textures/black.png");
+            auto flatNormalTex = ctx.am->loadTexture("textures/flat_normal.png");
+            auto albedo = ctx.am->loadTexture(obj->texture_path()->str());
             if (albedo && whiteTex && blackTex && flatNormalTex) {
                 auto normalTex = (obj->normal_map_path() && !obj->normal_map_path()->str().empty())
                                   ? ctx.am->loadTexture(obj->normal_map_path()->str()) : flatNormalTex;
@@ -862,7 +873,8 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             cc.vertexBuffer,
             cc.indexCount,
             cc.indexOffset,
-            clothMat);
+            clothMat
+        );
 
         GE::Assets::Mesh* const rawMesh = meshPtr.get();
         auto dummyModel = std::make_unique<GE::Assets::Model>();
@@ -916,17 +928,17 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
         // The host object itself is not used as a physics body — it's just the spawn anchor.
         const auto* fa = obj->behaviour_as_FlockAgent();
 
-        const int   agentCount       = (fa != nullptr) ? fa->agent_count()       : 60;
-        const float sphereRadius     = (fa != nullptr) ? fa->sphere_radius()     : 0.3f;
+        const int agentCount = (fa != nullptr) ? fa->agent_count() : 60;
+        const float sphereRadius = (fa != nullptr) ? fa->sphere_radius() : 0.3f;
         const float separationRadius = (fa != nullptr) ? fa->separation_radius() : 1.5f;
-        const float alignmentRadius  = (fa != nullptr) ? fa->alignment_radius()  : 3.0f;
-        const float cohesionRadius   = (fa != nullptr) ? fa->cohesion_radius()   : 5.0f;
-        const float wSeparation      = (fa != nullptr) ? fa->w_separation()      : 2.0f;
-        const float wAlignment       = (fa != nullptr) ? fa->w_alignment()       : 1.0f;
-        const float wCohesion        = (fa != nullptr) ? fa->w_cohesion()        : 1.0f;
-        const float maxSpeed         = (fa != nullptr) ? fa->max_speed()         : 6.0f;
-        const float maxForce         = (fa != nullptr) ? fa->max_force()         : 15.0f;
-        const float spawnRadius      = (fa != nullptr) ? fa->spawn_radius()      : 5.0f;
+        const float alignmentRadius = (fa != nullptr) ? fa->alignment_radius() : 3.0f;
+        const float cohesionRadius = (fa != nullptr) ? fa->cohesion_radius() : 5.0f;
+        const float wSeparation = (fa != nullptr) ? fa->w_separation() : 2.0f;
+        const float wAlignment = (fa != nullptr) ? fa->w_alignment() : 1.0f;
+        const float wCohesion = (fa != nullptr) ? fa->w_cohesion() : 1.0f;
+        const float maxSpeed = (fa != nullptr) ? fa->max_speed() : 6.0f;
+        const float maxForce = (fa != nullptr) ? fa->max_force() : 15.0f;
+        const float spawnRadius = (fa != nullptr) ? fa->spawn_radius() : 5.0f;
 
         // Get spawn origin from the anchor object's Transform
         const GE::Components::Transform* anchor =
@@ -982,12 +994,12 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
 
             // RigidBody — no gravity, flock forces drive motion
             GE::Components::RigidBody rb;
-            rb.isStatic         = false;
-            rb.useGravity       = false;
-            rb.mass             = mass;
-            rb.inverseMass      = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
+            rb.isStatic = false;
+            rb.useGravity = false;
+            rb.mass = mass;
+            rb.inverseMass = (mass > 0.0f) ? (1.0f / mass) : 0.0f;
             rb.invInertiaTensor = glm::mat3(invI_val);
-            rb.linearDamping    = 0.95f; // extra damping to prevent indefinite acceleration
+            rb.linearDamping = 0.95f; // extra damping to prevent indefinite acceleration
             // Random initial velocity (small kick)
             rb.velocity = glm::vec3{ distUnit(rng), distUnit(rng), distUnit(rng) } * 2.0f;
             ctx.em->AddComponent(agentId, rb);
@@ -995,13 +1007,13 @@ void FBSceneAdapter::adaptBehaviour(const Simulation::Object* obj, GE::ECS::Enti
             // FlockingComponent
             GE::Components::FlockingComponent fk;
             fk.separationRadius = separationRadius;
-            fk.alignmentRadius  = alignmentRadius;
-            fk.cohesionRadius   = cohesionRadius;
-            fk.wSeparation      = wSeparation;
-            fk.wAlignment       = wAlignment;
-            fk.wCohesion        = wCohesion;
-            fk.maxSpeed         = maxSpeed;
-            fk.maxForce         = maxForce;
+            fk.alignmentRadius = alignmentRadius;
+            fk.cohesionRadius = cohesionRadius;
+            fk.wSeparation = wSeparation;
+            fk.wAlignment = wAlignment;
+            fk.wCohesion = wCohesion;
+            fk.maxSpeed = maxSpeed;
+            fk.maxForce = maxForce;
             ctx.em->AddComponent(agentId, fk);
 
             // Mesh (sphere)
@@ -1140,7 +1152,7 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             const auto* s = pb->shape_as_Sphere();
             const float r = s ? s->radius() : 0.5f;
             tmpl.shapeKind = PrefabShapeKind::Sphere;
-            tmpl.radius    = r;
+            tmpl.radius = r;
             meshData = GeometryUtils::generateSphere(24, r, -r, color);
             mass = density * (4.0f / 3.0f) * PI * r * r * r;
             if (mass > 0.0f) invI = glm::mat3(5.0f / (2.0f * mass * r * r));
@@ -1151,8 +1163,8 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             const float r  = c ? c->radius() : 0.3f;
             const float ht = c ? c->height()  : 1.0f;
             tmpl.shapeKind = PrefabShapeKind::Capsule;
-            tmpl.radius    = r;
-            tmpl.height    = ht;
+            tmpl.radius = r;
+            tmpl.height = ht;
             meshData = GeometryUtils::generateCapsule(r, ht, 24, 12);
             for (auto& v : meshData.vertices) { v.color = color; }
             const float mc = density * PI * r * r * ht;
@@ -1173,8 +1185,8 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             const float r  = c ? c->radius() : 0.3f;
             const float ht = c ? c->height()  : 1.0f;
             tmpl.shapeKind = PrefabShapeKind::Cylinder;
-            tmpl.radius    = r;
-            tmpl.height    = ht;
+            tmpl.radius = r;
+            tmpl.height = ht;
             meshData = GeometryUtils::generateCylinder(24, r, r, ht, color, true, true);
             mass = density * PI * r * r * ht;
             if (mass > 0.0f) {
@@ -1188,7 +1200,7 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             const auto* c = pb->shape_as_Cuboid();
             const glm::vec3 sz = (c && c->size()) ? toVec3(*c->size()) : glm::vec3(0.5f);
             tmpl.shapeKind = PrefabShapeKind::Cuboid;
-            tmpl.size      = sz;
+            tmpl.size = sz;
             meshData = GeometryUtils::generateBox(sz.x, sz.y, sz.z, color);
             mass = density * sz.x * sz.y * sz.z;
             if (mass > 0.0f) {
@@ -1203,7 +1215,7 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             continue;
         }
 
-        tmpl.mass        = mass;
+        tmpl.mass = mass;
         tmpl.invInertia  = invI;
 
         // Helper: upload a mesh variant and push the Model into ownedModels.
@@ -1267,9 +1279,9 @@ void FBSceneAdapter::adaptPrefabs(FBSceneContext& ctx) const
             bool textureSucceeded = false;
             if (pb->texture_path() != nullptr) {
                 const std::string texPath = pb->texture_path()->str();
-                auto albedo        = ctx.am->loadTexture(texPath);
-                auto whiteTex      = ctx.am->loadTexture("textures/white.png");
-                auto blackTex      = ctx.am->loadTexture("textures/black.png");
+                auto albedo = ctx.am->loadTexture(texPath);
+                auto whiteTex = ctx.am->loadTexture("textures/white.png");
+                auto blackTex = ctx.am->loadTexture("textures/black.png");
                 auto flatNormalTex = ctx.am->loadTexture("textures/flat_normal.png");
                 if (albedo && whiteTex && blackTex && flatNormalTex) {
                     auto normalTex = (pb->normal_map_path() && !pb->normal_map_path()->str().empty())
@@ -1322,7 +1334,7 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
 {
     const auto* spawnTypesVec = m_scene->spawners_type();
     const auto* spawnersVec   = m_scene->spawners();
-    const auto  count         = spawnersVec->size();
+    const auto  count = spawnersVec->size();
 
     for (flatbuffers::uoffset_t i = 0; i < count; ++i) {
         const Simulation::BaseSpawner* base = nullptr;
@@ -1355,7 +1367,7 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
         if (base == nullptr) { continue; }
 
         SpawnerRecord rec;
-        rec.name      = (base->name() != nullptr) ? base->name()->str() : "spawner";
+        rec.name = (base->name() != nullptr) ? base->name()->str() : "spawner";
         rec.startTime = base->start_time();
         rec.prefabRef = (base->prefab_ref() != nullptr) ? base->prefab_ref()->str() : "";
 
@@ -1413,11 +1425,11 @@ void FBSceneAdapter::adaptSpawners(FBSceneContext& ctx) const
                 const float r = hasRange ? (rMin + t * (rMax - rMin)) : rMin;
 
                 PrefabTemplate tmpl;
-                tmpl.name               = spawnerName + "_synth_" + std::to_string(vi);
-                tmpl.shapeKind          = PrefabShapeKind::Sphere;
-                tmpl.radius             = r;
-                tmpl.density            = density;
-                tmpl.restitution        = 0.6f;
+                tmpl.name = spawnerName + "_synth_" + std::to_string(vi);
+                tmpl.shapeKind = PrefabShapeKind::Sphere;
+                tmpl.radius = r;
+                tmpl.density = density;
+                tmpl.restitution = 0.6f;
                 tmpl.physicsMaterialName = matName;
 
                 const float mass = density * (4.0f / 3.0f) * PI * r * r * r;
@@ -1529,7 +1541,7 @@ void FBSceneAdapter::adaptParentLinks(FBSceneContext& ctx) const {
 
     for (const auto* obj : *m_scene->objects()) {
         if (obj == nullptr || obj->parent() == nullptr) { continue; }
-        if (obj->name()   == nullptr) { continue; }
+        if (obj->name() == nullptr) { continue; }
 
         const std::string childName  = obj->name()->str();
         const std::string parentName = obj->parent()->str();

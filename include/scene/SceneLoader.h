@@ -52,15 +52,18 @@ namespace GE::Scene {
         struct DeferredSpring {
             std::string entityAName;    // empty → use worldAnchorA
             std::string entityBName;    // empty → use worldAnchorB
-            glm::vec3   worldAnchorA   { 0.0f };
-            glm::vec3   worldAnchorB   { 0.0f };
-            float restLength           { 1.0f };
-            float springConstant       { 10.0f };
-            float dampingCoeff         { 0.0f };
+            glm::vec3 worldAnchorA { 0.0f };
+            glm::vec3 worldAnchorB { 0.0f };
+            float restLength { 1.0f };
+            float springConstant { 10.0f };
+            float dampingCoeff { 0.0f };
         };
         std::vector<DeferredSpring> m_deferredSprings;
-        void resolveDeferred(GE::ECS::EntityManager* em, GE::Scene::Scene* scene,
-                             GE::Systems::SpringSystem* ss);
+        void resolveDeferred(
+            GE::ECS::EntityManager* em,
+            GE::Scene::Scene* scene,
+            GE::Systems::SpringSystem* ss
+        );
 
         // --- Parsing Helpers ---
         std::vector<std::string> splitString(const std::string& str);
@@ -83,13 +86,24 @@ namespace GE::Scene {
         void handleParticleComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleSkyboxComponent(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em);
         void handleSpring(const std::map<std::string, std::string>& props);
-        void handleRope(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em,
-                        GE::Scene::Scene* scene, GE::Graphics::GpuUploadContext& ctx,
-                        std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels,
-                        const std::map<std::string, std::shared_ptr<GE::Assets::Material>>& materials);
-        void handleCloth(const std::map<std::string, std::string>& props, GE::ECS::EntityManager* em,
-                         GE::Scene::Scene* scene, GE::Graphics::GpuUploadContext& ctx,
-                         std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels,
-                         const std::map<std::string, std::shared_ptr<GE::Assets::Material>>& materials);
+        void handleRope(
+            const std::map<std::string, std::string>& props,
+            GE::ECS::EntityManager* em,
+            GE::Scene::Scene* scene,
+            GE::Graphics::GpuUploadContext& ctx,
+            std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels,
+            const std::map<std::string,
+            std::shared_ptr<GE::Assets::Material>>& materials
+        );
+        void handleCloth(
+            const std::map<std::string,
+            std::string>& props,
+            GE::ECS::EntityManager* em,
+            GE::Scene::Scene* scene,
+            GE::Graphics::GpuUploadContext& ctx,
+            std::vector<std::unique_ptr<GE::Assets::Model>>& outOwnedModels,
+            const std::map<std::string,
+            std::shared_ptr<GE::Assets::Material>>& materials
+        );
     };
 }

@@ -26,18 +26,18 @@ void Scenario::createMaterialPipelines() {
     m_pipelines.clear();
 
     // --- Shader Modules (indices 0-7, material pipelines only) ---
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_vert.spv",           VK_SHADER_STAGE_VERTEX_BIT));   // [0]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_frag.spv",           VK_SHADER_STAGE_FRAGMENT_BIT)); // [1]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/sand_frag.spv",            VK_SHADER_STAGE_FRAGMENT_BIT)); // [2]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/base_frag.spv",            VK_SHADER_STAGE_FRAGMENT_BIT)); // [3]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/glass_frag.spv",           VK_SHADER_STAGE_FRAGMENT_BIT)); // [4]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/transparent_frag.spv",     VK_SHADER_STAGE_FRAGMENT_BIT)); // [5]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_vert.spv",           VK_SHADER_STAGE_VERTEX_BIT));   // [6]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_frag.spv",           VK_SHADER_STAGE_FRAGMENT_BIT)); // [7]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checkerboard_vert.spv",    VK_SHADER_STAGE_VERTEX_BIT));   // [8]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checkerboard_frag.spv",    VK_SHADER_STAGE_FRAGMENT_BIT)); // [9]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/collider_wire_vert.spv",   VK_SHADER_STAGE_VERTEX_BIT));   // [10]
-    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/collider_wire_frag.spv",   VK_SHADER_STAGE_FRAGMENT_BIT)); // [11]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));   // [0]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/phong_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [1]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/sand_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [2]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/base_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [3]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/glass_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [4]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/transparent_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [5]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));   // [6]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/water_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [7]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checkerboard_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));   // [8]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/checkerboard_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [9]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/collider_wire_vert.spv", VK_SHADER_STAGE_VERTEX_BIT));   // [10]
+    m_shaderModules.push_back(std::make_unique<ShaderModule>("./shaders/collider_wire_frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)); // [11]
 
     // Checkerboard push constant size: mat4 (64) + vec4 (16) + vec4 (16) + float (4) = 100 bytes
     // Both VERTEX and FRAGMENT stages read from this range (vert: model, frag: colorA/B/scale).
